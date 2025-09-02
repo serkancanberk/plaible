@@ -1,0 +1,21 @@
+# Plaible.art
+
+Plaible.art is a story-driven interactive reading and role-playing platform.  
+Users can step into classic public-domain stories, choose characters, and live unique branching experiences.
+
+## Features
+- Interactive story sessions
+- Character role-play with AI support
+- Wallet and credit system
+- Feedback, rating, and sharing options
+
+## Tech Stack
+- Node.js + Express + MongoDB
+- React + Vite + Tailwind
+- OpenAI API (Storyrunner AI)
+
+## Getting Started
+1. Clone the repo
+2. Install dependencies: `npm install`
+3. Start backend: `npm run dev`
+4. Seed DB: `npm run seed:story`
