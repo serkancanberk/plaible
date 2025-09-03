@@ -88,7 +88,7 @@ router.get("/me", async (req, res) => {
       email: user.email,
       profilePictureUrl: user.profilePictureUrl,
       identity: user.identity || { displayName: user.displayName },
-      wallet: { balance: user.walletBalance || 0 },
+      wallet: { balance: user.wallet?.balance ?? 0 },
     };
     res.json(safe);
   } catch (err) {
@@ -100,6 +100,12 @@ router.get("/me", async (req, res) => {
 router.post("/logout", (req, res) => {
   res.clearCookie("plaible_jwt", { path: "/" });
   res.json({ ok: true });
+});
+
+// GET alias for logout (dev convenience)
+router.get('/logout', (req, res) => {
+  res.clearCookie('plaible_jwt', { httpOnly: true, sameSite: 'lax', secure: false, path: '/' });
+  return res.json({ ok: true });
 });
 
 export default router;

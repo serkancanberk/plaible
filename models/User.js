@@ -32,6 +32,10 @@ const userSchema = new Schema(
     timeZone: { type: String, trim: true },
     location: { type: String, trim: true },
     language: { type: String, default: "en", trim: true },
+    wallet: {
+      balance: { type: Number, default: 0 },
+      currency: { type: String, default: 'CREDITS' }
+    },
     walletBalance: { type: Number, default: 0 },
     transactionHistory: { type: [transactionSchema], default: [] },
     socialConnections: { type: [String], default: [] },

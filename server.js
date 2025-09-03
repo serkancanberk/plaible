@@ -10,6 +10,7 @@ import { User } from "./models/User.js";
 import authRouter from "./routes/auth.js";
 import storiesRouter from "./routes/stories.js";
 import sessionsRouter from "./routes/sessions.js";
+import walletRouter from "./routes/wallet.js";
 
 dotenv.config();
 
@@ -33,7 +34,7 @@ app.get("/api/health", (req, res) => {
 
 // Auth guard: prefer cookie JWT; fallback to dev fixed user
 const devFallbackUserId = new mongoose.Types.ObjectId("64b7cafe1234567890cafe12");
-export function authGuard(req, _res, next) {
+export function authGuard(req, res, next) {
   const token = req.cookies?.plaible_jwt;
   if (token) {
     try {
@@ -66,6 +67,9 @@ app.use("/api/stories", authGuard, storiesRouter);
 
 // Sessions router
 app.use("/api/sessions", authGuard, sessionsRouter);
+
+// Wallet router
+app.use("/api/wallet", authGuard, walletRouter);
 
 // MongoDB connection
 const MONGO_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/plaible";
