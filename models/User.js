@@ -16,12 +16,18 @@ const transactionSchema = new Schema(
 
 const userSchema = new Schema(
   {
+    googleId: { type: String, index: true, sparse: true },
+    profilePictureUrl: { type: String, trim: true },
+    identity: {
+      firstName: { type: String, trim: true },
+      lastName: { type: String, trim: true },
+      displayName: { type: String, trim: true },
+    },
     fullName: { type: String, required: true, trim: true },
     displayName: { type: String, required: true, unique: true, lowercase: true, trim: true },
     about: { type: String, maxlength: 200, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
     phoneNumber: { type: String, trim: true },
-    avatarUrl: { type: String, trim: true },
     isVerified: { type: Boolean, default: false },
     timeZone: { type: String, trim: true },
     location: { type: String, trim: true },
