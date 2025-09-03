@@ -1,1 +1,41 @@
+# Environment variables
 .env
+*.env
+
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs
+logs/
+*.log
+logs/*.log
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Local database, cache, temp
+/data/
+tmp/
+cache/
+
+# Keys & credentials
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+
+# Coverage / testing
+coverage/
+.nyc_output/
+
+# Build outputs
+dist/
+build/
