@@ -74,23 +74,24 @@ router.post("/topup", async (req, res) => {
     const provider = typeof req.body?.provider === "string" ? req.body.provider : "";
     const providerRef = typeof req.body?.providerRef === "string" ? req.body.providerRef : "";
 
-    // create tx first
+    // Before the transaction, log user and amount
+    console.log("[wallet/topup] user", req.userId?.toString?.(), "amount", amount);
+    
+    // Create the transaction FIRST as before
     const tx = await WalletTransaction.createTopup(req.userId, amount, provider, providerRef);
-
-    // atomically ensure wallet exists and increment balance
-    const updated = await User.findOneAndUpdate(
-      { _id: req.userId },
-      {
-        $setOnInsert: { wallet: { balance: 0, currency: 'CREDITS' } },
-        $inc: { "wallet.balance": amount }
-      },
-      { new: true, upsert: true, projection: { "wallet.balance": 1 } }
+    
+    // Replace the update block with this simplified and reliable increment
+    const updated = await User.findByIdAndUpdate(
+      req.userId,
+      { $inc: { "wallet.balance": amount } },
+      { new: true }
     );
     if (!updated) return res.status(404).json({ error: "USER_NOT_FOUND" });
     const balance = updated.wallet?.balance ?? 0;
-
     return res.json({ ok: true, balance, txId: tx._id });
   } catch (err) {
+    // In the catch, log the error before returning
+    console.error("[wallet/topup] error", err);
     return res.status(500).json({ error: "SERVER_ERROR" });
   }
 });
