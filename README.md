@@ -92,3 +92,4 @@ Google OAuth + JWT cookie-based auth is available.
 ## 📜 License
 - Story content uses **public-domain classics**.  
 - Code is licensed under **MIT**.  
+- Bu güzel dünya kardeşim böyle!
