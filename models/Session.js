@@ -71,3 +71,19 @@ sessionSchema.pre("save", function (next) {
 });
 
 export const Session = mongoose.models?.Session || model("Session", sessionSchema);
+
+// Ensure single ACTIVE session per (userId, storyId)
+sessionSchema.index(
+  { userId: 1, storyId: 1 },
+  { unique: true, partialFilterExpression: { "progress.completed": false } }
+);
+
+// Listing performance
+sessionSchema.index({ userId: 1, _id: -1 });
+sessionSchema.index({ userId: 1, "progress.completed": 1, _id: -1 });
+sessionSchema.index({ storyId: 1, "progress.completed": 1 });
+
+// Optional: on boot, log existing indexes once (do not throw)
+Session.collection.getIndexes()
+  .then(ix => console.log("[sessions] indexes:", Object.keys(ix)))
+  .catch(() => {});

@@ -1,3 +1,4 @@
+// NOTE: Lightweight validation + consistent error bodies ({ error, field? }) applied.
 import { Router } from "express";
 import mongoose from "mongoose";
 import { Story } from "../models/Story.js";
@@ -7,39 +8,45 @@ import { WalletTransaction } from "../models/WalletTransaction.js";
 
 const router = Router();
 
-function bad(req, res, field) {
-  return res.status(400).json({ error: "BAD_REQUEST", field });
-}
+// removed legacy helpers (bad, unauth) in favor of err()/ok()
 
-function unauth(req, res) {
-  return res.status(401).json({ error: "UNAUTHENTICATED" });
+function isNonEmptyString(v) { return typeof v === "string" && v.trim().length > 0; }
+function toSlug(v) { return String(v || "").trim().toLowerCase(); }
+function isObjectId(v) { try { return mongoose.Types.ObjectId.isValid(String(v)); } catch { return false; } }
+function ok(res, data) { return res.json(data); }
+function err(res, code = 500, name = "SERVER_ERROR", field) {
+  const body = field ? { error: name, field } : { error: name };
+  return res.status(code).json(body);
 }
 
 // POST /api/sessions/start
 router.post("/start", async (req, res) => {
   try {
-    if (!req.userId) return unauth(req, res);
+    if (!req.userId) return err(res, 401, "UNAUTHENTICATED");
 
     const body = req.body || {};
-    const storySlug = typeof body.storySlug === "string" ? body.storySlug.trim().toLowerCase() : "";
-    const characterId = typeof body.characterId === "string" ? body.characterId.trim() : "";
+    const storySlug = toSlug(body.storySlug);
+    const characterId = isNonEmptyString(body.characterId) ? body.characterId.trim() : "";
     const roleIdsRaw = body.roleIds;
 
-    if (!storySlug) return bad(req, res, "storySlug");
-    if (!characterId) return bad(req, res, "characterId");
+    if (!isNonEmptyString(storySlug)) return err(res, 400, "BAD_REQUEST", "storySlug");
+    if (!isNonEmptyString(characterId)) return err(res, 400, "BAD_REQUEST", "characterId");
+    if (roleIdsRaw !== undefined && !(Array.isArray(roleIdsRaw) && roleIdsRaw.every(r => typeof r === "string"))) {
+      return err(res, 400, "BAD_REQUEST", "roleIds");
+    }
 
     const story = await Story.findOne({ slug: storySlug, isActive: true }).lean();
-    if (!story) return res.status(404).json({ error: "NOT_FOUND" });
+    if (!story) return err(res, 404, "NOT_FOUND");
 
     const characterExists = Array.isArray(story.characters) && story.characters.some(c => c.id === characterId);
-    if (!characterExists) return bad(req, res, "characterId");
+    if (!characterExists) return err(res, 400, "BAD_REQUEST", "characterId");
 
     let roleIds = [];
     if (Array.isArray(roleIdsRaw)) {
       roleIds = roleIdsRaw.filter(r => typeof r === "string");
       const validRoleIdSet = new Set((story.roles || []).map(r => r.id));
       const invalid = roleIds.find(r => !validRoleIdSet.has(r));
-      if (invalid) return bad(req, res, "roleIds");
+      if (invalid) return err(res, 400, "BAD_REQUEST", "roleIds");
     }
 
     const cost = Number.isInteger(story?.pricing?.creditsPerChapter) && story.pricing.creditsPerChapter > 0
@@ -47,7 +54,7 @@ router.post("/start", async (req, res) => {
       : 10;
 
     const user = await User.findById(req.userId).lean();
-    if (!user) return res.status(404).json({ error: "USER_NOT_FOUND" });
+    if (!user) return err(res, 404, "NOT_FOUND");
     const balance = user?.wallet?.balance ?? 0;
     if (balance < cost) {
       return res.status(402).json({ error: "INSUFFICIENT_CREDITS", needed: cost, balance });
@@ -64,7 +71,7 @@ router.post("/start", async (req, res) => {
     if (existing) {
       const latest = await User.findById(req.userId, "wallet.balance").lean();
       const latestBalance = latest?.wallet?.balance ?? 0;
-      return res.json({
+      return ok(res, {
         sessionId: String(existing._id),
         story: { title: story.title, slug: story.slug },
         progress: existing.progress,
@@ -130,14 +137,14 @@ router.post("/start", async (req, res) => {
     const latest = await User.findById(req.userId, "wallet.balance").lean();
     const latestBalance = latest?.wallet?.balance ?? 0;
 
-    return res.json({
+    return ok(res, {
       sessionId: String(sess._id),
       story: { title: story.title, slug: story.slug },
       progress: sess.progress,
       wallet: { balance: latestBalance },
     });
-  } catch (err) {
-    return res.status(500).json({ error: "SERVER_ERROR" });
+  } catch (e) {
+    return err(res, 500, "SERVER_ERROR");
   }
 });
 
@@ -146,16 +153,14 @@ router.post("/start", async (req, res) => {
 // GET /api/sessions/active
 router.get("/active", async (req, res) => {
   try {
-    if (!req.userId) return unauth(req, res);
+    if (!req.userId) return err(res, 401, "UNAUTHENTICATED");
 
-    const storySlug = typeof req.query.storySlug === "string"
-      ? req.query.storySlug.trim().toLowerCase()
-      : "";
+    const storySlug = toSlug(req.query.storySlug);
 
     let storyIdFilter = null;
     if (storySlug) {
       const story = await Story.findOne({ slug: storySlug, isActive: true }, { _id: 1, title: 1, slug: 1 }).lean();
-      if (!story) return res.status(404).json({ error: "NOT_FOUND" });
+      if (!story) return err(res, 404, "NOT_FOUND");
       storyIdFilter = story._id;
 
       const sess = await Session.findOne({
@@ -164,12 +169,12 @@ router.get("/active", async (req, res) => {
         "progress.completed": false
       }).sort({ updatedAt: -1 }).lean();
 
-      if (!sess) return res.status(404).json({ error: "NOT_FOUND" });
+      if (!sess) return err(res, 404, "NOT_FOUND");
 
       const user = await User.findById(req.userId, "wallet.balance").lean();
       const balance = user?.wallet?.balance ?? 0;
 
-      return res.json({
+      return ok(res, {
         sessionId: String(sess._id),
         story: { title: story.title, slug: story.slug },
         progress: sess.progress,
@@ -181,15 +186,15 @@ router.get("/active", async (req, res) => {
         "progress.completed": false
       }).sort({ updatedAt: -1 }).lean();
 
-      if (!sess) return res.status(404).json({ error: "NOT_FOUND" });
+      if (!sess) return err(res, 404, "NOT_FOUND");
 
       const story = await Story.findById(sess.storyId, { title: 1, slug: 1 }).lean();
-      if (!story) return res.status(404).json({ error: "NOT_FOUND" });
+      if (!story) return err(res, 404, "NOT_FOUND");
 
       const user = await User.findById(req.userId, "wallet.balance").lean();
       const balance = user?.wallet?.balance ?? 0;
 
-      return res.json({
+      return ok(res, {
         sessionId: String(sess._id),
         story: { title: story.title, slug: story.slug },
         progress: sess.progress,
@@ -197,14 +202,14 @@ router.get("/active", async (req, res) => {
       });
     }
   } catch (_err) {
-    return res.status(500).json({ error: "SERVER_ERROR" });
+    return err(res, 500, "SERVER_ERROR");
   }
 });
 
 // GET /api/sessions
 router.get("/", async (req, res) => {
   try {
-    if (!req.userId) return unauth(req, res);
+    if (!req.userId) return err(res, 401, "UNAUTHENTICATED");
 
     const valid = new Set(["active", "completed", "all"]);
     const status = valid.has(String(req.query.status)) ? String(req.query.status) : "active";
@@ -218,10 +223,8 @@ router.get("/", async (req, res) => {
     if (status === "completed") query["progress.completed"] = true;
 
     const cursor = typeof req.query.cursor === "string" ? req.query.cursor.trim() : "";
-    if (cursor) {
-      if (mongoose.Types.ObjectId.isValid(cursor)) {
-        query._id = { $lt: new mongoose.Types.ObjectId(cursor) };
-      }
+    if (cursor && mongoose.Types.ObjectId.isValid(cursor)) {
+      query._id = { $lt: new mongoose.Types.ObjectId(cursor) };
     }
 
     const sessions = await Session
@@ -231,7 +234,7 @@ router.get("/", async (req, res) => {
       .lean();
 
     if (!sessions.length) {
-      return res.json({ items: [] });
+      return ok(res, { items: [] });
     }
 
     // Map storyIds -> {title, slug}
@@ -253,27 +256,28 @@ router.get("/", async (req, res) => {
     const resp = { items };
     if (nextCursor) resp.nextCursor = nextCursor;
 
-    return res.json(resp);
+    return ok(res, resp);
   } catch (_err) {
-    return res.status(500).json({ error: "SERVER_ERROR" });
+    return err(res, 500, "SERVER_ERROR");
   }
 });
 
 // Re-add the choice route here (after / and /active, before /:id)
 router.post("/:id/choice", async (req, res) => {
   try {
-    if (!req.userId) return unauth(req, res);
+    if (!req.userId) return err(res, 401, "UNAUTHENTICATED");
 
     const sessionId = String(req.params.id || "").trim();
-    if (!sessionId) return res.status(404).json({ error: "NOT_FOUND" });
+    if (!isObjectId(sessionId)) return err(res, 404, "NOT_FOUND");
 
     const body = req.body || {};
     const chosen = typeof body.chosen === "string" ? body.chosen : "";
     const freeText = typeof body.freeText === "string" ? body.freeText : "";
-    const advanceChapter = Boolean(body.advanceChapter);
+    if (freeText && freeText.length > 1000) return err(res, 400, "BAD_REQUEST", "freeText");
+    const advanceChapter = !!body.advanceChapter;
 
     const sess = await Session.findOne({ _id: sessionId, userId: req.userId });
-    if (!sess) return res.status(404).json({ error: "NOT_FOUND" });
+    if (!sess) return err(res, 404, "NOT_FOUND");
 
     // Append user log entry
     sess.log.push({
@@ -291,7 +295,7 @@ router.post("/:id/choice", async (req, res) => {
 
       // Load story for pricing
       const story = await Story.findById(sess.storyId).lean();
-      if (!story) return res.status(404).json({ error: "NOT_FOUND" });
+      if (!story) return err(res, 404, "NOT_FOUND");
 
       const cost = Number.isInteger(story?.pricing?.creditsPerChapter) && story.pricing.creditsPerChapter > 0
         ? story.pricing.creditsPerChapter
@@ -345,19 +349,19 @@ router.post("/:id/choice", async (req, res) => {
     if (updatedWalletBalance !== undefined) {
       response.wallet = { balance: updatedWalletBalance };
     }
-    return res.json(response);
-  } catch (err) {
-    return res.status(500).json({ error: "SERVER_ERROR" });
+    return ok(res, response);
+  } catch (e) {
+    return err(res, 500, "SERVER_ERROR");
   }
 });
 
 // POST /api/sessions/:id/complete
 router.post("/:id/complete", async (req, res) => {
   try {
-    if (!req.userId) return unauth(req, res);
+    if (!req.userId) return err(res, 401, "UNAUTHENTICATED");
 
     const sessionId = String(req.params.id || "").trim();
-    if (!sessionId) return res.status(404).json({ error: "NOT_FOUND" });
+    if (!isObjectId(sessionId)) return err(res, 404, "NOT_FOUND");
 
     // Light input validation
     const body = req.body || {};
@@ -367,27 +371,27 @@ router.post("/:id/complete", async (req, res) => {
     if (stars !== undefined) {
       const n = Number(stars);
       if (!Number.isInteger(n) || n < 1 || n > 5) {
-        return res.status(400).json({ error: "BAD_REQUEST", field: "stars" });
+        return err(res, 400, "BAD_REQUEST", "stars");
       }
       stars = n;
     }
 
     if (text !== undefined) {
       if (typeof text !== "string") {
-        return res.status(400).json({ error: "BAD_REQUEST", field: "text" });
+        return err(res, 400, "BAD_REQUEST", "text");
       }
       text = text.trim();
       if (text.length > 250) {
-        return res.status(400).json({ error: "BAD_REQUEST", field: "text" });
+        return err(res, 400, "BAD_REQUEST", "text");
       }
     }
 
     const sess = await Session.findOne({ _id: sessionId, userId: req.userId });
-    if (!sess) return res.status(404).json({ error: "NOT_FOUND" });
+    if (!sess) return err(res, 404, "NOT_FOUND");
 
     // If already completed, just return current state (idempotent)
     if (sess.progress?.completed === true) {
-      return res.json({
+      return ok(res, {
         sessionId: String(sess._id),
         progress: sess.progress,
         finale: sess.finale,
@@ -417,31 +421,32 @@ router.post("/:id/complete", async (req, res) => {
 
     await sess.save();
 
-    return res.json({
+    return ok(res, {
       sessionId: String(sess._id),
       progress: sess.progress,
       finale: sess.finale,
       rating: sess.rating ?? null
     });
-  } catch (err) {
-    return res.status(500).json({ error: "SERVER_ERROR" });
+  } catch (e) {
+    return err(res, 500, "SERVER_ERROR");
+  }
+});
+
+// GET /api/sessions/:id (must be last)
+router.get("/:id", async (req, res) => {
+  try {
+    if (!req.userId) return err(res, 401, "UNAUTHENTICATED");
+    const id = String(req.params.id || "").trim();
+    if (!isObjectId(id)) return err(res, 404, "NOT_FOUND");
+
+    const sess = await Session.findById(id).lean();
+    if (!sess) return err(res, 404, "NOT_FOUND");
+    if (String(sess.userId) !== String(req.userId)) return err(res, 404, "NOT_FOUND");
+
+    return ok(res, sess);
+  } catch (e) {
+    return err(res, 500, "SERVER_ERROR");
   }
 });
 
 export default router;
-// GET /api/sessions/:id (must be last)
-router.get("/:id", async (req, res) => {
-  try {
-    if (!req.userId) return unauth(req, res);
-    const id = String(req.params.id || "").trim();
-    if (!id) return res.status(404).json({ error: "NOT_FOUND" });
-
-    const sess = await Session.findById(id).lean();
-    if (!sess) return res.status(404).json({ error: "NOT_FOUND" });
-    if (String(sess.userId) !== String(req.userId)) return res.status(404).json({ error: "NOT_FOUND" });
-
-    return res.json(sess);
-  } catch (err) {
-    return res.status(500).json({ error: "SERVER_ERROR" });
-  }
-});
