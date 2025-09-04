@@ -4,6 +4,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import passport from "passport";
+import helmet from "helmet";
+import compression from "compression";
+import morgan from "morgan";
+import rateLimit from "express-rate-limit";
 import { verifyJwt, isProduction } from "./auth/config.js";
 import "./auth/passport.js";
 import { User } from "./models/User.js";
@@ -19,12 +23,42 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
+// Env toggles & helpers
+const NODE_ENV = process.env.NODE_ENV || "development";
 const FE_ORIGIN = process.env.FE_ORIGIN || "http://localhost:5173";
-app.use(cors({ origin: FE_ORIGIN, credentials: true }));
-app.use(express.json());
+const FORCE_SECURE_COOKIE = String(process.env.FORCE_SECURE_COOKIE || "").toLowerCase() === "true";
+const TRUST_PROXY = String(process.env.TRUST_PROXY || "").toLowerCase() === "true";
+const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60000);
+const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 120);
+
+if (TRUST_PROXY) app.set("trust proxy", 1);
+
+// Middleware
 app.use(cookieParser());
+app.use(cors({
+  origin: FE_ORIGIN,
+  credentials: true,
+  methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(compression());
+app.use(morgan(isProduction ? "combined" : "dev"));
+app.use(express.json());
 app.use(passport.initialize());
+
+// Global rate limiter on /api
+const apiLimiter = rateLimit({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: RATE_LIMIT_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api", apiLimiter);
 
 // Simple route
 app.get("/", (req, res) => {

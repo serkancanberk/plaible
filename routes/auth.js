@@ -1,8 +1,11 @@
 import { Router } from "express";
 import passport from "passport";
 import "../auth/passport.js";
-import { signJwt, verifyJwt, isProduction } from "../auth/config.js";
+import { signJwt, verifyJwt } from "../auth/config.js";
 const FE_ORIGIN = process.env.FE_ORIGIN || "/";
+const NODE_ENV = process.env.NODE_ENV || "development";
+const isProduction = NODE_ENV === "production";
+const FORCE_SECURE_COOKIE = String(process.env.FORCE_SECURE_COOKIE || "").toLowerCase() === "true";
 import { User } from "../models/User.js";
 import passportCore from "passport";
 
@@ -59,12 +62,14 @@ router.get(
   (req, res) => {
     try {
       const token = signJwt({ sub: req.user._id.toString() });
-      res.cookie("plaible_jwt", token, {
+      const cookieOpts = {
         httpOnly: true,
-        sameSite: "lax",
-        secure: false, // set true in production behind HTTPS
+        sameSite: isProduction ? "lax" : "lax",
+        secure: isProduction || FORCE_SECURE_COOKIE,
         maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
+        path: "/",
+      };
+      res.cookie("plaible_jwt", token, cookieOpts);
       return res.redirect(FE_ORIGIN);
     } catch (e) {
       console.error("JWT issue in callback", e);
@@ -98,13 +103,27 @@ router.get("/me", async (req, res) => {
 
 // Logout
 router.post("/logout", (req, res) => {
-  res.clearCookie("plaible_jwt", { path: "/" });
-  res.json({ ok: true });
+  const cookieOpts = {
+    httpOnly: true,
+    sameSite: isProduction ? "lax" : "lax",
+    secure: isProduction || FORCE_SECURE_COOKIE,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  };
+  res.clearCookie("plaible_jwt", { ...cookieOpts });
+  return res.json({ ok: true });
 });
 
 // GET alias for logout (dev convenience)
 router.get('/logout', (req, res) => {
-  res.clearCookie('plaible_jwt', { httpOnly: true, sameSite: 'lax', secure: false, path: '/' });
+  const cookieOpts = {
+    httpOnly: true,
+    sameSite: isProduction ? "lax" : "lax",
+    secure: isProduction || FORCE_SECURE_COOKIE,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  };
+  res.clearCookie('plaible_jwt', { ...cookieOpts });
   return res.json({ ok: true });
 });
 
