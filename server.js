@@ -11,6 +11,7 @@ import authRouter from "./routes/auth.js";
 import storiesRouter from "./routes/stories.js";
 import sessionsRouter from "./routes/sessions.js";
 import walletRouter from "./routes/wallet.js";
+import feedbacksRouter from "./routes/feedbacks.js";
 
 dotenv.config();
 
@@ -70,6 +71,9 @@ app.use("/api/sessions", authGuard, sessionsRouter);
 
 // Wallet router
 app.use("/api/wallet", authGuard, walletRouter);
+
+// Feedbacks router
+app.use("/api/feedbacks", authGuard, feedbacksRouter);
 
 // MongoDB connection
 const MONGO_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/plaible";
