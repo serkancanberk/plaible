@@ -5,6 +5,8 @@ import { Story } from "../models/Story.js";
 import { User } from "../models/User.js";
 
 const router = Router();
+import { Router as _Router } from "express";
+export const publicFeedbacksRouter = _Router();
 
 function isNonEmptyString(v) { return typeof v === "string" && v.trim().length > 0; }
 function toSlug(v) { return String(v || "").trim().toLowerCase(); }
@@ -112,6 +114,35 @@ router.get("/story/:slug", async (req, res) => {
     const cursor = typeof req.query.cursor === "string" ? req.query.cursor : "";
     const all = Array.isArray(story.feedbacks) ? story.feedbacks.slice() : [];
     // sort by date desc
+    all.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+    const filtered = cursor
+      ? all.filter(x => new Date(x.date || 0) < new Date(cursor))
+      : all;
+
+    const page = filtered.slice(0, limit);
+    const nextCursor = page.length === limit ? page[page.length - 1].date : undefined;
+
+    return ok(res, { items: page.map(({ userId, _uid, ...rest }) => rest), nextCursor });
+  } catch (e) {
+    return err(res, 500, "SERVER_ERROR");
+  }
+});
+
+publicFeedbacksRouter.get("/story/:slug", async (req, res) => {
+  try {
+    const slug = toSlug(req.params.slug);
+    if (!isNonEmptyString(slug)) return err(res, 400, "BAD_REQUEST", "slug");
+
+    const story = await Story.findOne({ slug, isActive: true }, { feedbacks: 1 }).lean();
+    if (!story) return err(res, 404, "NOT_FOUND");
+
+    let limit = parseInt(String(req.query.limit ?? "20"), 10);
+    if (Number.isNaN(limit) || limit <= 0) limit = 20;
+    if (limit > 50) limit = 50;
+
+    const cursor = typeof req.query.cursor === "string" ? req.query.cursor : "";
+    const all = Array.isArray(story.feedbacks) ? story.feedbacks.slice() : [];
     all.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
     const filtered = cursor

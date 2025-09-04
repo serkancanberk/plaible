@@ -12,6 +12,7 @@ import storiesRouter from "./routes/stories.js";
 import sessionsRouter from "./routes/sessions.js";
 import walletRouter from "./routes/wallet.js";
 import feedbacksRouter from "./routes/feedbacks.js";
+import { publicFeedbacksRouter } from "./routes/feedbacks.js";
 import savesRouter from "./routes/saves.js";
 
 dotenv.config();
@@ -65,7 +66,8 @@ app.use("/api/users", usersRouter);
 app.use("/api/auth", authRouter);
 
 // Stories router
-app.use("/api/stories", authGuard, storiesRouter);
+// Public browsing per Blueprint
+app.use("/api/stories", storiesRouter);
 
 // Sessions router
 app.use("/api/sessions", authGuard, sessionsRouter);
@@ -74,6 +76,9 @@ app.use("/api/sessions", authGuard, sessionsRouter);
 app.use("/api/wallet", authGuard, walletRouter);
 
 // Feedbacks router
+// Public listing for story feedbacks (GET only)
+app.use("/api/feedbacks", publicFeedbacksRouter);
+// Auth-protected feedback endpoints (POST upsert, etc.)
 app.use("/api/feedbacks", authGuard, feedbacksRouter);
 app.use("/api/saves", authGuard, savesRouter);
 
