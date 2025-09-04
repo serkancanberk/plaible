@@ -1,3 +1,144 @@
+Plaible — Backend
+
+Express + MongoDB backend for interactive, credit-based classic stories.
+
+Table of Contents
+	•	Quickstart
+	•	Environment
+	•	Run Locally
+	•	Authentication
+	•	Public Browsing (Unauthenticated)
+	•	Feature Endpoints
+	•	Testing (curl / browser)
+	•	Dev Toggles & Tips
+	•	Docs
+	•	Troubleshooting
+
+Quickstart
+	1.	Clone & install
+
+git clone git@github.com:serkancanberk/plaible.git
+cd plaible
+npm install
+
+	2.	Environment
+
+	•	Copy .env.example → .env and fill placeholders:
+	•	MONGODB_URI (local: mongodb://127.0.0.1:27017/plaible)
+	•	JWT_SECRET (use a long random string)
+	•	Google OAuth: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL
+(local: http://localhost:5050/api/auth/google/callback)
+	•	Optional: FE_ORIGIN=http://localhost:5050 (switch to http://localhost:5173 when FE is running)
+
+	3.	Seed sample data (optional)
+
+npm run seed:story     # seeds "The Picture of Dorian Gray"
+npm run seed:user      # creates a test user (dev flow only)
+
+	4.	Run the server
+
+node server.js
+# Server -> http://localhost:5050
+
+Environment
+
+A template is provided in .env.example. Required keys:
+	•	Core: NODE_ENV, PORT, FE_ORIGIN, MONGODB_URI, JWT_SECRET
+	•	Google OAuth: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL, GOOGLE_FORCE_CONSENT
+	•	Dev flags: DEV_FAKE_USER, AUTH_DEBUG
+	•	Optional: OPENAI_*, STRIPE_SECRET_KEY, IYZICO_*, DEFAULT_LANGUAGE
+
+Note: .env is git-ignored by default.
+
+Run Locally
+
+node server.js
+
+	•	Health: GET /api/health → { ok: true, env }
+	•	Root: GET / → “Plaible API is running…”
+
+Authentication
+
+Google OAuth (stateless JWT cookie):
+	•	Start: GET /api/auth/google (append ?force=1 to always show consent if GOOGLE_FORCE_CONSENT=false)
+	•	Callback: GET /api/auth/google/callback (sets plaible_jwt cookie)
+	•	Who am I: GET /api/auth/me (requires cookie)
+	•	Logout: POST /api/auth/logout (also GET /api/auth/logout in dev)
+	•	Ping: GET /api/auth/ping
+
+Dev fallback (optional):
+Set NODE_ENV=development and DEV_FAKE_USER=1 to auto-inject a fixed userId for protected routes.
+
+Public Browsing (Unauthenticated)
+
+These endpoints are intentionally public for landing / marketing pages:
+	•	GET /api/stories — list stories (cards)
+	•	GET /api/stories/:slug — story detail (full metadata)
+	•	GET /api/feedbacks/story/:slug?limit=&cursor= — public reviews feed
+
+Feature Endpoints
+
+All below require auth (cookie) unless stated otherwise:
+	•	Stories: GET /api/stories, GET /api/stories/:slug (public)
+	•	Sessions:
+	•	POST /api/sessions/start — start (deduct credits, one active per story)
+	•	GET /api/sessions/active — latest active session (optional ?storySlug=)
+	•	GET /api/sessions — list (status filter, cursor pagination)
+	•	POST /api/sessions/:id/choice — append choice / advance (deduct)
+	•	POST /api/sessions/:id/complete — mark completed (+optional rating)
+	•	GET /api/sessions/:id — fetch one (owner only)
+	•	Wallet:
+	•	GET /api/wallet/me — balance
+	•	GET /api/wallet/transactions?limit=&cursor= — history
+	•	POST /api/wallet/topup — add credits (dev/sim)
+	•	POST /api/wallet/deduct — deduct credits
+	•	POST /api/wallet/refund — refund
+	•	Feedbacks:
+	•	POST /api/feedbacks — upsert user’s review
+	•	GET /api/feedbacks/story/:slug — public list (public)
+	•	Saves (Bookmarks):
+	•	POST /api/saves — save (idempotent)
+	•	DELETE /api/saves/:slug — unsave (idempotent)
+	•	GET /api/saves — list bookmarks
+	•	GET /api/saves/shelf — combined recent (active sessions) + saved (bookmarks)
+	•	GET /api/saves/story/:slug/is-saved — boolean for current user
+
+Testing (curl / browser)
+
+Public (no cookie):
+
+curl http://localhost:5050/api/stories
+curl "http://localhost:5050/api/feedbacks/story/the-picture-of-dorian-gray?limit=2"
+
+Login (browser):
+	•	Open http://localhost:5050/api/auth/google → consent → redirected
+	•	Check: http://localhost:5050/api/auth/me
+
+Wallet (after login):
+
+curl -X POST http://localhost:5050/api/wallet/topup \
+  -H "Content-Type: application/json" \
+  -d '{"amount":100,"provider":"dev"}'
+curl http://localhost:5050/api/wallet/me
+
+Session start (after login):
+
+curl -X POST http://localhost:5050/api/sessions/start \
+  -H "Content-Type: application/json" \
+  -d '{"storySlug":"the-picture-of-dorian-gray","characterId":"chr_dorian"}'
+
+Dev Toggles & Tips
+	•	Force consent screen: set GOOGLE_FORCE_CONSENT=true or use GET /api/auth/google?force=1
+	•	Frontend later: switch FE_ORIGIN to http://localhost:5173 when Vite FE runs
+	•	Local Mongo (no replica set): transactions gracefully fall back; safe for dev
+
+Docs
+	•	Sessions API: docs/sessions.md
+
+Troubleshooting
+	•	401 UNAUTHENTICATED: Login first (/api/auth/google) or enable DEV_FAKE_USER=1 in development.
+	•	OAuth not redirecting: Check GOOGLE_CLIENT_ID/SECRET/CALLBACK_URL and Authorized redirect URI in Google Console.
+	•	Cookie issues: In dev cookie is httpOnly, sameSite=lax, secure=false. In prod set secure=true and proper domain/HTTPS.
 # 📖 Plaible.art
 
 Plaible.art is a **story-driven interactive reading and role-playing platform**.  
