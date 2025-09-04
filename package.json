@@ -8,7 +8,8 @@
     "seed:story": "node scripts/seedStory.mjs",
     "seed:user": "node scripts/seedUser.mjs",
     "test:story": "node scripts/testStory.mjs",
-    "test:wallet": "node scripts/testWallet.mjs"
+    "test:wallet": "node scripts/testWallet.mjs",
+    "test:feedback": "node scripts/testFeedback.mjs"
   },
   "keywords": [],
   "author": "",
