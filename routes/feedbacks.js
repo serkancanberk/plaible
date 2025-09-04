@@ -10,35 +10,33 @@ export const publicFeedbacksRouter = _Router();
 
 function isNonEmptyString(v) { return typeof v === "string" && v.trim().length > 0; }
 function toSlug(v) { return String(v || "").trim().toLowerCase(); }
-function ok(res, data) { return res.json(data); }
-function err(res, code = 500, name = "SERVER_ERROR", field) {
-  const body = field ? { error: name, field } : { error: name };
-  return res.status(code).json(body);
-}
+const ok = (res, data = {}) => res.json({ ok: true, ...data });
+const err = (res, code = "BAD_REQUEST", http = 400, extra = {}) =>
+  res.status(http).json({ error: code, ...extra });
 
 // POST /api/feedbacks
 // body: { storySlug: string, stars: 1..5, text?: string (<=250) }
 router.post("/", async (req, res) => {
   try {
-    if (!req.userId) return err(res, 401, "UNAUTHENTICATED");
+    if (!req.userId) return err(res, "UNAUTHENTICATED", 401);
     const { storySlug, stars, text } = req.body || {};
     const slug = toSlug(storySlug);
-    if (!isNonEmptyString(slug)) return err(res, 400, "BAD_REQUEST", "storySlug");
+    if (!isNonEmptyString(slug)) return err(res, "BAD_REQUEST", 400, { field: "storySlug" });
 
     const n = Number(stars);
-    if (!Number.isInteger(n) || n < 1 || n > 5) return err(res, 400, "BAD_REQUEST", "stars");
+    if (!Number.isInteger(n) || n < 1 || n > 5) return err(res, "BAD_REQUEST", 400, { field: "stars" });
 
     if (text !== undefined) {
-      if (typeof text !== "string") return err(res, 400, "BAD_REQUEST", "text");
-      if (text.trim().length > 250) return err(res, 400, "BAD_REQUEST", "text");
+      if (typeof text !== "string") return err(res, "BAD_REQUEST", 400, { field: "text" });
+      if (text.trim().length > 250) return err(res, "BAD_REQUEST", 400, { field: "text" });
     }
 
     const story = await Story.findOne({ slug, isActive: true });
-    if (!story) return err(res, 404, "NOT_FOUND");
+    if (!story) return err(res, "NOT_FOUND", 404);
 
     // Load user for display info
     const user = await User.findById(req.userId, { "identity.displayName": 1, profilePictureUrl: 1 }).lean();
-    if (!user) return err(res, 404, "NOT_FOUND");
+    if (!user) return err(res, "NOT_FOUND", 404);
 
     const displayName = user.identity?.displayName || "Plaible User";
     const profilePictureUrl = user.profilePictureUrl || "";
@@ -83,7 +81,6 @@ router.post("/", async (req, res) => {
     await story.save();
 
     return ok(res, {
-      ok: true,
       stats: story.stats,
       last: {
         displayName: newEntry.displayName,
@@ -93,7 +90,8 @@ router.post("/", async (req, res) => {
       }
     });
   } catch (e) {
-    return err(res, 500, "SERVER_ERROR");
+    console.error("[feedbacks:POST]", e);
+    return err(res, "SERVER_ERROR", 500);
   }
 });
 
@@ -102,10 +100,10 @@ router.post("/", async (req, res) => {
 router.get("/story/:slug", async (req, res) => {
   try {
     const slug = toSlug(req.params.slug);
-    if (!isNonEmptyString(slug)) return err(res, 400, "BAD_REQUEST", "slug");
+    if (!isNonEmptyString(slug)) return err(res, "BAD_REQUEST", 400, { field: "slug" });
 
     const story = await Story.findOne({ slug, isActive: true }, { feedbacks: 1 }).lean();
-    if (!story) return err(res, 404, "NOT_FOUND");
+    if (!story) return err(res, "NOT_FOUND", 404);
 
     let limit = parseInt(String(req.query.limit ?? "20"), 10);
     if (Number.isNaN(limit) || limit <= 0) limit = 20;
@@ -125,17 +123,18 @@ router.get("/story/:slug", async (req, res) => {
 
     return ok(res, { items: page.map(({ userId, _uid, ...rest }) => rest), nextCursor });
   } catch (e) {
-    return err(res, 500, "SERVER_ERROR");
+    console.error("[feedbacks:GET]", e);
+    return err(res, "SERVER_ERROR", 500);
   }
 });
 
 publicFeedbacksRouter.get("/story/:slug", async (req, res) => {
   try {
     const slug = toSlug(req.params.slug);
-    if (!isNonEmptyString(slug)) return err(res, 400, "BAD_REQUEST", "slug");
+    if (!isNonEmptyString(slug)) return err(res, "BAD_REQUEST", 400, { field: "slug" });
 
     const story = await Story.findOne({ slug, isActive: true }, { feedbacks: 1 }).lean();
-    if (!story) return err(res, 404, "NOT_FOUND");
+    if (!story) return err(res, "NOT_FOUND", 404);
 
     let limit = parseInt(String(req.query.limit ?? "20"), 10);
     if (Number.isNaN(limit) || limit <= 0) limit = 20;
@@ -154,7 +153,8 @@ publicFeedbacksRouter.get("/story/:slug", async (req, res) => {
 
     return ok(res, { items: page.map(({ userId, _uid, ...rest }) => rest), nextCursor });
   } catch (e) {
-    return err(res, 500, "SERVER_ERROR");
+    console.error("[feedbacks:publicGET]", e);
+    return err(res, "SERVER_ERROR", 500);
   }
 });
 

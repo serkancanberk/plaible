@@ -4,6 +4,10 @@ import { Story } from "../models/Story.js";
 
 const router = Router();
 
+const ok = (res, data = {}) => res.json({ ok: true, ...data });
+const err = (res, code = "BAD_REQUEST", http = 400, extra = {}) =>
+  res.status(http).json({ error: code, ...extra });
+
 /** GET /api/stories
  * List lightweight cards for browsing (limits payload).
  */
@@ -29,10 +33,10 @@ router.get("/", async (req, res) => {
       .limit(50)
       .lean();
 
-    res.json({ items: docs });
+    return ok(res, { items: docs });
   } catch (err) {
     console.error("GET /api/stories error:", err);
-    res.status(500).json({ error: "Failed to fetch stories" });
+    return err(res, "SERVER_ERROR", 500);
   }
 });
 
@@ -42,15 +46,15 @@ router.get("/", async (req, res) => {
 router.get("/:slug", async (req, res) => {
   try {
     const slug = String(req.params.slug || "").toLowerCase().trim();
-    if (!slug) return res.status(400).json({ error: "Missing slug" });
+    if (!slug) return err(res, "BAD_REQUEST", 400, { field: "slug" });
 
     const doc = await Story.findOne({ slug, isActive: true }).lean();
-    if (!doc) return res.status(404).json({ error: "Story not found" });
+    if (!doc) return err(res, "NOT_FOUND", 404);
 
-    res.json(doc);
+    return ok(res, doc);
   } catch (err) {
     console.error("GET /api/stories/:slug error:", err);
-    res.status(500).json({ error: "Failed to fetch story" });
+    return err(res, "SERVER_ERROR", 500);
   }
 });
 

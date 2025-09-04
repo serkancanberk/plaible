@@ -5,6 +5,10 @@ import { WalletTransaction } from "../models/WalletTransaction.js";
 
 const router = Router();
 
+const ok = (res, data = {}) => res.json({ ok: true, ...data });
+const err = (res, code = "BAD_REQUEST", http = 400, extra = {}) =>
+  res.status(http).json({ error: code, ...extra });
+
 function parsePositiveInt(v, min = 1, max = 100000) {
   const num = Number(v);
   if (!Number.isInteger(num)) return null;
@@ -15,19 +19,19 @@ function parsePositiveInt(v, min = 1, max = 100000) {
 // 1) GET /api/wallet/me
 router.get("/me", async (req, res) => {
   try {
-    if (!req.userId) return res.status(401).json({ error: "UNAUTHENTICATED" });
+    if (!req.userId) return err(res, "UNAUTHENTICATED", 401);
     const user = await User.findById(req.userId).lean();
     const balance = user?.wallet?.balance ?? 0;
-    return res.json({ balance });
+    return ok(res, { balance });
   } catch (err) {
-    return res.status(500).json({ error: "SERVER_ERROR" });
+    return err(res, "SERVER_ERROR", 500);
   }
 });
 
 // 2) GET /api/wallet/transactions?limit=20&cursor=<createdAt_iso>
 router.get("/transactions", async (req, res) => {
   try {
-    if (!req.userId) return res.status(401).json({ error: "UNAUTHENTICATED" });
+    if (!req.userId) return err(res, "UNAUTHENTICATED", 401);
     const limitRaw = req.query.limit;
     let limit = parsePositiveInt(limitRaw || 20, 1, 100);
     if (!limit) limit = 20;
@@ -56,19 +60,19 @@ router.get("/transactions", async (req, res) => {
     }));
 
     const nextCursor = hasMore ? items[items.length - 1]?.createdAt?.toISOString() : undefined;
-    return res.json(nextCursor ? { items, nextCursor } : { items });
+    return ok(res, nextCursor ? { items, nextCursor } : { items });
   } catch (err) {
-    return res.status(500).json({ error: "SERVER_ERROR" });
+    return err(res, "SERVER_ERROR", 500);
   }
 });
 
 // 3) POST /api/wallet/topup
 router.post("/topup", async (req, res) => {
   try {
-    if (!req.userId) return res.status(401).json({ error: "UNAUTHENTICATED" });
+    if (!req.userId) return err(res, "UNAUTHENTICATED", 401);
     const amount = parsePositiveInt(req.body?.amount);
     if (!amount) {
-      return res.status(400).json({ error: "BAD_REQUEST", field: "amount" });
+      return err(res, "BAD_REQUEST", 400, { field: "amount" });
     }
 
     const provider = typeof req.body?.provider === "string" ? req.body.provider : "";
@@ -86,23 +90,23 @@ router.post("/topup", async (req, res) => {
       { $inc: { "wallet.balance": amount } },
       { new: true }
     );
-    if (!updated) return res.status(404).json({ error: "USER_NOT_FOUND" });
+    if (!updated) return err(res, "NOT_FOUND", 404);
     const balance = updated.wallet?.balance ?? 0;
-    return res.json({ ok: true, balance, txId: tx._id });
+    return ok(res, { balance, txId: tx._id });
   } catch (err) {
     // In the catch, log the error before returning
     console.error("[wallet/topup] error", err);
-    return res.status(500).json({ error: "SERVER_ERROR" });
+    return err(res, "SERVER_ERROR", 500);
   }
 });
 
 // 4) POST /api/wallet/deduct
 router.post("/deduct", async (req, res) => {
   try {
-    if (!req.userId) return res.status(401).json({ error: "UNAUTHENTICATED" });
+    if (!req.userId) return err(res, "UNAUTHENTICATED", 401);
     const amount = parsePositiveInt(req.body?.amount);
     if (!amount) {
-      return res.status(400).json({ error: "BAD_REQUEST", field: "amount" });
+      return err(res, "BAD_REQUEST", 400, { field: "amount" });
     }
     const storyId = typeof req.body?.storyId === "string" ? req.body.storyId : null;
     const chapter = Number.isInteger(req.body?.chapter) ? req.body.chapter : null;
@@ -110,7 +114,7 @@ router.post("/deduct", async (req, res) => {
     const user = await User.findById(req.userId);
     const balance = user?.wallet?.balance ?? 0;
     if (balance < amount) {
-      return res.status(402).json({ error: "INSUFFICIENT_CREDITS", balance });
+      return err(res, "INSUFFICIENT_CREDITS", 402, { balance });
     }
 
     try {
@@ -120,33 +124,33 @@ router.post("/deduct", async (req, res) => {
         { $inc: { "wallet.balance": -amount } },
         { new: true }
       );
-      return res.json({ ok: true, balance: updated?.wallet?.balance ?? 0, txId: tx._id });
+      return ok(res, { balance: updated?.wallet?.balance ?? 0, txId: tx._id });
     } catch (e) {
       if (process.env.NODE_ENV === "development" && process.env.AUTH_DEBUG === "1") {
         console.warn("[wallet] WARN non-transactional path:", e?.message);
       }
       // Fallback already sequential above
-      return res.status(500).json({ error: "SERVER_ERROR" });
+      return err(res, "SERVER_ERROR", 500);
     }
   } catch (err) {
-    return res.status(500).json({ error: "SERVER_ERROR" });
+    return err(res, "SERVER_ERROR", 500);
   }
 });
 
 // 5) POST /api/wallet/refund
 router.post("/refund", async (req, res) => {
   try {
-    if (!req.userId) return res.status(401).json({ error: "UNAUTHENTICATED" });
+    if (!req.userId) return err(res, "UNAUTHENTICATED", 401);
     const txId = String(req.body?.txId || "").trim();
-    if (!txId) return res.status(400).json({ error: "BAD_REQUEST", field: "txId" });
+    if (!txId) return err(res, "BAD_REQUEST", 400, { field: "txId" });
 
     const tx = await WalletTransaction.findById(txId);
-    if (!tx) return res.status(404).json({ error: "TX_NOT_FOUND" });
-    if (String(tx.userId) !== String(req.userId)) return res.status(403).json({ error: "FORBIDDEN" });
-    if (tx.type !== "deduct") return res.status(400).json({ error: "NOT_REFUNDABLE" });
+    if (!tx) return err(res, "TX_NOT_FOUND", 404);
+    if (String(tx.userId) !== String(req.userId)) return err(res, "FORBIDDEN", 403);
+    if (tx.type !== "deduct") return err(res, "NOT_REFUNDABLE", 400);
 
     const existing = await WalletTransaction.findOne({ userId: req.userId, type: "refund", note: `refund for ${txId}` });
-    if (existing) return res.status(409).json({ error: "ALREADY_REFUNDED" });
+    if (existing) return err(res, "ALREADY_REFUNDED", 409);
 
     const refund = await WalletTransaction.createRefund(req.userId, tx.amount, tx.storyId || null, `refund for ${txId}`);
     const updated = await User.findByIdAndUpdate(
@@ -155,9 +159,9 @@ router.post("/refund", async (req, res) => {
       { new: true }
     );
 
-    return res.json({ ok: true, balance: updated?.wallet?.balance ?? 0, refundTxId: refund._id });
+    return ok(res, { balance: updated?.wallet?.balance ?? 0, refundTxId: refund._id });
   } catch (err) {
-    return res.status(500).json({ error: "SERVER_ERROR" });
+    return err(res, "SERVER_ERROR", 500);
   }
 });
 

@@ -7,21 +7,19 @@ const router = Router();
 
 function isNonEmptyString(v) { return typeof v === "string" && v.trim().length > 0; }
 function toSlug(v) { return String(v || "").trim().toLowerCase(); }
-function ok(res, data) { return res.json(data); }
-function err(res, code = 500, name = "SERVER_ERROR", field) {
-  const body = field ? { error: name, field } : { error: name };
-  return res.status(code).json(body);
-}
+const ok = (res, data = {}) => res.json({ ok: true, ...data });
+const err = (res, code = "BAD_REQUEST", http = 400, extra = {}) =>
+  res.status(http).json({ error: code, ...extra });
 
 // POST /api/saves
 // POST /api/saves  body: { storySlug }
 router.post("/", async (req, res) => {
   try {
-    if (!req.userId) return res.status(401).json({ error: "UNAUTHENTICATED" });
+    if (!req.userId) return err(res, "UNAUTHENTICATED", 401);
 
     const { storySlug } = req.body || {};
     if (!storySlug || typeof storySlug !== "string") {
-      return res.status(400).json({ error: "BAD_REQUEST", field: "storySlug" });
+      return err(res, "BAD_REQUEST", 400, { field: "storySlug" });
     }
 
     // Load a lightweight projection from Story
@@ -30,7 +28,7 @@ router.post("/", async (req, res) => {
       { _id: 1, slug: 1, title: 1, "assets.images": { $slice: 1 } }
     ).lean();
 
-    if (!story) return res.status(404).json({ error: "NOT_FOUND", field: "storySlug" });
+    if (!story) return err(res, "NOT_FOUND", 404, { field: "storySlug" });
 
     const coverUrl = story.assets?.images?.[0] || null;
 
@@ -60,10 +58,10 @@ router.post("/", async (req, res) => {
       );
     }
 
-    return res.json({ ok: true, created });
+    return ok(res, { created });
   } catch (e) {
     console.error("[saves:POST] error", e);
-    return res.status(500).json({ error: "SERVER_ERROR" });
+    return err(res, "SERVER_ERROR", 500);
   }
 });
 
@@ -71,16 +69,16 @@ router.post("/", async (req, res) => {
 // DELETE /api/saves/:slug
 router.delete("/:slug", async (req, res) => {
   try {
-    if (!req.userId) return res.status(401).json({ error: "UNAUTHENTICATED" });
+    if (!req.userId) return err(res, "UNAUTHENTICATED", 401);
 
     const slug = String(req.params.slug || "").trim().toLowerCase();
-    if (!slug) return res.status(400).json({ error: "BAD_REQUEST", field: "slug" });
+    if (!slug) return err(res, "BAD_REQUEST", 400, { field: "slug" });
 
     // Find the save to get storyId
     const saveDoc = await Save.findOne({ userId: req.userId, slug }, { storyId: 1 }).lean();
     if (!saveDoc) {
       // idempotent: deleting an already-missing save is still ok:true
-      return res.json({ ok: true, deleted: false });
+      return ok(res, { deleted: false });
     }
 
     const del = await Save.deleteOne({ userId: req.userId, slug });
@@ -93,17 +91,17 @@ router.delete("/:slug", async (req, res) => {
       );
     }
 
-    return res.json({ ok: true, deleted: !!actuallyDeleted });
+    return ok(res, { deleted: !!actuallyDeleted });
   } catch (e) {
     console.error("[saves:DELETE] error", e);
-    return res.status(500).json({ error: "SERVER_ERROR" });
+    return err(res, "SERVER_ERROR", 500);
   }
 });
 
 // GET /api/saves
 router.get("/", async (req, res) => {
   try {
-    if (!req.userId) return err(res, 401, "UNAUTHENTICATED");
+    if (!req.userId) return err(res, "UNAUTHENTICATED", 401);
     let limit = parseInt(String(req.query.limit ?? "20"), 10);
     if (Number.isNaN(limit) || limit <= 0) limit = 20;
     if (limit > 50) limit = 50;
@@ -131,22 +129,24 @@ router.get("/", async (req, res) => {
     const nextCursor = hasMore ? items[items.length - 1]?.createdAt : undefined;
     return ok(res, nextCursor ? { items, nextCursor } : { items });
   } catch (e) {
-    return err(res, 500, "SERVER_ERROR");
+    console.error("[saves:list]", e);
+    return err(res, "SERVER_ERROR", 500);
   }
 });
 
 // OPTIONAL: GET /api/stories/:slug/is-saved
 router.get("/story/:slug/is-saved", async (req, res) => {
   try {
-    if (!req.userId) return err(res, 401, "UNAUTHENTICATED");
+    if (!req.userId) return err(res, "UNAUTHENTICATED", 401);
     const slug = toSlug(req.params.slug);
-    if (!isNonEmptyString(slug)) return err(res, 400, "BAD_REQUEST", "slug");
+    if (!isNonEmptyString(slug)) return err(res, "BAD_REQUEST", 400, { field: "slug" });
     const story = await Story.findOne({ slug, isActive: true }, { _id: 1 });
-    if (!story) return err(res, 404, "NOT_FOUND");
+    if (!story) return err(res, "NOT_FOUND", 404);
     const existing = await Save.findOne({ userId: req.userId, storyId: story._id }).lean();
     return ok(res, { saved: !!existing });
   } catch (e) {
-    return err(res, 500, "SERVER_ERROR");
+    console.error("[saves:is-saved]", e);
+    return err(res, "SERVER_ERROR", 500);
   }
 });
 
@@ -154,7 +154,7 @@ router.get("/story/:slug/is-saved", async (req, res) => {
 // Returns { recent: [...], saved: [...] }
 router.get("/shelf", async (req, res) => {
   try {
-    if (!req.userId) return res.status(401).json({ error: "UNAUTHENTICATED" });
+    if (!req.userId) return err(res, "UNAUTHENTICATED", 401);
 
     const recentLimit = Math.max(1, Math.min(parseInt(req.query.recentLimit) || 5, 20));
     const savedLimit = Math.max(1, Math.min(parseInt(req.query.savedLimit) || 10, 50));
@@ -200,10 +200,10 @@ router.get("/shelf", async (req, res) => {
       .limit(savedLimit)
       .lean();
 
-    return res.json({ recent, saved: saves });
+    return ok(res, { recent, saved: saves });
   } catch (e) {
     console.error("[saves:shelf] error", e);
-    return res.status(500).json({ error: "SERVER_ERROR" });
+    return err(res, "SERVER_ERROR", 500);
   }
 });
 
