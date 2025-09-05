@@ -4,6 +4,8 @@ import { Story } from "../models/Story.js";
 import { Session } from "../models/Session.js";
 import { User } from "../models/User.js";
 import { WalletTransaction } from "../models/WalletTransaction.js";
+import { generateStart, generateTurn } from "../services/llmProvider.js";
+import { moderateUserText } from "../services/moderation.js";
 
 // Lightweight validators and helpers (mirror sessions router style)
 function isNonEmptyString(v) { return typeof v === "string" && v.trim().length > 0; }
@@ -15,24 +17,6 @@ function err(res, code = 500, name = "SERVER_ERROR", field) {
   return res.status(code).json(body);
 }
 
-// Local mock LLM util to synthesize short scene text + 2–4 choices
-async function mockLLM({ system, guardrails = [], context = [], user = {} }) {
-  const storyTitle = user.storyTitle || "Your Story";
-  const characterName = user.characterName || "You";
-  const promptBeat = context.slice(-1)[0]?.content || "the adventure begins";
-  const base = `${characterName} in ${storyTitle}`;
-  const text = `${base}: ${promptBeat}. A new moment unfolds.`.slice(0, 240);
-  const choicesPool = [
-    "Investigate",
-    "Wait and observe",
-    "Ask for help",
-    "Take a bold step",
-    "Hide and plan",
-  ];
-  const count = 2 + Math.floor(Math.random() * 3); // 2–4
-  const choices = choicesPool.sort(() => 0.5 - Math.random()).slice(0, count);
-  return { text, choices };
-}
 
 const router = Router();
 
@@ -76,7 +60,7 @@ router.post("/start", async (req, res) => {
 
     if (resume && active) {
       const lastScene = (active.log || []).slice().reverse().find(e => e.role === "storyrunner");
-      const scene = lastScene ? { text: lastScene.content, choices: lastScene.choices || [] } : { text: "", choices: [] };
+      const scene = lastScene ? { text: lastScene.text || lastScene.content || "", choices: lastScene.choices || [] } : { text: "", choices: [] };
       const userDoc = await User.findById(req.userId, "wallet.balance").lean();
       const balance = userDoc?.wallet?.balance ?? 0;
       return ok(res, {
@@ -154,12 +138,11 @@ router.post("/start", async (req, res) => {
       rating: { stars: null, text: null },
     });
 
-    // Build initial scene via mock LLM
-    const { text, choices } = await mockLLM({
-      system: story.storyrunner?.systemPrompt || "",
-      guardrails: story.storyrunner?.guardrails || [],
-      context: [],
-      user: { storyTitle: story.title, characterName: character.name },
+    // Build initial scene via LLM provider
+    const { text, choices } = await generateStart({
+      story,
+      characterId,
+      roleIds: Array.isArray(roleIds) ? roleIds : [],
     });
 
     sess.log.push({ role: "storyrunner", content: String(text || "").slice(0, 500), choices: (choices || []).slice(0, 4), ts: new Date() });
@@ -196,6 +179,19 @@ router.post("/turn", async (req, res) => {
     if (!isNonEmptyString(chosen) && !isNonEmptyString(freeText)) return err(res, 400, "BAD_REQUEST", "turn");
     if (freeText && freeText.length > 1000) return err(res, 400, "BAD_REQUEST", "freeText");
 
+    // Moderate user text if provided
+    if (freeText) {
+      try {
+        const moderation = await moderateUserText(freeText);
+        if (!moderation.allowed) {
+          return err(res, 400, "CONTENT_BLOCKED");
+        }
+      } catch (error) {
+        console.error("Moderation error:", error);
+        return err(res, 400, "CONTENT_BLOCKED");
+      }
+    }
+
     const sess = await Session.findOne({ _id: sessionId, userId: req.userId });
     if (!sess) return err(res, 404, "NOT_FOUND");
 
@@ -207,7 +203,7 @@ router.post("/turn", async (req, res) => {
       const userDup = (sess.log || []).find(e => e.role === "user" && typeof e.content === "string" && e.content.includes(`[ctid:${clientTurnId}]`));
       if (userDup) {
         const lastScene = (sess.log || []).slice().reverse().find(e => e.role === "storyrunner");
-        const scene = lastScene ? { text: lastScene.content, choices: lastScene.choices || [] } : { text: "", choices: [] };
+        const scene = lastScene ? { text: lastScene.text || lastScene.content || "", choices: lastScene.choices || [] } : { text: "", choices: [] };
         return res.status(409).json({ ok: true, sessionId: String(sess._id), scene, progress: sess.progress });
       }
     }
@@ -262,11 +258,11 @@ router.post("/turn", async (req, res) => {
     sess.log.push({ role: "user", content: String(contentWithCtid).slice(0, 1000), choices: [], chosen: chosen || null, ts: new Date() });
 
     // Generate storyrunner turn
-    const { text, choices } = await mockLLM({
-      system: story.storyrunner?.systemPrompt || "",
-      guardrails: story.storyrunner?.guardrails || [],
-      context: lastContext,
-      user: { storyTitle: story.title, characterName: characterNameFrom(story, sess.characterId) },
+    const { text, choices } = await generateTurn({
+      story,
+      session: sess,
+      chosen,
+      freeText,
     });
 
     const srEntry = { role: "storyrunner", content: String(text || "").slice(0, 500), choices: (choices || []).slice(0, 4), ts: new Date() };
