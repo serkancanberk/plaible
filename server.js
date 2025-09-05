@@ -18,6 +18,7 @@ import walletRouter from "./routes/wallet.js";
 import feedbacksRouter from "./routes/feedbacks.js";
 import { publicFeedbacksRouter } from "./routes/feedbacks.js";
 import savesRouter from "./routes/saves.js";
+import storyrunnerRouter from "./routes/storyrunner.js";
 
 dotenv.config();
 
@@ -105,6 +106,9 @@ app.use("/api/stories", storiesRouter);
 
 // Sessions router
 app.use("/api/sessions", authGuard, sessionsRouter);
+
+// StoryRunner router
+app.use("/api/storyrunner", authGuard, storyrunnerRouter);
 
 // Wallet router
 app.use("/api/wallet", authGuard, walletRouter);
