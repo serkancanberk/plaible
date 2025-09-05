@@ -4,8 +4,8 @@ import { Story } from "../models/Story.js";
 import { Session } from "../models/Session.js";
 import { User } from "../models/User.js";
 import { WalletTransaction } from "../models/WalletTransaction.js";
-import { generateStart, generateTurn } from "../services/llmProvider.js";
-import { moderateUserText } from "../services/moderation.js";
+import { selectProvider, generateStart, generateTurn } from "../services/llmProvider.js";
+import { moderateUserInput } from "../services/moderation.js";
 
 // Lightweight validators and helpers (mirror sessions router style)
 function isNonEmptyString(v) { return typeof v === "string" && v.trim().length > 0; }
@@ -139,13 +139,13 @@ router.post("/start", async (req, res) => {
     });
 
     // Build initial scene via LLM provider
-    const { text, choices } = await generateStart({
+    const scene = await generateStart({
       story,
       characterId,
       roleIds: Array.isArray(roleIds) ? roleIds : [],
     });
 
-    sess.log.push({ role: "storyrunner", content: String(text || "").slice(0, 500), choices: (choices || []).slice(0, 4), ts: new Date() });
+    sess.log.push({ role: "storyrunner", content: scene.text, choices: scene.choices, ts: new Date() });
     await sess.save();
 
     const latest = await User.findById(req.userId, "wallet.balance").lean();
@@ -154,7 +154,7 @@ router.post("/start", async (req, res) => {
     return ok(res, {
       sessionId: String(sess._id),
       story: { title: story.title, slug: story.slug },
-      scene: { text, choices },
+      scene: { text: scene.text, choices: scene.choices },
       progress: sess.progress,
       wallet: { balance: latestBalance },
     });
@@ -181,14 +181,9 @@ router.post("/turn", async (req, res) => {
 
     // Moderate user text if provided
     if (freeText) {
-      try {
-        const moderation = await moderateUserText(freeText);
-        if (!moderation.allowed) {
-          return err(res, 400, "CONTENT_BLOCKED");
-        }
-      } catch (error) {
-        console.error("Moderation error:", error);
-        return err(res, 400, "CONTENT_BLOCKED");
+      const moderation = await moderateUserInput(freeText);
+      if (!moderation.ok) {
+        return err(res, 400, "MODERATION_BLOCKED");
       }
     }
 
@@ -258,20 +253,20 @@ router.post("/turn", async (req, res) => {
     sess.log.push({ role: "user", content: String(contentWithCtid).slice(0, 1000), choices: [], chosen: chosen || null, ts: new Date() });
 
     // Generate storyrunner turn
-    const { text, choices } = await generateTurn({
+    const scene = await generateTurn({
       story,
       session: sess,
       chosen,
       freeText,
     });
 
-    const srEntry = { role: "storyrunner", content: String(text || "").slice(0, 500), choices: (choices || []).slice(0, 4), ts: new Date() };
+    const srEntry = { role: "storyrunner", content: scene.text, choices: scene.choices, ts: new Date() };
     sess.log.push(srEntry);
     await sess.save();
 
     const response = {
       sessionId: String(sess._id),
-      scene: { text: srEntry.content, choices: srEntry.choices },
+      scene: { text: scene.text, choices: scene.choices },
       progress: sess.progress,
       log: sess.log.slice(-2),
     };

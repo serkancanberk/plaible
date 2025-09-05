@@ -1,58 +1,62 @@
-import OpenAI from 'openai';
+// Moderation Service with safe fallbacks
+// Never throws - always returns safe { ok: true/false, code? }
 
-// Simple heuristic fallback for content moderation
-function heuristicModeration(text) {
+// Simple local ruleset for basic content filtering
+function localModeration(text) {
   if (!text || typeof text !== 'string') {
-    return { allowed: true };
+    return { ok: true };
   }
   
   const lowerText = text.toLowerCase();
   
-  // Block obvious violent/graphic content
-  const violentTerms = [
-    'kill', 'murder', 'violence', 'blood', 'gore', 'torture', 'rape',
-    'suicide', 'self-harm', 'bomb', 'weapon', 'gun', 'knife'
+  // Very small set of obvious violations
+  const blockedTerms = [
+    'kill yourself',
+    'suicide',
+    'rape',
+    'child porn',
+    'nazi',
+    'terrorist attack',
+    'bomb threat'
   ];
   
-  // Block explicit sexual content
-  const sexualTerms = [
-    'sex', 'porn', 'nude', 'naked', 'fuck', 'shit', 'bitch', 'whore'
-  ];
-  
-  // Block hate speech
-  const hateTerms = [
-    'hate', 'racist', 'nazi', 'terrorist', 'bomb', 'attack'
-  ];
-  
-  const allBlockedTerms = [...violentTerms, ...sexualTerms, ...hateTerms];
-  
-  for (const term of allBlockedTerms) {
+  for (const term of blockedTerms) {
     if (lowerText.includes(term)) {
       return { 
-        allowed: false, 
-        reason: `Content contains potentially inappropriate language: ${term}` 
+        ok: false, 
+        code: "MODERATION_BLOCKED" 
       };
     }
   }
   
-  return { allowed: true };
+  return { ok: true };
 }
 
-// OpenAI moderation
+// OpenAI moderation with timeout and fallback
 async function openaiModeration(text) {
-  if (!text || typeof text !== 'string') {
-    return { allowed: true };
-  }
-  
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
-  
   try {
-    const response = await openai.moderations.create({
+    if (!text || typeof text !== 'string') {
+      return { ok: true };
+    }
+    
+    // Dynamic import to avoid loading OpenAI if not needed
+    const { default: OpenAI } = await import('openai');
+    
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_BASE_URL,
+    });
+    
+    // 8 second timeout for moderation
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Moderation timeout')), 8000)
+    );
+    
+    const moderationPromise = openai.moderations.create({
       input: text,
     });
     
+    const response = await Promise.race([moderationPromise, timeoutPromise]);
     const result = response.results[0];
     
     if (result.flagged) {
@@ -60,35 +64,42 @@ async function openaiModeration(text) {
         .filter(([_, flagged]) => flagged)
         .map(([category, _]) => category);
       
-      return {
-        allowed: false,
-        reason: `Content flagged for: ${categories.join(', ')}`
-      };
+      // Only block on serious violations
+      const seriousCategories = ['sexual/minors', 'hate', 'violence/graphic', 'self-harm'];
+      const hasSeriousViolation = categories.some(cat => seriousCategories.includes(cat));
+      
+      if (hasSeriousViolation) {
+        return {
+          ok: false,
+          code: "MODERATION_BLOCKED"
+        };
+      }
     }
     
-    return { allowed: true };
+    return { ok: true };
   } catch (error) {
-    console.error("OpenAI moderation error:", error);
-    // Fallback to heuristic on API error
-    return heuristicModeration(text);
+    console.error("OpenAI moderation error:", error.message);
+    // Fallback to local moderation
+    return localModeration(text);
   }
 }
 
 // Main moderation function
-export async function moderateUserText(text) {
-  const moderationEnabled = process.env.MODERATION_ENABLED === 'true';
+export async function moderateUserInput(text) {
+  const moderationEnabled = process.env.MODERATION_ENABLED !== 'false';
   const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
+  const provider = process.env.MODERATION_PROVIDER?.toLowerCase() || 'openai';
   
   // If moderation is disabled, always allow
   if (!moderationEnabled) {
-    return { allowed: true };
+    return { ok: true };
   }
   
-  // If OpenAI key exists and moderation is enabled, use OpenAI
-  if (hasOpenAIKey && moderationEnabled) {
+  // If OpenAI key exists and provider is openai, use OpenAI
+  if (hasOpenAIKey && provider === 'openai') {
     return openaiModeration(text);
   }
   
-  // Otherwise use heuristic fallback
-  return heuristicModeration(text);
+  // Otherwise use local moderation
+  return localModeration(text);
 }
