@@ -3,32 +3,31 @@
 
 // Simple local ruleset for basic content filtering
 function localModeration(text) {
-  if (!text || typeof text !== 'string') {
-    return { ok: true };
-  }
-  
+  if (!text || typeof text !== 'string') return { ok: true };
+
   const lowerText = text.toLowerCase();
-  
-  // Very small set of obvious violations
-  const blockedTerms = [
-    'kill yourself',
-    'suicide',
-    'rape',
-    'child porn',
-    'nazi',
-    'terrorist attack',
-    'bomb threat'
+
+  // Basit includes yerine regex tabanlı blok kalıpları
+  const BLOCK_PATTERNS = [
+    /\bsuicide\b/i,
+    /\bself[-\s]*harm\b/i,
+    /\bkill\s*myself\b/i,
+    /\bend\s*my\s*life\b/i,
+    /\bharm\s*myself\b/i,
+    // mevcut güçlü ifadeleri de koruyalım:
+    /\brape\b/i,
+    /\bchild\s*porn\b/i,
+    /\bnazi\b/i,
+    /\bterrorist\s*attack\b/i,
+    /\bbomb\s*threat\b/i,
   ];
-  
-  for (const term of blockedTerms) {
-    if (lowerText.includes(term)) {
-      return { 
-        ok: false, 
-        code: "MODERATION_BLOCKED" 
-      };
+
+  for (const re of BLOCK_PATTERNS) {
+    if (re.test(lowerText)) {
+      return { ok: false, code: "MODERATION_BLOCKED" };
     }
   }
-  
+
   return { ok: true };
 }
 
