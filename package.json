@@ -8,6 +8,7 @@
     "seed:story": "node scripts/seedStory.mjs",
     "seed:user": "node scripts/seedUser.mjs",
     "seed:reengagement": "node scripts/seedReengagementRules.mjs",
+    "seed:achievements": "node scripts/seedAchievements.mjs",
     "test:story": "node scripts/testStory.mjs",
     "test:wallet": "node scripts/testWallet.mjs",
     "test:feedback": "node scripts/testFeedback.mjs"

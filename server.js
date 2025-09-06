@@ -23,6 +23,8 @@ import { Event } from "./models/Event.js";
 import { attachRequestId, notFoundHandler, globalErrorHandler } from "./middleware/errors.js";
 import inboxRouter from "./routes/inbox.js";
 import devEngagementRouter from "./routes/devEngagement.js";
+import achievementsRouter from "./routes/achievements.js";
+import devAchievementsRouter from "./routes/devAchievements.js";
 
 dotenv.config();
 
@@ -130,6 +132,27 @@ app.use("/api/inbox", authGuard, inboxRouter);
 
 // Dev engagement router
 app.use("/api/dev/engagement", authGuard, devEngagementRouter);
+
+// Achievements router
+app.use("/api/achievements", authGuard, achievementsRouter);
+
+// Stats endpoint
+app.get("/api/stats", authGuard, async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ error: "UNAUTHENTICATED" });
+
+    const { getStats } = await import("./services/achievements.js");
+    const stats = await getStats(userId);
+    return res.json(stats);
+  } catch (error) {
+    console.error("[stats] error:", error);
+    return res.status(500).json({ error: "SERVER_ERROR" });
+  }
+});
+
+// Dev achievements router
+app.use("/api/dev/achievements", authGuard, devAchievementsRouter);
 
 // Dev events endpoint (read-only, auth-protected)
 app.get("/api/dev/events", authGuard, async (req, res) => {

@@ -79,7 +79,10 @@ export const eventTypes = {
   FEEDBACK_CREATE: "feedback.create",
   FEEDBACK_DELETE: "feedback.delete",
   SAVE_CREATE: "save.create",
-  SAVE_DELETE: "save.delete"
+  SAVE_DELETE: "save.delete",
+  
+  // Achievement events
+  ACHIEVEMENT_UNLOCKED: "achievement.unlocked"
 };
 
 /**
