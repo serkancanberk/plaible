@@ -2,6 +2,7 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { User } from "../models/User.js";
 import { WalletTransaction } from "../models/WalletTransaction.js";
+import { logWalletEvent, eventTypes } from "../services/eventLog.js";
 
 const router = Router();
 
@@ -92,6 +93,14 @@ router.post("/topup", async (req, res) => {
     );
     if (!updated) return err(res, "NOT_FOUND", 404);
     const balance = updated.wallet?.balance ?? 0;
+    
+    // Log wallet topup event
+    await logWalletEvent(eventTypes.WALLET_TOPUP, req.userId, {
+      amount: amount,
+      provider: "api",
+      txId: String(tx._id)
+    });
+    
     return ok(res, { balance, txId: tx._id });
   } catch (err) {
     // In the catch, log the error before returning
@@ -124,6 +133,14 @@ router.post("/deduct", async (req, res) => {
         { $inc: { "wallet.balance": -amount } },
         { new: true }
       );
+      
+      // Log wallet deduct event
+      await logWalletEvent(eventTypes.WALLET_DEDUCT, req.userId, {
+        amount: amount,
+        provider: "api",
+        txId: String(tx._id)
+      });
+      
       return ok(res, { balance: updated?.wallet?.balance ?? 0, txId: tx._id });
     } catch (e) {
       if (process.env.NODE_ENV === "development" && process.env.AUTH_DEBUG === "1") {
@@ -158,6 +175,13 @@ router.post("/refund", async (req, res) => {
       { $inc: { "wallet.balance": tx.amount } },
       { new: true }
     );
+
+    // Log wallet refund event
+    await logWalletEvent(eventTypes.WALLET_REFUND, req.userId, {
+      amount: tx.amount,
+      provider: "api",
+      txId: String(refund._id)
+    });
 
     return ok(res, { balance: updated?.wallet?.balance ?? 0, refundTxId: refund._id });
   } catch (err) {

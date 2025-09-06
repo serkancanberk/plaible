@@ -6,6 +6,7 @@ import { User } from "../models/User.js";
 import { WalletTransaction } from "../models/WalletTransaction.js";
 import { selectProvider, generateStart, generateTurn } from "../services/llmProvider.js";
 import { moderateUserInput } from "../services/moderation.js";
+import { logStoryRunnerEvent, eventTypes } from "../services/eventLog.js";
 
 // Lightweight validators and helpers (mirror sessions router style)
 function isNonEmptyString(v) { return typeof v === "string" && v.trim().length > 0; }
@@ -63,6 +64,14 @@ router.post("/start", async (req, res) => {
       const scene = lastScene ? { text: lastScene.text || lastScene.content || "", choices: lastScene.choices || [] } : { text: "", choices: [] };
       const userDoc = await User.findById(req.userId, "wallet.balance").lean();
       const balance = userDoc?.wallet?.balance ?? 0;
+      
+      // Log storyrunner start event (resume)
+      await logStoryRunnerEvent(eventTypes.STORYRUNNER_START, req.userId, {
+        storyId: String(story._id),
+        sessionId: String(active._id),
+        chapter: active.progress?.chapter || 1
+      });
+      
       return ok(res, {
         sessionId: String(active._id),
         story: { title: story.title, slug: story.slug },
@@ -83,6 +92,13 @@ router.post("/start", async (req, res) => {
 
     // Existing active session guard (do not re-charge)
     if (active) {
+      // Log storyrunner start event (existing session)
+      await logStoryRunnerEvent(eventTypes.STORYRUNNER_START, req.userId, {
+        storyId: String(story._id),
+        sessionId: String(active._id),
+        chapter: active.progress?.chapter || 1
+      });
+      
       return ok(res, {
         sessionId: String(active._id),
         story: { title: story.title, slug: story.slug },
@@ -151,6 +167,13 @@ router.post("/start", async (req, res) => {
     const latest = await User.findById(req.userId, "wallet.balance").lean();
     const latestBalance = latest?.wallet?.balance ?? 0;
 
+    // Log storyrunner start event (new session)
+    await logStoryRunnerEvent(eventTypes.STORYRUNNER_START, req.userId, {
+      storyId: String(story._id),
+      sessionId: String(sess._id),
+      chapter: sess.progress?.chapter || 1
+    });
+
     return ok(res, {
       sessionId: String(sess._id),
       story: { title: story.title, slug: story.slug },
@@ -179,16 +202,23 @@ router.post("/turn", async (req, res) => {
     if (!isNonEmptyString(chosen) && !isNonEmptyString(freeText)) return err(res, 400, "BAD_REQUEST", "turn");
     if (freeText && freeText.length > 1000) return err(res, 400, "BAD_REQUEST", "freeText");
 
+    const sess = await Session.findOne({ _id: sessionId, userId: req.userId });
+    if (!sess) return err(res, 404, "NOT_FOUND");
+
     // Moderate user text if provided
     if (freeText) {
       const moderation = await moderateUserInput(freeText);
       if (!moderation.ok) {
+        // Log moderation blocked event
+        await logStoryRunnerEvent(eventTypes.STORYRUNNER_MODERATION, req.userId, {
+          storyId: String(sess.storyId),
+          sessionId: sessionId,
+          moderated: true,
+          code: moderation.code
+        });
         return err(res, 400, "MODERATION_BLOCKED");
       }
     }
-
-    const sess = await Session.findOne({ _id: sessionId, userId: req.userId });
-    if (!sess) return err(res, 404, "NOT_FOUND");
 
     const story = await Story.findById(sess.storyId).lean();
     if (!story) return err(res, 404, "NOT_FOUND");
@@ -263,6 +293,14 @@ router.post("/turn", async (req, res) => {
     const srEntry = { role: "storyrunner", content: scene.text, choices: scene.choices, ts: new Date() };
     sess.log.push(srEntry);
     await sess.save();
+
+    // Log storyrunner turn event
+    await logStoryRunnerEvent(eventTypes.STORYRUNNER_TURN, req.userId, {
+      storyId: String(story._id),
+      sessionId: String(sess._id),
+      moderated: !!freeText,
+      chapter: sess.progress?.chapter || 1
+    });
 
     const response = {
       sessionId: String(sess._id),

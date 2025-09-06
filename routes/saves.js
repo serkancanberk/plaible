@@ -2,6 +2,7 @@ import { Router } from "express";
 import { Story } from "../models/Story.js";
 import { Save } from "../models/Save.js";
 import { Session } from "../models/Session.js";
+import { logContentEvent, eventTypes } from "../services/eventLog.js";
 
 const router = Router();
 
@@ -56,6 +57,12 @@ router.post("/", async (req, res) => {
         { _id: story._id },
         { $inc: { "stats.savedCount": 1 } }
       );
+      
+      // Log save create event
+      await logContentEvent(eventTypes.SAVE_CREATE, req.userId, {
+        slug: storySlug,
+        storyId: String(story._id)
+      });
     }
 
     return ok(res, { created });
@@ -89,6 +96,12 @@ router.delete("/:slug", async (req, res) => {
         { _id: saveDoc.storyId },
         { $inc: { "stats.savedCount": -1 } }
       );
+      
+      // Log save delete event
+      await logContentEvent(eventTypes.SAVE_DELETE, req.userId, {
+        slug: slug,
+        storyId: String(saveDoc.storyId)
+      });
     }
 
     return ok(res, { deleted: !!actuallyDeleted });

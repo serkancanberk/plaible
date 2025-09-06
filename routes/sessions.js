@@ -5,6 +5,7 @@ import { Story } from "../models/Story.js";
 import { Session } from "../models/Session.js";
 import { User } from "../models/User.js";
 import { WalletTransaction } from "../models/WalletTransaction.js";
+import { logSessionEvent, eventTypes } from "../services/eventLog.js";
 
 const router = Router();
 
@@ -71,6 +72,14 @@ router.post("/start", async (req, res) => {
     if (existing) {
       const latest = await User.findById(req.userId, "wallet.balance").lean();
       const latestBalance = latest?.wallet?.balance ?? 0;
+      
+      // Log session start event
+      await logSessionEvent(eventTypes.SESSION_START, req.userId, {
+        storyId: String(story._id),
+        chapter: existing.progress?.chapter || 1,
+        status: "resumed"
+      });
+      
       return ok(res, {
         sessionId: String(existing._id),
         story: { title: story.title, slug: story.slug },
@@ -136,6 +145,14 @@ router.post("/start", async (req, res) => {
 
     const latest = await User.findById(req.userId, "wallet.balance").lean();
     const latestBalance = latest?.wallet?.balance ?? 0;
+
+    // Log session start event
+    await logSessionEvent(eventTypes.SESSION_START, req.userId, {
+      storyId: String(story._id),
+      chapter: sess.progress?.chapter || 1,
+      cost: alreadyCharged ? 0 : 1,
+      status: "new"
+    });
 
     return ok(res, {
       sessionId: String(sess._id),
@@ -341,6 +358,14 @@ router.post("/:id/choice", async (req, res) => {
 
     await sess.save();
 
+    // Log session choice event
+    await logSessionEvent(eventTypes.SESSION_CHOICE, req.userId, {
+      storyId: String(sess.storyId),
+      chapter: sess.progress?.chapter || 1,
+      cost: cost,
+      status: "advanced"
+    });
+
     const response = {
       sessionId: String(sess._id),
       progress: sess.progress,
@@ -420,6 +445,13 @@ router.post("/:id/complete", async (req, res) => {
     }
 
     await sess.save();
+
+    // Log session complete event
+    await logSessionEvent(eventTypes.SESSION_COMPLETE, req.userId, {
+      storyId: String(sess.storyId),
+      chapter: sess.progress?.chapter || 1,
+      status: "completed"
+    });
 
     return ok(res, {
       sessionId: String(sess._id),

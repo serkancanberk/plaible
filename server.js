@@ -19,6 +19,7 @@ import feedbacksRouter from "./routes/feedbacks.js";
 import { publicFeedbacksRouter } from "./routes/feedbacks.js";
 import savesRouter from "./routes/saves.js";
 import storyrunnerRouter from "./routes/storyrunner.js";
+import { Event } from "./models/Event.js";
 
 dotenv.config();
 
@@ -119,6 +120,50 @@ app.use("/api/feedbacks", publicFeedbacksRouter);
 // Auth-protected feedback endpoints (POST upsert, etc.)
 app.use("/api/feedbacks", authGuard, feedbacksRouter);
 app.use("/api/saves", authGuard, savesRouter);
+
+// Dev events endpoint (read-only, auth-protected)
+app.get("/api/dev/events", authGuard, async (req, res) => {
+  try {
+    const { type, limit = 50, cursor } = req.query;
+    
+    // Validate limit
+    const parsedLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 100);
+    
+    // Build query
+    const query = { userId: req.userId };
+    if (type) {
+      query.type = type;
+    }
+    if (cursor) {
+      query._id = { $lt: cursor };
+    }
+    
+    // Fetch events (newest first)
+    const events = await Event.find(query)
+      .sort({ createdAt: -1 })
+      .limit(parsedLimit + 1)
+      .lean();
+    
+    // Check if there are more events
+    const hasMore = events.length > parsedLimit;
+    if (hasMore) {
+      events.pop(); // Remove the extra event
+    }
+    
+    // Get next cursor
+    const nextCursor = hasMore ? events[events.length - 1]?._id : undefined;
+    
+    res.json({
+      ok: true,
+      items: events,
+      nextCursor,
+      hasMore
+    });
+  } catch (error) {
+    console.error("[dev/events] error:", error);
+    res.status(500).json({ error: "SERVER_ERROR" });
+  }
+});
 
 // MongoDB connection
 const MONGO_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/plaible";

@@ -3,6 +3,7 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { Story } from "../models/Story.js";
 import { User } from "../models/User.js";
+import { logContentEvent, eventTypes } from "../services/eventLog.js";
 
 const router = Router();
 import { Router as _Router } from "express";
@@ -79,6 +80,12 @@ router.post("/", async (req, res) => {
     };
 
     await story.save();
+
+    // Log feedback create event
+    await logContentEvent(eventTypes.FEEDBACK_CREATE, req.userId, {
+      slug: storySlug,
+      storyId: String(story._id)
+    });
 
     return ok(res, {
       stats: story.stats,
