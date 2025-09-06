@@ -21,6 +21,8 @@ import savesRouter from "./routes/saves.js";
 import storyrunnerRouter from "./routes/storyrunner.js";
 import { Event } from "./models/Event.js";
 import { attachRequestId, notFoundHandler, globalErrorHandler } from "./middleware/errors.js";
+import inboxRouter from "./routes/inbox.js";
+import devEngagementRouter from "./routes/devEngagement.js";
 
 dotenv.config();
 
@@ -122,6 +124,12 @@ app.use("/api/feedbacks", publicFeedbacksRouter);
 // Auth-protected feedback endpoints (POST upsert, etc.)
 app.use("/api/feedbacks", authGuard, feedbacksRouter);
 app.use("/api/saves", authGuard, savesRouter);
+
+// Inbox router
+app.use("/api/inbox", authGuard, inboxRouter);
+
+// Dev engagement router
+app.use("/api/dev/engagement", authGuard, devEngagementRouter);
 
 // Dev events endpoint (read-only, auth-protected)
 app.get("/api/dev/events", authGuard, async (req, res) => {

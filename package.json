@@ -7,6 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed:story": "node scripts/seedStory.mjs",
     "seed:user": "node scripts/seedUser.mjs",
+    "seed:reengagement": "node scripts/seedReengagementRules.mjs",
     "test:story": "node scripts/testStory.mjs",
     "test:wallet": "node scripts/testWallet.mjs",
     "test:feedback": "node scripts/testFeedback.mjs"
