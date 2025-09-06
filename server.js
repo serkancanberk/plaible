@@ -20,6 +20,7 @@ import { publicFeedbacksRouter } from "./routes/feedbacks.js";
 import savesRouter from "./routes/saves.js";
 import storyrunnerRouter from "./routes/storyrunner.js";
 import { Event } from "./models/Event.js";
+import { attachRequestId, notFoundHandler, globalErrorHandler } from "./middleware/errors.js";
 
 dotenv.config();
 
@@ -51,6 +52,7 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
 app.use(morgan(isProduction ? "combined" : "dev"));
 app.use(express.json());
+app.use(attachRequestId);
 app.use(passport.initialize());
 
 // Global rate limiter on /api
@@ -165,6 +167,9 @@ app.get("/api/dev/events", authGuard, async (req, res) => {
   }
 });
 
+// 404 handler for API routes
+app.use("/api", notFoundHandler);
+
 // MongoDB connection
 const MONGO_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/plaible";
 
@@ -175,6 +180,9 @@ mongoose
   })
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
+
+// Global error handler (must be last)
+app.use(globalErrorHandler);
 
 const PORT = process.env.PORT || 5050;
 app.listen(PORT, () => {
