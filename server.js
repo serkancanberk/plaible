@@ -26,6 +26,15 @@ import devEngagementRouter from "./routes/devEngagement.js";
 import achievementsRouter from "./routes/achievements.js";
 import devAchievementsRouter from "./routes/devAchievements.js";
 
+const { ObjectId } = mongoose.Types;
+
+// Helper functions for consistent responses
+function ok(res, data) { return res.json(data); }
+function err(res, code = 500, name = "SERVER_ERROR", field) {
+  const body = field ? { error: name, field } : { error: name };
+  return res.status(code).json(body);
+}
+
 dotenv.config();
 
 const app = express();
@@ -157,44 +166,61 @@ app.use("/api/dev/achievements", authGuard, devAchievementsRouter);
 // Dev events endpoint (read-only, auth-protected)
 app.get("/api/dev/events", authGuard, async (req, res) => {
   try {
-    const { type, limit = 50, cursor } = req.query;
+    const { userId, type, limit, cursor } = req.query;
     
     // Validate limit
-    const parsedLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 100);
+    const pageSize = Math.min(Math.max(Number(limit) || 20, 1), 100);
     
-    // Build query
-    const query = { userId: req.userId };
+    // Build filter
+    const filter = {};
+    
+    // Handle userId
+    if (userId === "me") {
+      filter.userId = req.userId;
+    } else if (userId) {
+      if (!ObjectId.isValid(userId)) {
+        return err(res, 400, "BAD_REQUEST", "userId");
+      }
+      filter.userId = new ObjectId(userId);
+    }
+    // If no userId query is provided, do not set filter.userId (default → all events)
+    
+    // Handle type
     if (type) {
-      query.type = type;
-    }
-    if (cursor) {
-      query._id = { $lt: cursor };
+      const types = type.split(',').map(t => t.trim()).filter(t => t.length > 0);
+      if (types.length > 0) {
+        filter.type = { $in: types };
+      }
     }
     
-    // Fetch events (newest first)
-    const events = await Event.find(query)
+    // Handle cursor
+    if (cursor) {
+      const cursorDate = new Date(cursor);
+      if (isNaN(cursorDate.getTime())) {
+        return err(res, 400, "BAD_REQUEST", "cursor");
+      }
+      filter.createdAt = { $lt: cursorDate };
+    }
+    
+    // Query events
+    const items = await Event.find(filter)
       .sort({ createdAt: -1 })
-      .limit(parsedLimit + 1)
+      .limit(pageSize + 1)
       .lean();
     
     // Check if there are more events
-    const hasMore = events.length > parsedLimit;
+    const hasMore = items.length > pageSize;
     if (hasMore) {
-      events.pop(); // Remove the extra event
+      items.pop(); // Remove the extra event
     }
     
     // Get next cursor
-    const nextCursor = hasMore ? events[events.length - 1]?._id : undefined;
+    const nextCursor = hasMore ? items[items.length - 1]?.createdAt?.toISOString() || null : null;
     
-    res.json({
-      ok: true,
-      items: events,
-      nextCursor,
-      hasMore
-    });
+    return ok(res, { ok: true, items, nextCursor, hasMore });
   } catch (error) {
     console.error("[dev/events] error:", error);
-    res.status(500).json({ error: "SERVER_ERROR" });
+    return err(res, 500, "SERVER_ERROR");
   }
 });
 

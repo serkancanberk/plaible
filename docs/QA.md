@@ -172,4 +172,58 @@ curl -s -X DELETE http://localhost:5050/api/saves/the-picture-of-dorian-gray
 
 ---
 
+## `/api/dev/events` (Developer Debug Endpoint)
+
+This endpoint provides access to raw event logs for debugging and development.
+
+**Filters & Parameters:**
+
+- **userId**
+  - `userId=me` → Returns events for the current authenticated user
+  - `userId=<ObjectId>` → Returns events for the specified user
+  - *If no `userId` is provided → Returns all events (default)*
+
+- **type**
+  - `type=a,b,c` → Filters by comma-separated event types  
+  - Examples: `type=achievement.unlocked,wallet.topup`
+
+- **cursor**
+  - `cursor=<ISO Date>` → Time-based pagination (returns events with `createdAt < cursor`)  
+  - Must be a valid ISO date string; invalid values return `400 { error: "BAD_REQUEST", field: "cursor" }`
+
+- **limit**
+  - Default: `20`
+  - Maximum: `100`
+
+**Response Format:**
+```json
+{
+  "ok": true,
+  "items": [ ... ],
+  "nextCursor": "2025-09-06T18:15:30.269Z",
+  "hasMore": true
+}
+```
+
+**Examples:**
+- Latest 5 events (all users):
+  ```
+  GET /api/dev/events?limit=5
+  ```
+- Latest 5 for current user only:
+  ```
+  GET /api/dev/events?userId=me&limit=5
+  ```
+- Filter by event types:
+  ```
+  GET /api/dev/events?type=achievement.unlocked,wallet.topup&limit=5
+  ```
+- Cursor pagination:
+  ```
+  GET /api/dev/events?limit=3
+  GET /api/dev/events?limit=3&cursor=<nextCursor from previous page>
+  ```
+
+---
+
 Last updated: {{today}}
