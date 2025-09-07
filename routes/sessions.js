@@ -20,6 +20,125 @@ function err(res, code = 500, name = "SERVER_ERROR", field) {
   return res.status(code).json(body);
 }
 
+/**
+ * @swagger
+ * /api/sessions/start:
+ *   post:
+ *     tags: [Sessions]
+ *     summary: Start a new story session
+ *     description: Creates a new session for a story with the specified character
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - storySlug
+ *               - characterId
+ *             properties:
+ *               storySlug:
+ *                 type: string
+ *                 description: The story identifier
+ *                 example: "the-picture-of-dorian-gray"
+ *               characterId:
+ *                 type: string
+ *                 description: The character to play as
+ *                 example: "chr_dorian"
+ *               roleIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Optional role identifiers
+ *                 example: ["role_artist", "role_gentleman"]
+ *     responses:
+ *       200:
+ *         description: Session started successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 sessionId:
+ *                   type: string
+ *                   description: The session identifier
+ *                   example: "68badfecd69761f15d790d09"
+ *                 story:
+ *                   type: object
+ *                   properties:
+ *                     title:
+ *                       type: string
+ *                       example: "The Picture of Dorian Gray"
+ *                     slug:
+ *                       type: string
+ *                       example: "the-picture-of-dorian-gray"
+ *                 character:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "chr_dorian"
+ *                     name:
+ *                       type: string
+ *                       example: "Dorian Gray"
+ *                 progress:
+ *                   type: object
+ *                   properties:
+ *                     chapter:
+ *                       type: number
+ *                       example: 1
+ *                     completed:
+ *                       type: boolean
+ *                       example: false
+ *       400:
+ *         description: Bad request - invalid parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "BAD_REQUEST"
+ *                 field:
+ *                   type: string
+ *                   example: "storySlug"
+ *       401:
+ *         description: Unauthenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "UNAUTHENTICATED"
+ *       404:
+ *         description: Story not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "NOT_FOUND"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "SERVER_ERROR"
+ */
 // POST /api/sessions/start
 router.post("/start", async (req, res) => {
   try {
@@ -279,6 +398,114 @@ router.get("/", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/sessions/{id}/choice:
+ *   post:
+ *     tags: [Sessions]
+ *     summary: Make a choice in a story session
+ *     description: Advances the story by making a choice
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Session ID
+ *         example: "68badfecd69761f15d790d09"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - choice
+ *             properties:
+ *               choice:
+ *                 type: string
+ *                 description: The choice made by the user
+ *                 example: "Explore the room"
+ *     responses:
+ *       200:
+ *         description: Choice processed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 sessionId:
+ *                   type: string
+ *                   example: "68badfecd69761f15d790d09"
+ *                 scene:
+ *                   type: object
+ *                   properties:
+ *                     text:
+ *                       type: string
+ *                       example: "You carefully examine the ornate painting..."
+ *                     choices:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["Continue exploring", "Ask about the painting", "Leave the room"]
+ *                 progress:
+ *                   type: object
+ *                   properties:
+ *                     chapter:
+ *                       type: number
+ *                       example: 1
+ *                     completed:
+ *                       type: boolean
+ *                       example: false
+ *       400:
+ *         description: Bad request - invalid parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "BAD_REQUEST"
+ *                 field:
+ *                   type: string
+ *                   example: "choice"
+ *       401:
+ *         description: Unauthenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "UNAUTHENTICATED"
+ *       404:
+ *         description: Session not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "NOT_FOUND"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "SERVER_ERROR"
+ */
 // Re-add the choice route here (after / and /active, before /:id)
 router.post("/:id/choice", async (req, res) => {
   try {
@@ -380,6 +607,77 @@ router.post("/:id/choice", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/sessions/{id}/complete:
+ *   post:
+ *     tags: [Sessions]
+ *     summary: Complete a story session
+ *     description: Marks a session as completed
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Session ID
+ *         example: "68badfecd69761f15d790d09"
+ *     responses:
+ *       200:
+ *         description: Session completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 sessionId:
+ *                   type: string
+ *                   example: "68badfecd69761f15d790d09"
+ *                 progress:
+ *                   type: object
+ *                   properties:
+ *                     chapter:
+ *                       type: number
+ *                       example: 5
+ *                     completed:
+ *                       type: boolean
+ *                       example: true
+ *       401:
+ *         description: Unauthenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "UNAUTHENTICATED"
+ *       404:
+ *         description: Session not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "NOT_FOUND"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "SERVER_ERROR"
+ */
 // POST /api/sessions/:id/complete
 router.post("/:id/complete", async (req, res) => {
   try {

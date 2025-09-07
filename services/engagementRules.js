@@ -21,15 +21,23 @@ function cooldownBucketStart(cooldownHours) {
   return new Date(epoch);
 }
 
-export async function buildForUser(userId) {
+export async function buildForUser(userId, deps = {}) {
+  const {
+    User: UserModel = User,
+    ReengagementRule: ReengagementRuleModel = ReengagementRule,
+    Session: SessionModel = Session,
+    Save: SaveModel = Save,
+    Story: StoryModel = Story
+  } = deps;
+
   // Load context
-  const user = await User.findById(userId).lean();
+  const user = await UserModel.findById(userId).lean();
   if (!user) return [];
 
   const [rules, latestActive, saves] = await Promise.all([
-    ReengagementRule.find({ enabled: true }).lean(),
-    Session.findOne({ userId, "progress.completed": false }).sort({ updatedAt: -1 }).lean(),
-    Save.find({ userId }).lean()
+    ReengagementRuleModel.find({ enabled: true }).lean(),
+    SessionModel.findOne({ userId, "progress.completed": false }).sort({ updatedAt: -1 }).lean(),
+    SaveModel.find({ userId }).lean()
   ]);
 
   const walletBalance = user?.wallet?.balance ?? 0;
@@ -54,7 +62,7 @@ export async function buildForUser(userId) {
     // Narrow story context where provided
     let story = null;
     if (rule.storyId) {
-      story = await Story.findById(rule.storyId).lean();
+      story = await StoryModel.findById(rule.storyId).lean();
       if (!story?.isActive) continue; // ignore inactive
     }
 
@@ -135,11 +143,13 @@ export async function buildForUser(userId) {
   return messages;
 }
 
-export async function upsertMessages(userId, msgs) {
+export async function upsertMessages(userId, msgs, deps = {}) {
+  const { EngagementMessage: EngagementMessageModel = EngagementMessage } = deps;
+  
   let created = 0;
   for (const m of msgs) {
     try {
-      const res = await EngagementMessage.updateOne(
+      const res = await EngagementMessageModel.updateOne(
         { userId, dedupeKey: m.dedupeKey },
         { $setOnInsert: m },
         { upsert: true }

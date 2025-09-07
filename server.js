@@ -21,10 +21,13 @@ import savesRouter from "./routes/saves.js";
 import storyrunnerRouter from "./routes/storyrunner.js";
 import { Event } from "./models/Event.js";
 import { attachRequestId, notFoundHandler, globalErrorHandler } from "./middleware/errors.js";
+import { requestLogger } from "./middleware/requestLogger.js";
 import inboxRouter from "./routes/inbox.js";
 import devEngagementRouter from "./routes/devEngagement.js";
 import achievementsRouter from "./routes/achievements.js";
 import devAchievementsRouter from "./routes/devAchievements.js";
+import sseRouter from "./routes/sse.js";
+import { swaggerSpec, swaggerUi, swaggerOpts } from "./docs/swagger.js";
 
 const { ObjectId } = mongoose.Types;
 
@@ -66,6 +69,7 @@ app.use(compression());
 app.use(morgan(isProduction ? "combined" : "dev"));
 app.use(express.json());
 app.use(attachRequestId);
+app.use(requestLogger);
 app.use(passport.initialize());
 
 // Global rate limiter on /api
@@ -145,6 +149,74 @@ app.use("/api/dev/engagement", authGuard, devEngagementRouter);
 // Achievements router
 app.use("/api/achievements", authGuard, achievementsRouter);
 
+/**
+ * @swagger
+ * /api/stats:
+ *   get:
+ *     tags: [Achievements]
+ *     summary: Get user statistics
+ *     description: Retrieves user statistics including achievements and session data
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 stats:
+ *                   type: object
+ *                   properties:
+ *                     totalSessions:
+ *                       type: integer
+ *                       example: 5
+ *                     completedSessions:
+ *                       type: integer
+ *                       example: 3
+ *                     totalAchievements:
+ *                       type: integer
+ *                       example: 2
+ *                     recentAchievements:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           code:
+ *                             type: string
+ *                             example: "first_completion"
+ *                           name:
+ *                             type: string
+ *                             example: "First Completion"
+ *                           unlockedAt:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-09-07T15:30:00.000Z"
+ *       401:
+ *         description: Unauthenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "UNAUTHENTICATED"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "SERVER_ERROR"
+ */
 // Stats endpoint
 app.get("/api/stats", authGuard, async (req, res) => {
   try {
@@ -163,6 +235,109 @@ app.get("/api/stats", authGuard, async (req, res) => {
 // Dev achievements router
 app.use("/api/dev/achievements", authGuard, devAchievementsRouter);
 
+// SSE router
+app.use("/api/sse", authGuard, sseRouter);
+
+// Swagger UI documentation
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerOpts));
+
+/**
+ * @swagger
+ * /api/dev/events:
+ *   get:
+ *     tags: [Dev]
+ *     summary: Get event logs (Dev Only)
+ *     description: Retrieves paginated event logs with optional filtering
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         description: User ID to filter events (use "me" for current user, or ObjectId for specific user)
+ *         example: "me"
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *         description: Comma-separated list of event types to filter
+ *         example: "session.started,wallet.deducted"
+ *       - in: query
+ *         name: cursor
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: ISO date string for pagination cursor
+ *         example: "2025-09-07T15:30:00.000Z"
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Maximum number of events to return
+ *         example: 20
+ *     responses:
+ *       200:
+ *         description: Events retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 events:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "68badfecd69761f15d790d09"
+ *                       type:
+ *                         type: string
+ *                         example: "session.started"
+ *                       userId:
+ *                         type: string
+ *                         example: "68badfecd69761f15d790d10"
+ *                       meta:
+ *                         type: object
+ *                         example: {"sessionId": "68badfecd69761f15d790d11"}
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-09-07T15:30:00.000Z"
+ *                 nextCursor:
+ *                   type: string
+ *                   format: date-time
+ *                   nullable: true
+ *                   description: ISO date string for next page cursor, null if no more pages
+ *                   example: "2025-09-07T15:25:00.000Z"
+ *       401:
+ *         description: Unauthenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "UNAUTHENTICATED"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "SERVER_ERROR"
+ */
 // Dev events endpoint (read-only, auth-protected)
 app.get("/api/dev/events", authGuard, async (req, res) => {
   try {

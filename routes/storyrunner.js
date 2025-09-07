@@ -7,6 +7,7 @@ import { WalletTransaction } from "../models/WalletTransaction.js";
 import { selectProvider, generateStart, generateTurn } from "../services/llmProvider.js";
 import { moderateUserInput } from "../services/moderation.js";
 import { logStoryRunnerEvent, eventTypes } from "../services/eventLog.js";
+import { emit } from "../middleware/memorySSE.js";
 
 // Lightweight validators and helpers (mirror sessions router style)
 function isNonEmptyString(v) { return typeof v === "string" && v.trim().length > 0; }
@@ -21,6 +22,137 @@ function err(res, code = 500, name = "SERVER_ERROR", field) {
 
 const router = Router();
 
+/**
+ * @swagger
+ * /api/storyrunner/start:
+ *   post:
+ *     tags: [StoryRunner]
+ *     summary: Start a new interactive story session
+ *     description: Creates a new story session and generates the initial scene
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - storySlug
+ *               - characterId
+ *             properties:
+ *               storySlug:
+ *                 type: string
+ *                 description: The story identifier
+ *                 example: "the-picture-of-dorian-gray"
+ *               characterId:
+ *                 type: string
+ *                 description: The character to play as
+ *                 example: "chr_dorian"
+ *               roleIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Optional role identifiers
+ *                 example: ["role_artist", "role_gentleman"]
+ *               resume:
+ *                 type: boolean
+ *                 description: Whether to resume an existing session
+ *                 default: false
+ *     responses:
+ *       200:
+ *         description: Session started successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 sessionId:
+ *                   type: string
+ *                   description: The session identifier
+ *                   example: "68badfecd69761f15d790d09"
+ *                 story:
+ *                   type: object
+ *                   properties:
+ *                     title:
+ *                       type: string
+ *                       example: "The Picture of Dorian Gray"
+ *                     slug:
+ *                       type: string
+ *                       example: "the-picture-of-dorian-gray"
+ *                 scene:
+ *                   type: object
+ *                   properties:
+ *                     text:
+ *                       type: string
+ *                       example: "You find yourself in a luxurious Victorian drawing room..."
+ *                     choices:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["Explore the room", "Look at the painting", "Speak to someone"]
+ *                 progress:
+ *                   type: object
+ *                   properties:
+ *                     chapter:
+ *                       type: number
+ *                       example: 1
+ *                     completed:
+ *                       type: boolean
+ *                       example: false
+ *                 wallet:
+ *                   type: object
+ *                   properties:
+ *                     balance:
+ *                       type: number
+ *                       example: 100
+ *       400:
+ *         description: Bad request - invalid parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "BAD_REQUEST"
+ *                 field:
+ *                   type: string
+ *                   example: "storySlug"
+ *       401:
+ *         description: Unauthenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "UNAUTHENTICATED"
+ *       404:
+ *         description: Story not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "NOT_FOUND"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "SERVER_ERROR"
+ */
 // POST /api/storyrunner/start
 router.post("/start", async (req, res) => {
   try {
@@ -174,6 +306,19 @@ router.post("/start", async (req, res) => {
       chapter: sess.progress?.chapter || 1
     });
 
+    // Emit SSE event for real-time updates
+    try {
+      emit(String(sess._id), {
+        kind: 'scene',
+        scene: { text: scene.text, choices: scene.choices },
+        progress: sess.progress,
+        ts: new Date().toISOString()
+      });
+    } catch (error) {
+      // Defensive: never throw from SSE emission
+      console.warn('[SSE] Failed to emit start event:', error);
+    }
+
     return ok(res, {
       sessionId: String(sess._id),
       story: { title: story.title, slug: story.slug },
@@ -186,6 +331,148 @@ router.post("/start", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/storyrunner/turn:
+ *   post:
+ *     tags: [StoryRunner]
+ *     summary: Make a turn in an interactive story session
+ *     description: Advances the story by making a choice or providing free text input
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - sessionId
+ *               - chosen
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *                 description: The session identifier
+ *                 example: "68badfecd69761f15d790d09"
+ *               chosen:
+ *                 type: string
+ *                 description: The choice made by the user
+ *                 example: "Explore the room"
+ *               freeText:
+ *                 type: string
+ *                 description: Optional free text input
+ *                 example: "I want to examine the painting more closely"
+ *               clientTurnId:
+ *                 type: string
+ *                 description: Client-side idempotency key
+ *                 example: "turn_123_456"
+ *     responses:
+ *       200:
+ *         description: Turn processed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 sessionId:
+ *                   type: string
+ *                   description: The session identifier
+ *                   example: "68badfecd69761f15d790d09"
+ *                 scene:
+ *                   type: object
+ *                   properties:
+ *                     text:
+ *                       type: string
+ *                       example: "You carefully examine the ornate painting..."
+ *                     choices:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["Continue exploring", "Ask about the painting", "Leave the room"]
+ *                 progress:
+ *                   type: object
+ *                   properties:
+ *                     chapter:
+ *                       type: number
+ *                       example: 1
+ *                     completed:
+ *                       type: boolean
+ *                       example: false
+ *                 log:
+ *                   type: array
+ *                   description: Recent session log entries
+ *                   items:
+ *                     type: object
+ *                 wallet:
+ *                   type: object
+ *                   properties:
+ *                     balance:
+ *                       type: number
+ *                       example: 95
+ *       400:
+ *         description: Bad request - invalid parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "BAD_REQUEST"
+ *                 field:
+ *                   type: string
+ *                   example: "sessionId"
+ *       401:
+ *         description: Unauthenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "UNAUTHENTICATED"
+ *       404:
+ *         description: Session not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "NOT_FOUND"
+ *       409:
+ *         description: Duplicate turn (idempotency)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 sessionId:
+ *                   type: string
+ *                   example: "68badfecd69761f15d790d09"
+ *                 scene:
+ *                   type: object
+ *                 progress:
+ *                   type: object
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "SERVER_ERROR"
+ */
 // POST /api/storyrunner/turn
 router.post("/turn", async (req, res) => {
   try {
@@ -301,6 +588,19 @@ router.post("/turn", async (req, res) => {
       moderated: !!freeText,
       chapter: sess.progress?.chapter || 1
     });
+
+    // Emit SSE event for real-time updates
+    try {
+      emit(String(sess._id), {
+        kind: 'scene',
+        scene: { text: scene.text, choices: scene.choices },
+        progress: sess.progress,
+        ts: new Date().toISOString()
+      });
+    } catch (error) {
+      // Defensive: never throw from SSE emission
+      console.warn('[SSE] Failed to emit turn event:', error);
+    }
 
     const response = {
       sessionId: String(sess._id),

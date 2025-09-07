@@ -33,12 +33,19 @@ export async function listUnlocked(userId, { limit = 50, cursor } = {}) {
   });
 }
 
-export async function evaluateAndUnlock({ userId, storyId, sessionId } = {}) {
+export async function evaluateAndUnlock({ userId, storyId, sessionId, deps = {} } = {}) {
+  const { 
+    Achievement: AchievementModel = Achievement,
+    Session: SessionModel = Session,
+    UserAchievement: UserAchievementModel = UserAchievement,
+    mongoose: mongooseDep = mongoose
+  } = deps;
+
   // Load enabled achievements
-  const achievements = await Achievement.find({ enabled: true }).lean();
+  const achievements = await AchievementModel.find({ enabled: true }).lean();
   
   // Load user context
-  const sessions = await Session.find({ userId })
+  const sessions = await SessionModel.find({ userId })
     .sort({ updatedAt: -1 })
     .limit(50)
     .lean();
@@ -104,14 +111,14 @@ export async function evaluateAndUnlock({ userId, storyId, sessionId } = {}) {
     if (shouldUnlock) {
       const dedupeKey = `${userId}:${achievement.code}`;
       try {
-        const result = await UserAchievement.updateOne(
+        const result = await UserAchievementModel.updateOne(
           { dedupeKey },
           {
             $setOnInsert: {
-              userId: new mongoose.Types.ObjectId(userId),
+              userId: new mongooseDep.Types.ObjectId(userId),
               achievementCode: achievement.code,
               storyId: contextStoryId,
-              sessionId: contextSessionId ? new mongoose.Types.ObjectId(contextSessionId) : null,
+              sessionId: contextSessionId ? new mongooseDep.Types.ObjectId(contextSessionId) : null,
               unlockedAt: new Date(),
               dedupeKey
             }

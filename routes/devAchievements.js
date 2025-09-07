@@ -9,6 +9,88 @@ function err(res, code = 500, name = "SERVER_ERROR", field) {
   return res.status(code).json(body);
 }
 
+/**
+ * @swagger
+ * /api/dev/achievements/tick:
+ *   post:
+ *     tags: [Dev]
+ *     summary: Trigger achievement evaluation (Dev Only)
+ *     description: Manually triggers evaluation of achievement unlock conditions for the current user
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               storyId:
+ *                 type: string
+ *                 description: Story ID for context (optional)
+ *                 example: "story_dorian_gray"
+ *               sessionId:
+ *                 type: string
+ *                 description: Session ID for context (optional)
+ *                 example: "68badfecd69761f15d790d09"
+ *     responses:
+ *       200:
+ *         description: Achievement evaluation completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 counts:
+ *                   type: object
+ *                   properties:
+ *                     created:
+ *                       type: integer
+ *                       description: Number of new achievements unlocked
+ *                       example: 1
+ *                 unlocked:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   description: List of achievement codes that were unlocked
+ *                   example: ["first_completion"]
+ *       400:
+ *         description: Bad request - invalid parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "BAD_REQUEST"
+ *                 field:
+ *                   type: string
+ *                   example: "storyId"
+ *       401:
+ *         description: Unauthenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "UNAUTHENTICATED"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "SERVER_ERROR"
+ */
 // POST /api/dev/achievements/tick
 router.post("/tick", async (req, res) => {
   try {

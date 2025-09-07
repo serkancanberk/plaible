@@ -4,7 +4,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
     "seed:story": "node scripts/seedStory.mjs",
     "seed:user": "node scripts/seedUser.mjs",
     "seed:reengagement": "node scripts/seedReengagementRules.mjs",
@@ -30,6 +30,12 @@
     "morgan": "^1.10.1",
     "openai": "^5.19.1",
     "passport": "^0.7.0",
-    "passport-google-oauth20": "^2.0.0"
+    "passport-google-oauth20": "^2.0.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.1.2",
+    "jest": "^30.1.3"
   }
 }

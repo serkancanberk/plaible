@@ -1,6 +1,8 @@
 // Production-safe error handling middleware
 // Maintains existing { ok: true } / { error: "CODE" } response standard
 
+import { logError } from '../services/logging.js';
+
 /**
  * Attach a unique request ID to each request for tracing
  */
@@ -34,12 +36,17 @@ export function globalErrorHandler(err, req, res, next) {
   const status = (err && typeof err.status === "number") ? err.status : 500;
 
   if (status >= 500) {
-    // Minimal logging; do not leak internals to client
-    console.error("[ERROR]", {
+    // Use structured logging with stack trace (not leaked to client)
+    logError('Server error occurred', {
       requestId: res.locals.requestId,
-      path: req.method + " " + req.originalUrl,
-      message: err?.message,
-      stack: err?.stack,
+      userId: req.userId || null,
+      method: req.method,
+      path: req.originalUrl || req.url,
+      status,
+      meta: {
+        message: err?.message,
+        stack: err?.stack,
+      }
     });
     return res.status(500).json({ error: "SERVER_ERROR", requestId: res.locals.requestId });
   }

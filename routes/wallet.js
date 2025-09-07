@@ -67,6 +67,90 @@ router.get("/transactions", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/wallet/topup:
+ *   post:
+ *     tags: [Wallet]
+ *     summary: Add credits to user wallet
+ *     description: Increases the user's wallet balance by the specified amount
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - amount
+ *             properties:
+ *               amount:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 100000
+ *                 description: Amount of credits to add
+ *                 example: 100
+ *               provider:
+ *                 type: string
+ *                 description: Payment provider identifier
+ *                 example: "stripe"
+ *     responses:
+ *       200:
+ *         description: Credits added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 transactionId:
+ *                   type: string
+ *                   description: Transaction identifier
+ *                   example: "68badfecd69761f15d790d09"
+ *                 amount:
+ *                   type: integer
+ *                   example: 100
+ *                 balance:
+ *                   type: integer
+ *                   description: New wallet balance
+ *                   example: 150
+ *       400:
+ *         description: Bad request - invalid amount
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "BAD_REQUEST"
+ *                 field:
+ *                   type: string
+ *                   example: "amount"
+ *       401:
+ *         description: Unauthenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "UNAUTHENTICATED"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "SERVER_ERROR"
+ */
 // 3) POST /api/wallet/topup
 router.post("/topup", async (req, res) => {
   try {
@@ -109,6 +193,94 @@ router.post("/topup", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/wallet/deduct:
+ *   post:
+ *     tags: [Wallet]
+ *     summary: Deduct credits from user wallet
+ *     description: Decreases the user's wallet balance by the specified amount
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - amount
+ *             properties:
+ *               amount:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 100000
+ *                 description: Amount of credits to deduct
+ *                 example: 10
+ *               storyId:
+ *                 type: string
+ *                 description: Story identifier for context
+ *                 example: "story_dorian_gray"
+ *               chapter:
+ *                 type: integer
+ *                 description: Chapter number for context
+ *                 example: 1
+ *     responses:
+ *       200:
+ *         description: Credits deducted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 transactionId:
+ *                   type: string
+ *                   description: Transaction identifier
+ *                   example: "68badfecd69761f15d790d09"
+ *                 amount:
+ *                   type: integer
+ *                   example: 10
+ *                 balance:
+ *                   type: integer
+ *                   description: New wallet balance
+ *                   example: 90
+ *       400:
+ *         description: Bad request - invalid amount or insufficient balance
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "BAD_REQUEST"
+ *                 field:
+ *                   type: string
+ *                   example: "amount"
+ *       401:
+ *         description: Unauthenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "UNAUTHENTICATED"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "SERVER_ERROR"
+ */
 // 4) POST /api/wallet/deduct
 router.post("/deduct", async (req, res) => {
   try {
@@ -154,6 +326,94 @@ router.post("/deduct", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/wallet/refund:
+ *   post:
+ *     tags: [Wallet]
+ *     summary: Refund a wallet transaction
+ *     description: Refunds credits from a previous transaction
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - txId
+ *             properties:
+ *               txId:
+ *                 type: string
+ *                 description: Transaction ID to refund
+ *                 example: "68badfecd69761f15d790d09"
+ *     responses:
+ *       200:
+ *         description: Transaction refunded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 refundId:
+ *                   type: string
+ *                   description: Refund transaction identifier
+ *                   example: "68badfecd69761f15d790d10"
+ *                 amount:
+ *                   type: integer
+ *                   example: 10
+ *                 balance:
+ *                   type: integer
+ *                   description: New wallet balance
+ *                   example: 110
+ *       400:
+ *         description: Bad request - invalid transaction ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "BAD_REQUEST"
+ *                 field:
+ *                   type: string
+ *                   example: "txId"
+ *       401:
+ *         description: Unauthenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "UNAUTHENTICATED"
+ *       404:
+ *         description: Transaction not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "NOT_FOUND"
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "SERVER_ERROR"
+ */
 // 5) POST /api/wallet/refund
 router.post("/refund", async (req, res) => {
   try {

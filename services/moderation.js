@@ -2,7 +2,7 @@
 // Never throws - always returns safe { ok: true/false, code? }
 
 // Simple local ruleset for basic content filtering
-function localModeration(text) {
+export function localModeration(text) {
   if (!text || typeof text !== 'string') return { ok: true };
 
   const lowerText = text.toLowerCase();

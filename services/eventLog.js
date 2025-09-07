@@ -82,7 +82,12 @@ export const eventTypes = {
   SAVE_DELETE: "save.delete",
   
   // Achievement events
-  ACHIEVEMENT_UNLOCKED: "achievement.unlocked"
+  ACHIEVEMENT_UNLOCKED: "achievement.unlocked",
+  
+  // SSE events
+  SSE_CLIENT_CONNECTED: "sse.client_connected",
+  SSE_CLIENT_DISCONNECTED: "sse.client_disconnected",
+  SSE_MESSAGE_EMITTED: "sse.message_emitted"
 };
 
 /**
