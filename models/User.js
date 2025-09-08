@@ -39,6 +39,9 @@ const userSchema = new Schema(
     walletBalance: { type: Number, default: 0 },
     transactionHistory: { type: [transactionSchema], default: [] },
     socialConnections: { type: [String], default: [] },
+    roles: { type: [String], default: ["user"], index: true },
+    status: { type: String, enum: ["active", "disabled", "deleted"], default: "active", index: true },
+    deletedAt: { type: Date },
   },
   { timestamps: true }
 );
@@ -64,4 +67,4 @@ userSchema.methods.applyTransaction = async function ({ amount, type = "debit", 
   return this.save();
 };
 
-export const User = model("User", userSchema); 
+export const User = mongoose.models.User || mongoose.model("User", userSchema); 

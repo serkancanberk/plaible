@@ -28,6 +28,11 @@ import achievementsRouter from "./routes/achievements.js";
 import devAchievementsRouter from "./routes/devAchievements.js";
 import sseRouter from "./routes/sse.js";
 import { swaggerSpec, swaggerUi, swaggerOpts } from "./docs/swagger.js";
+import adminGuard from "./middleware/adminGuard.js";
+import adminUsersRouter from "./routes/admin/users.js";
+import adminStoriesRouter from "./routes/admin/stories.js";
+import adminFeedbacksRouter from "./routes/admin/feedbacks.js";
+import adminAnalyticsRouter from "./routes/admin/analytics.js";
 
 const { ObjectId } = mongoose.Types;
 
@@ -237,6 +242,12 @@ app.use("/api/dev/achievements", authGuard, devAchievementsRouter);
 
 // SSE router
 app.use("/api/sse", authGuard, sseRouter);
+
+// Admin routers (require authGuard + adminGuard)
+app.use("/api/admin/users", authGuard, adminGuard, adminUsersRouter);
+app.use("/api/admin/stories", authGuard, adminGuard, adminStoriesRouter);
+app.use("/api/admin/feedbacks", authGuard, adminGuard, adminFeedbacksRouter);
+app.use("/api/admin/analytics", authGuard, adminGuard, adminAnalyticsRouter);
 
 // Swagger UI documentation
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerOpts));

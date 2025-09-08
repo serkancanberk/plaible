@@ -73,6 +73,10 @@ const swaggerOptions = {
         name: 'SSE',
         description: 'Server-Sent Events for real-time updates',
       },
+      {
+        name: 'Admin',
+        description: 'Administrative endpoints for user, story, and feedback management',
+      },
     ],
   },
   apis: [

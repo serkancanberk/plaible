@@ -2,8 +2,8 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import { Story } from "../models/Story.js";
-import { User } from "../models/User.js";
-import { logContentEvent, eventTypes } from "../services/eventLog.js";
+import { Feedback } from "../models/Feedback.js";
+import { Event } from "../models/Event.js";
 
 const router = Router();
 import { Router as _Router } from "express";
@@ -15,153 +15,198 @@ const ok = (res, data = {}) => res.json({ ok: true, ...data });
 const err = (res, code = "BAD_REQUEST", http = 400, extra = {}) =>
   res.status(http).json({ error: code, ...extra });
 
-// POST /api/feedbacks
-// body: { storySlug: string, stars: 1..5, text?: string (<=250) }
+/**
+ * @swagger
+ * /api/feedbacks:
+ *   post:
+ *     tags: [Stories]
+ *     summary: Create feedback for a story
+ *     description: Create or update feedback for a story (writes to feedbacks collection)
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [storySlug, stars]
+ *             properties:
+ *               storySlug: { type: string, example: "the-picture-of-dorian-gray" }
+ *               stars: { type: integer, minimum: 1, maximum: 5, example: 4 }
+ *               text: { type: string, maxLength: 250, example: "Great story with interesting characters" }
+ *     responses:
+ *       200:
+ *         description: Feedback created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok: { type: boolean, example: true }
+ *                 stats: { type: object, properties: { avgRating: { type: number }, totalReviews: { type: integer } } }
+ *                 last: { type: object, properties: { _id: { type: string }, userId: { type: string }, storyId: { type: string }, stars: { type: integer }, text: { type: string }, createdAt: { type: string, format: date-time } } }
+ *       401: { description: "Unauthenticated", content: { application/json: { schema: { type: object, properties: { error: { type: string, example: "UNAUTHENTICATED" } } } } } }
+ *       400: { description: "Bad Request", content: { application/json: { schema: { type: object, properties: { error: { type: string, example: "BAD_REQUEST" }, field: { type: string } } } } } }
+ *       404: { description: "Not Found", content: { application/json: { schema: { type: object, properties: { error: { type: string, example: "NOT_FOUND" } } } } } }
+ */
+// AUTH: Create feedback for a story (writes to feedbacks collection)
 router.post("/", async (req, res) => {
   try {
-    if (!req.userId) return err(res, "UNAUTHENTICATED", 401);
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ error: "UNAUTHENTICATED" });
+
     const { storySlug, stars, text } = req.body || {};
-    const slug = toSlug(storySlug);
-    if (!isNonEmptyString(slug)) return err(res, "BAD_REQUEST", 400, { field: "storySlug" });
+    if (!storySlug) return res.status(400).json({ error: "BAD_REQUEST", field: "storySlug" });
 
-    const n = Number(stars);
-    if (!Number.isInteger(n) || n < 1 || n > 5) return err(res, "BAD_REQUEST", 400, { field: "stars" });
-
-    if (text !== undefined) {
-      if (typeof text !== "string") return err(res, "BAD_REQUEST", 400, { field: "text" });
-      if (text.trim().length > 250) return err(res, "BAD_REQUEST", 400, { field: "text" });
+    const s = Number(stars);
+    if (!Number.isFinite(s) || s < 1 || s > 5) {
+      return res.status(400).json({ error: "BAD_REQUEST", field: "stars" });
+    }
+    if (text && typeof text !== "string") {
+      return res.status(400).json({ error: "BAD_REQUEST", field: "text" });
     }
 
-    const story = await Story.findOne({ slug, isActive: true });
-    if (!story) return err(res, "NOT_FOUND", 404);
+    // 1) Story çöz
+    const story = await Story.findOne({ slug: storySlug }, { _id: 1 }).lean();
+    if (!story) return res.status(404).json({ error: "NOT_FOUND", field: "storySlug" });
 
-    // Load user for display info
-    const user = await User.findById(req.userId, { "identity.displayName": 1, profilePictureUrl: 1 }).lean();
-    if (!user) return err(res, "NOT_FOUND", 404);
-
-    const displayName = user.identity?.displayName || "Plaible User";
-    const profilePictureUrl = user.profilePictureUrl || "";
-
-    const now = new Date();
-
-    const fb = Array.isArray(story.feedbacks) ? story.feedbacks : [];
-    const uidStr = String(req.userId);
-    const idx = fb.findIndex(f => String(f.userId || "") === uidStr);
-
-    const newEntry = {
-      userId: new mongoose.Types.ObjectId(uidStr),
-      profilePictureUrl,
-      displayName,
-      text: (text || "").trim(),
-      stars: n,
-      date: now
-    };
-
-    if (idx >= 0) {
-      // Update existing review (idempotent)
-      fb[idx] = newEntry;
-    } else {
-      fb.push(newEntry);
-    }
-
-    story.feedbacks = fb;
-
-    // Recompute stats
-    const rated = fb.filter(x => typeof x.stars === "number" && x.stars > 0);
-    const totalReviews = rated.length;
-    const avgRating = totalReviews
-      ? Math.round((rated.reduce((a, b) => a + b.stars, 0) / totalReviews) * 10) / 10
-      : 0;
-
-    story.stats = {
-      ...(story.stats || {}),
-      totalReviews,
-      avgRating
-    };
-
-    await story.save();
-
-    // Log feedback create event
-    await logContentEvent(eventTypes.FEEDBACK_CREATE, req.userId, {
-      slug: storySlug,
-      storyId: String(story._id)
+    // 2) Insert (default status)
+    const status = (process.env.FEEDBACK_DEFAULT_STATUS || "visible");
+    const doc = await Feedback.create({
+      userId: new mongoose.Types.ObjectId(userId),
+      storyId: story._id,     // Story._id (string)
+      stars: s,
+      text: text || "",
+      status,
+      createdAt: new Date(),
     });
 
-    return ok(res, {
-      stats: story.stats,
-      last: {
-        displayName: newEntry.displayName,
-        stars: newEntry.stars,
-        text: newEntry.text,
-        date: newEntry.date
+    // 3) Best-effort stats: visible yorumlarla hesapla
+    let avgRating = null;
+    let totalReviews = 0;
+    try {
+      const agg = await Feedback.aggregate([
+        { $match: { storyId: story._id, status: "visible" } },
+        { $group: { _id: null, avg: { $avg: "$stars" }, cnt: { $sum: 1 } } },
+      ]);
+      if (agg?.[0]) {
+        avgRating = Math.round((agg[0].avg + Number.EPSILON) * 10) / 10; // 1 decimal
+        totalReviews = agg[0].cnt;
       }
+      // Story.stats güncelle (best-effort)
+      await Story.updateOne(
+        { _id: story._id },
+        { $set: { "stats.avgRating": avgRating || 0, "stats.totalReviews": totalReviews } }
+      ).catch(() => {});
+    } catch (_) {
+      // istatistik hesaplaması başarısız olsa da API dönsün
+    }
+
+    // 4) Event log (opsiyonel best-effort)
+    try {
+      await Event.create({
+        type: "feedback.created",
+        userId: new mongoose.Types.ObjectId(userId),
+        meta: { storyId: story._id, stars: s },
+        createdAt: new Date(),
+      });
+    } catch (_) {}
+
+    // 5) Response → şema korunur
+    const last = {
+      _id: String(doc._id),
+      userId: String(doc.userId),
+      storyId: doc.storyId,
+      stars: doc.stars,
+      text: doc.text,
+      createdAt: doc.createdAt,
+    };
+
+    return res.json({
+      ok: true,
+      stats: { avgRating: avgRating || 0, totalReviews },
+      last,
     });
-  } catch (e) {
-    console.error("[feedbacks:POST]", e);
-    return err(res, "SERVER_ERROR", 500);
+  } catch (err) {
+    console.error("[feedbacks create] error:", err);
+    return res.status(500).json({ error: "SERVER_ERROR" });
   }
 });
 
-// GET /api/stories/:slug/feedbacks?limit=20&cursor=<ISO date>
-// newest first; cursor is "before" date for pagination
-router.get("/story/:slug", async (req, res) => {
-  try {
-    const slug = toSlug(req.params.slug);
-    if (!isNonEmptyString(slug)) return err(res, "BAD_REQUEST", 400, { field: "slug" });
-
-    const story = await Story.findOne({ slug, isActive: true }, { feedbacks: 1 }).lean();
-    if (!story) return err(res, "NOT_FOUND", 404);
-
-    let limit = parseInt(String(req.query.limit ?? "20"), 10);
-    if (Number.isNaN(limit) || limit <= 0) limit = 20;
-    if (limit > 50) limit = 50;
-
-    const cursor = typeof req.query.cursor === "string" ? req.query.cursor : "";
-    const all = Array.isArray(story.feedbacks) ? story.feedbacks.slice() : [];
-    // sort by date desc
-    all.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-
-    const filtered = cursor
-      ? all.filter(x => new Date(x.date || 0) < new Date(cursor))
-      : all;
-
-    const page = filtered.slice(0, limit);
-    const nextCursor = page.length === limit ? page[page.length - 1].date : undefined;
-
-    return ok(res, { items: page.map(({ userId, _uid, ...rest }) => rest), nextCursor });
-  } catch (e) {
-    console.error("[feedbacks:GET]", e);
-    return err(res, "SERVER_ERROR", 500);
-  }
-});
-
+/**
+ * @swagger
+ * /api/feedbacks/story/{slug}:
+ *   get:
+ *     tags: [Stories]
+ *     summary: Get feedbacks for a story
+ *     description: Retrieve paginated list of visible feedbacks for a story
+ *     parameters:
+ *       - in: path, name: slug, required: true, schema: { type: string }, description: Story slug
+ *       - in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 20 }, description: Number of results per page
+ *       - in: query, name: cursor, schema: { type: string, format: date-time }, description: Pagination cursor (ISO date)
+ *     responses:
+ *       200:
+ *         description: Feedbacks retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok: { type: boolean, example: true }
+ *                 items: { type: array, items: { type: object, properties: { _id: { type: string }, userId: { type: string }, storyId: { type: string }, stars: { type: integer }, text: { type: string }, createdAt: { type: string, format: date-time } } } }
+ *                 nextCursor: { type: string, format: date-time, nullable: true }
+ *       400: { description: "Bad Request", content: { application/json: { schema: { type: object, properties: { error: { type: string, example: "BAD_REQUEST" } } } } } }
+ *       404: { description: "Not Found", content: { application/json: { schema: { type: object, properties: { error: { type: string, example: "NOT_FOUND" } } } } } }
+ */
+// PUBLIC: List feedbacks by story slug (visible only)
 publicFeedbacksRouter.get("/story/:slug", async (req, res) => {
   try {
-    const slug = toSlug(req.params.slug);
-    if (!isNonEmptyString(slug)) return err(res, "BAD_REQUEST", 400, { field: "slug" });
+    const { slug } = req.params;
+    const { limit, cursor } = req.query;
 
-    const story = await Story.findOne({ slug, isActive: true }, { feedbacks: 1 }).lean();
-    if (!story) return err(res, "NOT_FOUND", 404);
+    const pageSize = Math.min(Math.max(Number(limit) || 20, 1), 100);
 
-    let limit = parseInt(String(req.query.limit ?? "20"), 10);
-    if (Number.isNaN(limit) || limit <= 0) limit = 20;
-    if (limit > 50) limit = 50;
+    // 1) StoryId (string) çöz
+    const story = await Story.findOne({ slug }, { _id: 1 }).lean();
+    if (!story) {
+      return res.json({ ok: true, items: [], nextCursor: null });
+    }
 
-    const cursor = typeof req.query.cursor === "string" ? req.query.cursor : "";
-    const all = Array.isArray(story.feedbacks) ? story.feedbacks.slice() : [];
-    all.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    // 2) Filtre kur
+    const filter = { storyId: story._id, status: "visible" };
+    if (cursor) {
+      const c = new Date(cursor);
+      if (!isNaN(c.getTime())) {
+        filter.createdAt = { $lt: c };
+      }
+    }
 
-    const filtered = cursor
-      ? all.filter(x => new Date(x.date || 0) < new Date(cursor))
-      : all;
+    // 3) Sorgu (desc)
+    const docs = await Feedback.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(pageSize + 1)
+      .lean();
 
-    const page = filtered.slice(0, limit);
-    const nextCursor = page.length === limit ? page[page.length - 1].date : undefined;
+    const hasMore = docs.length > pageSize;
+    if (hasMore) docs.pop();
 
-    return ok(res, { items: page.map(({ userId, _uid, ...rest }) => rest), nextCursor });
-  } catch (e) {
-    console.error("[feedbacks:publicGET]", e);
-    return err(res, "SERVER_ERROR", 500);
+    // 4) Public DTO map (eski şemayı koruyacak şekilde basit alanlar)
+    const items = docs.map(f => ({
+      _id: String(f._id),
+      userId: String(f.userId),
+      storyId: f.storyId,          // Story._id (string)
+      stars: f.stars,
+      text: f.text,
+      createdAt: f.createdAt,
+    }));
+
+    const nextCursor = hasMore ? items[items.length - 1]?.createdAt?.toISOString?.() || null : null;
+
+    return res.json({ ok: true, items, nextCursor });
+  } catch (err) {
+    console.error("[public feedbacks list] error:", err);
+    return res.status(500).json({ error: "SERVER_ERROR" });
   }
 });
 
