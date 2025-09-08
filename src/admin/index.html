@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plaible Admin Dashboard</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6/dist/umd/react-router-dom.development.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for better admin UI */
+        .admin-container {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="module">
+        // This would be the entry point for a real React app
+        // For now, this serves as a template for integration
+        
+        console.log('Admin Dashboard loaded');
+        console.log('Available routes:');
+        console.log('- /admin/users');
+        console.log('- /admin/stories'); 
+        console.log('- /admin/feedbacks');
+        
+        // Example of how to test the API endpoints
+        async function testAdminAPI() {
+            try {
+                console.log('Testing admin API endpoints...');
+                
+                // Test users endpoint
+                const usersResponse = await fetch('/api/admin/users', {
+                    credentials: 'include'
+                });
+                console.log('Users endpoint status:', usersResponse.status);
+                
+                // Test stories endpoint
+                const storiesResponse = await fetch('/api/admin/stories', {
+                    credentials: 'include'
+                });
+                console.log('Stories endpoint status:', storiesResponse.status);
+                
+                // Test feedbacks endpoint
+                const feedbacksResponse = await fetch('/api/admin/feedbacks', {
+                    credentials: 'include'
+                });
+                console.log('Feedbacks endpoint status:', feedbacksResponse.status);
+                
+            } catch (error) {
+                console.error('API test failed:', error);
+            }
+        }
+        
+        // Run API test when page loads
+        testAdminAPI();
+    </script>
+</body>
+</html>

@@ -252,6 +252,9 @@ app.use("/api/admin/analytics", authGuard, adminGuard, adminAnalyticsRouter);
 // Swagger UI documentation
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerOpts));
 
+// OpenAPI JSON endpoint
+app.get("/api/docs.json", (_, res) => res.json(swaggerSpec));
+
 /**
  * @swagger
  * /api/dev/events:
