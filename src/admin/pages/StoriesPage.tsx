@@ -1,9 +1,12 @@
 // src/admin/pages/StoriesPage.tsx
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Table } from '../components/Table';
 import { Spinner } from '../components/Spinner';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { debounce } from '../utils/debounce';
 import { adminApi, Story } from '../api';
+import { FilterBarStories } from '../components/FilterBarStories';
 
 export const StoriesPage: React.FC = () => {
   const [stories, setStories] = useState<Story[]>([]);
@@ -11,26 +14,50 @@ export const StoriesPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     query: '',
-    isActive: ''
+    isActive: '' as '' | 'true' | 'false'
   });
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // URL'den başlangıç yüklemesi (ilk render)
+  useEffect(() => {
+    const q = searchParams.get('query') ?? '';
+    const a = searchParams.get('isActive') ?? '';
+    setFilters(prev => (prev.query === q && prev.isActive === a) ? prev : { query: q, isActive: a as any });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // URL'i güncellemek için debounce'lu bir handler
+  const updateUrlDebounced = React.useMemo(
+    () => debounce((next: { query?: string; isActive?: ''|'true'|'false' }) => {
+      const q = next.query ?? filters.query;
+      const a = next.isActive ?? filters.isActive;
+      const params: Record<string,string> = {};
+      if (q) params.query = q;
+      if (a) params.isActive = a;
+      setSearchParams(params, { replace: true });
+    }, 300),
+    [filters.query, filters.isActive, setSearchParams]
+  );
 
   const loadStories = useCallback(async () => {
+    console.debug('[stories] load start', { filters });
     setLoading(true);
-    setError(null);            // clear previous error
+    setError(null);
     try {
-      const params: any = {};
-      if (filters.query) params.query = filters.query;
-      if (filters.isActive) params.isActive = filters.isActive === 'true';
-      
-      const resp = await adminApi.getStories(params);
+      const isActiveBool = filters.isActive === '' ? undefined
+                        : filters.isActive === 'true' ? true
+                        : false;
+      const resp = await adminApi.getStories({ query: filters.query, isActive: isActiveBool as any, limit: 10 });
+      console.debug('[stories] resp', resp);
       if (resp?.ok) {
         setStories(resp.items ?? []);
-        setError(null);        // be explicit
+        setError(null);
       } else {
         setStories([]);
         setError(resp?.error || 'Failed to load stories');
       }
     } catch (e: any) {
+      console.debug('[stories] error', e);
       setStories([]);
       setError(e?.message || 'Failed to load stories');
     } finally {
@@ -40,7 +67,7 @@ export const StoriesPage: React.FC = () => {
 
   useEffect(() => {
     loadStories();
-  }, [filters]);
+  }, [loadStories]);
 
   const handleStatusToggle = async (storyId: string, currentStatus: boolean) => {
     try {
@@ -111,15 +138,34 @@ export const StoriesPage: React.FC = () => {
 
   if (error) {
     return (
-      <ErrorMessage title="Failed to load stories" message={error} backHref="#/"/>
+      <>
+        <ErrorMessage title="Failed to load stories" message={error} backHref="#/"/>
+        {/* dev-only */}
+        {process.env.NODE_ENV !== 'production' && (
+          <pre className="mt-2 text-xs opacity-60">filters: {JSON.stringify(filters)}</pre>
+        )}
+      </>
     );
   }
 
   return (
-    <Table
-      data={stories}
-      columns={columns}
-      emptyMessage="No stories found"
-    />
+    <div className="p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Stories</h1>
+        <FilterBarStories
+          query={filters.query}
+          isActive={filters.isActive}
+          onChange={(next) => {
+            setFilters(prev => ({ ...prev, ...next }));
+            updateUrlDebounced(next);
+          }}
+        />
+      </div>
+      <Table
+        data={stories}
+        columns={columns}
+        emptyMessage="No stories found"
+      />
+    </div>
   );
 };

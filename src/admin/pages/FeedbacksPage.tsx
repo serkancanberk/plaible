@@ -1,9 +1,12 @@
 // src/admin/pages/FeedbacksPage.tsx
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Table } from '../components/Table';
 import { Spinner } from '../components/Spinner';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { debounce } from '../utils/debounce';
 import { adminApi, Feedback } from '../api';
+import { FilterBarFeedbacks } from '../components/FilterBarFeedbacks';
 
 export const FeedbacksPage: React.FC = () => {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
@@ -14,25 +17,54 @@ export const FeedbacksPage: React.FC = () => {
     status: '',
     starsGte: ''
   });
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // URL'den başlangıç yüklemesi (ilk render)
+  useEffect(() => {
+    const sId = searchParams.get('storyId') ?? '';
+    const st  = searchParams.get('status') ?? '';
+    const sg  = searchParams.get('starsGte') ?? '';
+    setFilters(prev => (prev.storyId===sId && prev.status===st && prev.starsGte===sg) ? prev : { storyId:sId, status:st, starsGte:sg });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // URL'i güncellemek için debounce'lu bir handler
+  const updateUrlDebounced = React.useMemo(
+    () => debounce((next: { storyId?: string; status?: string; starsGte?: string }) => {
+      const sId = next.storyId ?? filters.storyId;
+      const st  = next.status ?? filters.status;
+      const sg  = next.starsGte ?? filters.starsGte;
+      const params: Record<string,string> = {};
+      if (sId) params.storyId = sId;
+      if (st)  params.status  = st;
+      if (sg)  params.starsGte = sg;
+      setSearchParams(params, { replace:true });
+    }, 300),
+    [filters.storyId, filters.status, filters.starsGte, setSearchParams]
+  );
 
   const loadFeedbacks = useCallback(async () => {
+    console.debug('[feedbacks] load start', { filters });
     setLoading(true);
-    setError(null);            // clear previous error
+    setError(null);
     try {
-      const params: any = {};
-      if (filters.storyId) params.storyId = filters.storyId;
-      if (filters.status) params.status = filters.status;
-      if (filters.starsGte) params.starsGte = parseInt(filters.starsGte);
-      
-      const resp = await adminApi.getFeedbacks(params);
+      const sgNum = filters.starsGte ? Number(filters.starsGte) : undefined;
+      const resp = await adminApi.getFeedbacks({
+        storyId: filters.storyId || undefined,
+        status:  filters.status  || undefined,
+        starsGte: sgNum as any,
+        limit: 10
+      });
+      console.debug('[feedbacks] resp', resp);
       if (resp?.ok) {
         setFeedbacks(resp.items ?? []);
-        setError(null);        // be explicit
+        setError(null);
       } else {
         setFeedbacks([]);
         setError(resp?.error || 'Failed to load feedbacks');
       }
     } catch (e: any) {
+      console.debug('[feedbacks] error', e);
       setFeedbacks([]);
       setError(e?.message || 'Failed to load feedbacks');
     } finally {
@@ -42,7 +74,7 @@ export const FeedbacksPage: React.FC = () => {
 
   useEffect(() => {
     loadFeedbacks();
-  }, [filters]);
+  }, [loadFeedbacks]);
 
   const handleStatusToggle = async (feedbackId: string, currentStatus: string) => {
     try {
@@ -135,15 +167,35 @@ export const FeedbacksPage: React.FC = () => {
 
   if (error) {
     return (
-      <ErrorMessage title="Failed to load feedbacks" message={error} backHref="#/"/>
+      <>
+        <ErrorMessage title="Failed to load feedbacks" message={error} backHref="#/"/>
+        {/* dev-only */}
+        {process.env.NODE_ENV !== 'production' && (
+          <pre className="mt-2 text-xs opacity-60">filters: {JSON.stringify(filters)}</pre>
+        )}
+      </>
     );
   }
 
   return (
-    <Table
-      data={feedbacks}
-      columns={columns}
-      emptyMessage="No feedbacks found"
-    />
+    <div className="p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Feedbacks</h1>
+        <FilterBarFeedbacks
+          storyId={filters.storyId}
+          status={filters.status}
+          starsGte={filters.starsGte}
+          onChange={(next) => {
+            setFilters(prev => ({ ...prev, ...next }));
+            updateUrlDebounced(next);
+          }}
+        />
+      </div>
+      <Table
+        data={feedbacks}
+        columns={columns}
+        emptyMessage="No feedbacks found"
+      />
+    </div>
   );
 };
