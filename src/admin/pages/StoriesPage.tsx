@@ -1,6 +1,6 @@
 // src/admin/pages/StoriesPage.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Table } from '../components/Table';
 import { Spinner } from '../components/Spinner';
 import { ErrorMessage } from '../components/ErrorMessage';
@@ -23,6 +23,7 @@ export const StoriesPage: React.FC = () => {
   });
   const [selectedStoryId, setSelectedStoryId] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { showToast } = useToast();
 
   // URL'den başlangıç yüklemesi (ilk render)
@@ -145,6 +146,12 @@ export const StoriesPage: React.FC = () => {
       label: 'Actions',
       render: (_: any, story: Story) => (
         <div className="flex space-x-2">
+          <button
+            onClick={() => navigate(`/stories/edit/${story._id}`)}
+            className="px-3 py-1 text-xs rounded bg-blue-100 text-blue-800 hover:bg-blue-200"
+          >
+            Edit
+          </button>
           <button
             onClick={() => handleStatusToggle(story._id, story.isActive)}
             className={`px-3 py-1 text-xs rounded ${

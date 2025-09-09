@@ -6,6 +6,7 @@ import { Topbar } from './components/Topbar';
 import { ToastProvider } from './components/Toast';
 import { UsersPage } from './pages/UsersPage';
 import { StoriesPage } from './pages/StoriesPage';
+import { StoryEditPage } from './pages/StoryEditPage';
 import { FeedbacksPage } from './pages/FeedbacksPage';
 import { WalletAnalyticsPage } from './pages/WalletAnalyticsPage';
 
@@ -24,6 +25,7 @@ export const AppAdmin: React.FC = () => {
                 <Route path="/" element={<Navigate to="/users" replace />} />
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/stories" element={<StoriesPage />} />
+                <Route path="/stories/edit/:storyId" element={<StoryEditPage />} />
                 <Route path="/feedbacks" element={<FeedbacksPage />} />
                 <Route path="/wallet-analytics" element={<WalletAnalyticsPage />} />
                 <Route path="*" element={<Navigate to="/users" replace />} />
