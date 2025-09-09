@@ -10,6 +10,7 @@ const menuItems = [
   { path: '/users', label: 'Users', icon: '👥' },
   { path: '/stories', label: 'Stories', icon: '📚' },
   { path: '/feedbacks', label: 'Feedbacks', icon: '💬' },
+  { path: '/wallet-analytics', label: 'Wallet Analytics', icon: '💰' },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {

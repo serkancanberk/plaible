@@ -1,45 +1,94 @@
 // src/admin/components/Toast.tsx
-import React, { useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
-export type ToastType = 'success' | 'error' | 'info';
-
-interface ToastProps {
+interface ToastState {
   message: string;
-  type: ToastType;
+  type: 'success' | 'error' | 'info';
+  isVisible: boolean;
+}
+
+interface ToastContextType {
+  showToast: (message: string, type: 'success' | 'error' | 'info') => void;
+  hideToast: () => void;
+}
+
+const ToastContext = createContext<ToastContextType | undefined>(undefined);
+
+export const useToast = () => {
+  const context = useContext(ToastContext);
+  if (!context) {
+    throw new Error('useToast must be used within a ToastProvider');
+  }
+  return context;
+};
+
+interface ToastProviderProps {
+  children: React.ReactNode;
+}
+
+export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
+  const [toast, setToast] = useState<ToastState | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info') => {
+    setToast({ message, type, isVisible: true });
+  };
+
+  const hideToast = () => {
+    setToast(null);
+  };
+
+  return (
+    <ToastContext.Provider value={{ showToast, hideToast }}>
+      {children}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          isVisible={toast.isVisible}
+          onClose={hideToast}
+        />
+      )}
+    </ToastContext.Provider>
+  );
+};
+
+interface Props {
+  message: string;
+  type: 'success' | 'error' | 'info';
+  isVisible: boolean;
   onClose: () => void;
   duration?: number;
 }
 
-export const Toast: React.FC<ToastProps> = ({ message, type, onClose, duration = 3000 }) => {
-  const [isVisible, setIsVisible] = useState(true);
-
+export const Toast: React.FC<Props> = ({ 
+  message, 
+  type, 
+  isVisible, 
+  onClose, 
+  duration = 4000 
+}) => {
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsVisible(false);
-      setTimeout(onClose, 300); // Allow fade out animation
-    }, duration);
+    if (isVisible) {
+      const timer = setTimeout(onClose, duration);
+      return () => clearTimeout(timer);
+    }
+  }, [isVisible, duration, onClose]);
 
-    return () => clearTimeout(timer);
-  }, [duration, onClose]);
+  if (!isVisible) return null;
 
-  const typeClasses = {
-    success: 'bg-green-500 text-white',
-    error: 'bg-red-500 text-white',
-    info: 'bg-blue-500 text-white'
-  };
+  const bgColor = {
+    success: 'bg-green-500',
+    error: 'bg-red-500',
+    info: 'bg-blue-500'
+  }[type];
 
   return (
-    <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-md shadow-lg transition-opacity duration-300 ${
-      isVisible ? 'opacity-100' : 'opacity-0'
-    } ${typeClasses[type]}`}>
-      <div className="flex items-center justify-between">
+    <div className="fixed top-4 right-4 z-50">
+      <div className={`${bgColor} text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-3`}>
         <span>{message}</span>
         <button
-          onClick={() => {
-            setIsVisible(false);
-            setTimeout(onClose, 300);
-          }}
-          className="ml-2 text-white hover:text-gray-200"
+          onClick={onClose}
+          className="text-white hover:text-gray-200 text-xl leading-none"
         >
           ×
         </button>
@@ -48,17 +97,5 @@ export const Toast: React.FC<ToastProps> = ({ message, type, onClose, duration =
   );
 };
 
-// Toast context for global toast management
-interface ToastContextType {
-  showToast: (message: string, type: ToastType) => void;
-}
-
-export const ToastContext = React.createContext<ToastContextType | null>(null);
-
-export const useToast = () => {
-  const context = React.useContext(ToastContext);
-  if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
-  }
-  return context;
-};
+// Export the context for direct usage if needed
+export { ToastContext };

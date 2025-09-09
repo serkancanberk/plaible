@@ -36,7 +36,6 @@ const userSchema = new Schema(
       balance: { type: Number, default: 0 },
       currency: { type: String, default: 'CREDITS' }
     },
-    walletBalance: { type: Number, default: 0 },
     transactionHistory: { type: [transactionSchema], default: [] },
     socialConnections: { type: [String], default: [] },
     roles: { type: [String], default: ["user"], index: true },
@@ -46,16 +45,18 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
-userSchema.methods.applyTransaction = async function ({ amount, type = "debit", source = "play", note = "" } = {}) {
+userSchema.methods.applyTransaction = async function ({ amount, type = "debit", source = "play", note = "", metadata = {} } = {}) {
   if (typeof amount !== "number" || amount <= 0) {
     throw new Error("Amount must be a positive number");
   }
   const delta = type === "credit" ? amount : -amount;
-  const nextBalance = (this.walletBalance || 0) + delta;
+  const nextBalance = (this.wallet?.balance || 0) + delta;
   if (nextBalance < 0) {
     throw new Error("Insufficient balance");
   }
-  this.walletBalance = nextBalance;
+  this.wallet.balance = nextBalance;
+  
+  // Add to legacy transaction history for backward compatibility
   this.transactionHistory.push({
     amount,
     type,
@@ -64,7 +65,28 @@ userSchema.methods.applyTransaction = async function ({ amount, type = "debit", 
     balanceAfter: nextBalance,
     date: new Date(),
   });
-  return this.save();
+  
+  // Save the user first
+  await this.save();
+  
+  // Log to the new wallet transactions collection
+  try {
+    const { logWalletTransaction } = await import("../services/walletTransactionLogger.js");
+    await logWalletTransaction(
+      this._id,
+      type,
+      amount,
+      source,
+      nextBalance,
+      note,
+      metadata
+    );
+  } catch (error) {
+    console.error("Failed to log wallet transaction:", error);
+    // Don't throw - the main transaction should still succeed
+  }
+  
+  return this;
 };
 
 export const User = mongoose.models.User || mongoose.model("User", userSchema); 

@@ -33,6 +33,7 @@ import adminUsersRouter from "./routes/admin/users.js";
 import adminStoriesRouter from "./routes/admin/stories.js";
 import adminFeedbacksRouter from "./routes/admin/feedbacks.js";
 import adminAnalyticsRouter from "./routes/admin/analytics.js";
+import adminWalletAnalyticsRouter from "./routes/admin/walletAnalytics.js";
 
 const { ObjectId } = mongoose.Types;
 
@@ -248,6 +249,7 @@ app.use("/api/admin/users", authGuard, adminGuard, adminUsersRouter);
 app.use("/api/admin/stories", authGuard, adminGuard, adminStoriesRouter);
 app.use("/api/admin/feedbacks", authGuard, adminGuard, adminFeedbacksRouter);
 app.use("/api/admin/analytics", authGuard, adminGuard, adminAnalyticsRouter);
+app.use("/api/admin/wallet", authGuard, adminGuard, adminWalletAnalyticsRouter);
 
 // Swagger UI documentation
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerOpts));

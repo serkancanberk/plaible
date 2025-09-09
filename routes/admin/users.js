@@ -55,6 +55,8 @@ router.get("/", async (req, res) => {
       filter.$or = [
         { email: regex },
         { 'identity.displayName': regex },
+        { displayName: regex },
+        { fullName: regex },
         { googleId: regex }
       ];
     }
@@ -68,7 +70,7 @@ router.get("/", async (req, res) => {
 
     // Query with limit + 1 to check for more results
     const users = await User.find(filter)
-      .select('_id email identity.displayName roles status wallet.balance createdAt')
+      .select('_id email identity.displayName displayName fullName roles status wallet.balance createdAt')
       .sort({ createdAt: -1 })
       .limit(pageSize + 1)
       .lean();
@@ -81,7 +83,7 @@ router.get("/", async (req, res) => {
     const transformedItems = items.map(user => ({
       _id: user._id,
       email: user.email,
-      displayName: user.identity?.displayName || user.displayName,
+      displayName: user.identity?.displayName || user.displayName || user.fullName || 'Unknown',
       roles: user.roles,
       status: user.status,
       balance: user.wallet?.balance || 0,
@@ -167,6 +169,8 @@ router.get("/:id", async (req, res) => {
  *               email: { type: string, format: email, example: "user@example.com" }
  *               displayName: { type: string, example: "John Doe" }
  *               roles: { type: array, items: { type: string }, example: ["user"] }
+ *               status: { type: string, enum: [active, disabled], example: "active" }
+ *               walletBalance: { type: number, minimum: 0, example: 100 }
  *     responses:
  *       200:
  *         description: User created successfully
@@ -181,10 +185,16 @@ router.get("/:id", async (req, res) => {
  */
 router.post("/", async (req, res) => {
   try {
-    const { email, displayName, roles = ["user"] } = req.body;
+    const { email, displayName, roles = ["user"], status = "active", walletBalance = 0 } = req.body;
 
     if (!email || !displayName) {
       return err(res, "BAD_REQUEST");
+    }
+
+    // Validate walletBalance
+    const balance = Number(walletBalance);
+    if (isNaN(balance) || balance < 0) {
+      return err(res, "BAD_REQUEST", "walletBalance");
     }
 
     const user = new User({
@@ -193,16 +203,39 @@ router.post("/", async (req, res) => {
       identity: { displayName },
       fullName: displayName,
       roles,
-      status: "active"
+      status,
+      wallet: {
+        balance: balance,
+        currency: 'CREDITS'
+      }
     });
 
     await user.save();
+
+    // Log the initial wallet balance if it's greater than 0
+    if (balance > 0) {
+      try {
+        const { logWalletTransaction } = await import("../../services/walletTransactionLogger.js");
+        await logWalletTransaction(
+          user._id,
+          "credit",
+          balance,
+          "admin",
+          balance,
+          "Initial wallet balance set by admin",
+          { adminUserId: req.userId }
+        );
+      } catch (error) {
+        console.error("Failed to log initial wallet transaction:", error);
+        // Don't fail the user creation if logging fails
+      }
+    }
 
     // Log admin action
     await logEvent({
       type: "admin.users.create",
       userId: req.userId,
-      meta: { targetUserId: user._id, email, displayName, roles },
+      meta: { targetUserId: user._id, email, displayName, roles, status, walletBalance: balance },
       level: "info"
     });
 
