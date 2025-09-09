@@ -1,5 +1,5 @@
 // src/admin/components/FilterBarFeedbacks.tsx
-import React from 'react';
+import React, { useState } from 'react';
 
 interface Props {
   storyId: string;
@@ -9,14 +9,23 @@ interface Props {
 }
 
 export const FilterBarFeedbacks: React.FC<Props> = ({ storyId, status, starsGte, onChange }) => {
+  const [storyIdInput, setStoryIdInput] = useState(storyId);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      onChange({ storyId: storyIdInput });
+    }
+  };
+
   return (
     <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
       <input
         type="text"
-        placeholder="Story ID…"
+        placeholder="Story ID… (Press Enter)"
         className="border rounded px-3 py-2 w-full md:w-48"
-        value={storyId}
-        onChange={(e) => onChange({ storyId: e.target.value })}
+        value={storyIdInput}
+        onChange={(e) => setStoryIdInput(e.target.value)}
+        onKeyDown={handleKeyDown}
       />
       <select
         className="border rounded px-3 py-2"

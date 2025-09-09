@@ -4,39 +4,49 @@ import { useSearchParams } from 'react-router-dom';
 import { Table } from '../components/Table';
 import { Spinner } from '../components/Spinner';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { Pagination } from '../components/Pagination';
+import { useToast } from '../components/Toast';
 import { debounce } from '../utils/debounce';
 import { adminApi, Story } from '../api';
 import { FilterBarStories } from '../components/FilterBarStories';
+import { StoryDetailModal } from '../components/StoryDetailModal';
 
 export const StoriesPage: React.FC = () => {
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
   const [filters, setFilters] = useState({
     query: '',
-    isActive: '' as '' | 'true' | 'false'
+    isActive: '' as '' | 'true' | 'false',
+    page: 1
   });
+  const [selectedStoryId, setSelectedStoryId] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const { showToast } = useToast();
 
   // URL'den başlangıç yüklemesi (ilk render)
   useEffect(() => {
     const q = searchParams.get('query') ?? '';
     const a = searchParams.get('isActive') ?? '';
-    setFilters(prev => (prev.query === q && prev.isActive === a) ? prev : { query: q, isActive: a as any });
+    const p = parseInt(searchParams.get('page') ?? '1', 10);
+    setFilters(prev => (prev.query === q && prev.isActive === a && prev.page === p) ? prev : { query: q, isActive: a as any, page: p });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // URL'i güncellemek için debounce'lu bir handler
   const updateUrlDebounced = React.useMemo(
-    () => debounce((next: { query?: string; isActive?: ''|'true'|'false' }) => {
+    () => debounce((next: { query?: string; isActive?: ''|'true'|'false'; page?: number }) => {
       const q = next.query ?? filters.query;
       const a = next.isActive ?? filters.isActive;
+      const p = next.page ?? filters.page;
       const params: Record<string,string> = {};
       if (q) params.query = q;
       if (a) params.isActive = a;
+      if (p > 1) params.page = p.toString();
       setSearchParams(params, { replace: true });
     }, 300),
-    [filters.query, filters.isActive, setSearchParams]
+    [filters.query, filters.isActive, filters.page, setSearchParams]
   );
 
   const loadStories = useCallback(async () => {
@@ -47,23 +57,31 @@ export const StoriesPage: React.FC = () => {
       const isActiveBool = filters.isActive === '' ? undefined
                         : filters.isActive === 'true' ? true
                         : false;
-      const resp = await adminApi.getStories({ query: filters.query, isActive: isActiveBool as any, limit: 10 });
+      const resp = await adminApi.getStories({ 
+        query: filters.query, 
+        isActive: isActiveBool, 
+        limit: 10
+      });
       console.debug('[stories] resp', resp);
       if (resp?.ok) {
         setStories(resp.items ?? []);
+        // Note: Stories API uses cursor-based pagination, so we estimate totalCount
+        setTotalCount(resp.items?.length === 10 ? (filters.page * 10) + 1 : filters.page * 10);
         setError(null);
       } else {
         setStories([]);
+        setTotalCount(0);
         setError(resp?.error || 'Failed to load stories');
       }
     } catch (e: any) {
       console.debug('[stories] error', e);
       setStories([]);
+      setTotalCount(0);
       setError(e?.message || 'Failed to load stories');
     } finally {
       setLoading(false);
     }
-  }, [filters.query, filters.isActive]);
+  }, [filters.query, filters.isActive, filters.page]);
 
   useEffect(() => {
     loadStories();
@@ -73,9 +91,17 @@ export const StoriesPage: React.FC = () => {
     try {
       await adminApi.updateStoryStatus(storyId, !currentStatus);
       await loadStories(); // Reload to get updated data
+      showToast('Story status updated successfully', 'success');
     } catch (err: any) {
       console.error('Failed to update story status:', err);
+      showToast('Failed to update story status', 'error');
     }
+  };
+
+  // Pagination handler
+  const handlePageChange = (newPage: number) => {
+    setFilters(prev => ({ ...prev, page: newPage }));
+    updateUrlDebounced({ page: newPage });
   };
 
   const columns = [
@@ -134,7 +160,29 @@ export const StoriesPage: React.FC = () => {
     },
   ];
 
-  if (loading) return <Spinner />;
+  // Skeleton loading state
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Stories</h1>
+          <FilterBarStories
+            query={filters.query}
+            isActive={filters.isActive}
+            onChange={(next) => {
+              setFilters(prev => ({ ...prev, ...next, isActive: (next.isActive as '' | 'true' | 'false') || prev.isActive }));
+              updateUrlDebounced({ ...next, isActive: (next.isActive as '' | 'true' | 'false') || filters.isActive });
+            }}
+          />
+        </div>
+        <div className="bg-white rounded-lg shadow">
+          <div className="flex items-center justify-center h-64">
+            <Spinner />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -156,16 +204,32 @@ export const StoriesPage: React.FC = () => {
           query={filters.query}
           isActive={filters.isActive}
           onChange={(next) => {
-            setFilters(prev => ({ ...prev, ...next }));
-            updateUrlDebounced(next);
+            setFilters(prev => ({ ...prev, ...next, isActive: (next.isActive as '' | 'true' | 'false') || prev.isActive }));
+            updateUrlDebounced({ ...next, isActive: (next.isActive as '' | 'true' | 'false') || filters.isActive });
           }}
         />
       </div>
       <Table
         data={stories}
         columns={columns}
-        emptyMessage="No stories found"
+        emptyMessage={totalCount === 0 ? "No stories match your filters." : "No stories found"}
+        onRowClick={(story) => setSelectedStoryId(story._id)}
       />
+      <Pagination
+        currentPage={filters.page}
+        hasNextPage={stories.length === 10}
+        totalCount={totalCount}
+        limit={10}
+        onPageChange={handlePageChange}
+      />
+      
+      {/* Story Detail Modal */}
+      {selectedStoryId && (
+        <StoryDetailModal
+          storyId={selectedStoryId}
+          onClose={() => setSelectedStoryId(null)}
+        />
+      )}
     </div>
   );
 };

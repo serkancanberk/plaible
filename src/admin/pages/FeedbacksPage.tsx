@@ -4,43 +4,51 @@ import { useSearchParams } from 'react-router-dom';
 import { Table } from '../components/Table';
 import { Spinner } from '../components/Spinner';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { Pagination } from '../components/Pagination';
+import { useToast } from '../components/Toast';
 import { debounce } from '../utils/debounce';
-import { adminApi, Feedback } from '../api';
+import { adminApi, AdminFeedback } from '../api';
 import { FilterBarFeedbacks } from '../components/FilterBarFeedbacks';
 
 export const FeedbacksPage: React.FC = () => {
-  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [feedbacks, setFeedbacks] = useState<AdminFeedback[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
   const [filters, setFilters] = useState({
     storyId: '',
     status: '',
-    starsGte: ''
+    starsGte: '',
+    page: 1
   });
   const [searchParams, setSearchParams] = useSearchParams();
+  const { showToast } = useToast();
 
   // URL'den başlangıç yüklemesi (ilk render)
   useEffect(() => {
     const sId = searchParams.get('storyId') ?? '';
     const st  = searchParams.get('status') ?? '';
     const sg  = searchParams.get('starsGte') ?? '';
-    setFilters(prev => (prev.storyId===sId && prev.status===st && prev.starsGte===sg) ? prev : { storyId:sId, status:st, starsGte:sg });
+    const p = parseInt(searchParams.get('page') ?? '1', 10);
+    setFilters(prev => (prev.storyId===sId && prev.status===st && prev.starsGte===sg && prev.page === p) ? prev : { storyId:sId, status:st, starsGte:sg, page: p });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // URL'i güncellemek için debounce'lu bir handler
   const updateUrlDebounced = React.useMemo(
-    () => debounce((next: { storyId?: string; status?: string; starsGte?: string }) => {
+    () => debounce((next: { storyId?: string; status?: string; starsGte?: string; page?: number }) => {
       const sId = next.storyId ?? filters.storyId;
       const st  = next.status ?? filters.status;
       const sg  = next.starsGte ?? filters.starsGte;
+      const p = next.page ?? filters.page;
       const params: Record<string,string> = {};
       if (sId) params.storyId = sId;
       if (st)  params.status  = st;
       if (sg)  params.starsGte = sg;
+      if (p > 1) params.page = p.toString();
       setSearchParams(params, { replace:true });
     }, 300),
-    [filters.storyId, filters.status, filters.starsGte, setSearchParams]
+    [filters.storyId, filters.status, filters.starsGte, filters.page, setSearchParams]
   );
 
   const loadFeedbacks = useCallback(async () => {
@@ -52,25 +60,29 @@ export const FeedbacksPage: React.FC = () => {
       const resp = await adminApi.getFeedbacks({
         storyId: filters.storyId || undefined,
         status:  filters.status  || undefined,
-        starsGte: sgNum as any,
+        starsGte: sgNum,
         limit: 10
       });
       console.debug('[feedbacks] resp', resp);
       if (resp?.ok) {
         setFeedbacks(resp.items ?? []);
+        // Note: Feedbacks API uses cursor-based pagination, so we estimate totalCount
+        setTotalCount(resp.items?.length === 10 ? (filters.page * 10) + 1 : filters.page * 10);
         setError(null);
       } else {
         setFeedbacks([]);
+        setTotalCount(0);
         setError(resp?.error || 'Failed to load feedbacks');
       }
     } catch (e: any) {
       console.debug('[feedbacks] error', e);
       setFeedbacks([]);
+      setTotalCount(0);
       setError(e?.message || 'Failed to load feedbacks');
     } finally {
       setLoading(false);
     }
-  }, [filters.storyId, filters.status, filters.starsGte]);
+  }, [filters.storyId, filters.status, filters.starsGte, filters.page]);
 
   useEffect(() => {
     loadFeedbacks();
@@ -81,8 +93,10 @@ export const FeedbacksPage: React.FC = () => {
       const newStatus = currentStatus === 'visible' ? 'hidden' : 'visible';
       await adminApi.updateFeedbackStatus(feedbackId, newStatus as 'visible' | 'hidden' | 'flagged');
       await loadFeedbacks(); // Reload to get updated data
+      showToast('Feedback status updated successfully', 'success');
     } catch (err: any) {
       console.error('Failed to update feedback status:', err);
+      showToast('Failed to update feedback status', 'error');
     }
   };
 
@@ -92,9 +106,17 @@ export const FeedbacksPage: React.FC = () => {
     try {
       await adminApi.deleteFeedback(feedbackId);
       await loadFeedbacks(); // Reload to get updated data
+      showToast('Feedback deleted successfully', 'success');
     } catch (err: any) {
       console.error('Failed to delete feedback:', err);
+      showToast('Failed to delete feedback', 'error');
     }
+  };
+
+  // Pagination handler
+  const handlePageChange = (newPage: number) => {
+    setFilters(prev => ({ ...prev, page: newPage }));
+    updateUrlDebounced({ page: newPage });
   };
 
   const columns = [
@@ -163,7 +185,30 @@ export const FeedbacksPage: React.FC = () => {
     },
   ];
 
-  if (loading) return <Spinner />;
+  // Skeleton loading state
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Feedbacks</h1>
+          <FilterBarFeedbacks
+            storyId={filters.storyId}
+            status={filters.status}
+            starsGte={filters.starsGte}
+            onChange={(next) => {
+              setFilters(prev => ({ ...prev, ...next }));
+              updateUrlDebounced(next);
+            }}
+          />
+        </div>
+        <div className="bg-white rounded-lg shadow">
+          <div className="flex items-center justify-center h-64">
+            <Spinner />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -194,7 +239,14 @@ export const FeedbacksPage: React.FC = () => {
       <Table
         data={feedbacks}
         columns={columns}
-        emptyMessage="No feedbacks found"
+        emptyMessage={totalCount === 0 ? "No feedbacks match your filters." : "No feedbacks found"}
+      />
+      <Pagination
+        currentPage={filters.page}
+        hasNextPage={feedbacks.length === 10}
+        totalCount={totalCount}
+        limit={10}
+        onPageChange={handlePageChange}
       />
     </div>
   );

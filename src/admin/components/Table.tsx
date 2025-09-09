@@ -14,6 +14,7 @@ interface TableProps<T> {
   loading?: boolean;
   emptyMessage?: string;
   className?: string;
+  onRowClick?: (item: T, index: number) => void;
 }
 
 export function Table<T extends Record<string, any>>({
@@ -21,7 +22,8 @@ export function Table<T extends Record<string, any>>({
   columns,
   loading = false,
   emptyMessage = 'No data available',
-  className = ''
+  className = '',
+  onRowClick
 }: TableProps<T>) {
   if (loading) {
     return (
@@ -64,7 +66,11 @@ export function Table<T extends Record<string, any>>({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {data.map((item, rowIndex) => (
-              <tr key={rowIndex} className="hover:bg-gray-50">
+              <tr 
+                key={rowIndex} 
+                className={`hover:bg-gray-50 ${onRowClick ? 'cursor-pointer' : ''}`}
+                onClick={() => onRowClick?.(item, rowIndex)}
+              >
                 {columns.map((column, colIndex) => {
                   const value = typeof column.key === 'string' 
                     ? column.key.split('.').reduce((obj, key) => obj?.[key], item)

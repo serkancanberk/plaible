@@ -155,7 +155,7 @@ export const adminApi = {
   // Feedbacks
   getFeedbacks: async (params?: { storyId?: string; userId?: string; status?: string; starsGte?: number; limit?: number; cursor?: string }) => {
     const q = { storyId: '', userId: '', status: '', limit: 10, ...params };
-    const json = await api.get<{ ok: boolean; items: Feedback[]; nextCursor?: string; error?: string }>('/admin/feedbacks', q);
+    const json = await api.get<{ ok: boolean; items: AdminFeedback[]; nextCursor?: string; error?: string }>('/admin/feedbacks', q);
     if ((import.meta as any).env?.DEV) console.debug('[api] feedbacks', json);
     return json;
   },
@@ -203,23 +203,133 @@ export interface User {
   createdAt: string;
 }
 
-export interface Story {
-  _id: string;
-  slug: string;
+// Character and Role interfaces
+export interface Character {
+  id: string;
+  name: string;
+  summary: string;
+  hooks: string[];
+  assets: {
+    images: string[];
+    videos: string[];
+  };
+}
+
+export interface Role {
+  id: string;
+  label: string;
+}
+
+export interface Cast {
+  characterId: string;
+  roleIds: string[];
+}
+
+export interface Highlight {
   title: string;
-  isActive: boolean;
-  pricing: {
-    creditsPerChapter: number;
-    estimatedChapterCount: number;
-  };
-  stats: {
-    avgRating: number;
-    totalReviews: number;
-  };
-  updatedAt: string;
+  description: string;
+}
+
+export interface Summary {
+  original: string;
+  modern: string;
+  highlights: Highlight[];
+}
+
+export interface FactItem {
+  title: string;
+  description: string;
+}
+
+export interface FunFacts {
+  storyFacts: FactItem[];
+  authorInfo: FactItem[];
+  modernEcho: FactItem[];
+}
+
+export interface MediaBlock {
+  images: string[];
+  videos: string[];
+  ambiance: string[];
+}
+
+export interface Share {
+  link: string;
+  text: string;
+  images: string[];
+  videos: string[];
 }
 
 export interface Feedback {
+  profilePictureUrl: string;
+  displayName: string;
+  text: string;
+  stars: number;
+  date: string;
+}
+
+export interface Pricing {
+  creditsPerChapter: number;
+  estimatedChapterCount: number;
+}
+
+export interface ReengagementTemplate {
+  trigger: string;
+  template: string;
+  cooldownHours: number;
+  enabled: boolean;
+}
+
+export interface Storyrunner {
+  systemPrompt: string;
+  openingBeats: string[];
+}
+
+export interface StoryStats {
+  totalPlayed: number;
+  totalReviews: number;
+  avgRating: number;
+  savedCount: number;
+}
+
+// Main Story interface
+export interface Story {
+  _id: string;
+  slug: string;
+  mainCategory: 'Book' | 'Story' | 'Biography';
+  subCategory?: string;
+  title: string;
+  authorName?: string;
+  publisher?: string;
+  genres: string[];
+  publishedEra?: string;
+  publishedYear?: number;
+  headline?: string;
+  description?: string;
+  language: string;
+  license: string;
+  contentRating: string;
+  tags: string[];
+  assets: MediaBlock;
+  characters: Character[];
+  roles: Role[];
+  cast: Cast[];
+  hooks: string[];
+  summary: Summary;
+  funFacts: FunFacts;
+  stats: StoryStats;
+  share: Share;
+  feedbacks: Feedback[];
+  pricing: Pricing;
+  relatedStoryIds: string[];
+  reengagementTemplates: ReengagementTemplate[];
+  storyrunner: Storyrunner;
+  createdAt: string;
+  updatedAt: string;
+  isActive: boolean;
+}
+
+export interface AdminFeedback {
   _id: string;
   userId: string;
   storyId: string;
