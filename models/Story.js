@@ -1,5 +1,6 @@
 // models/Story.js
 import mongoose from "mongoose";
+import { MAIN_CATEGORIES, LANGUAGES, CONTENT_RATINGS, LICENSES, STORY_STATUS, AGE_GROUPS } from "../src/config/categoryEnums.js";
 
 const { Schema, model } = mongoose;
 
@@ -153,7 +154,7 @@ const storySchema = new Schema(
   {
     _id: { type: String, required: true, trim: true }, // prefer semantic IDs (e.g., "story_dorian_gray")
     slug: { type: String, required: true, lowercase: true, trim: true, unique: true, index: true },
-    mainCategory: { type: String, required: true, enum: ["Book", "Story", "Biography"] },
+    mainCategory: { type: String, required: true, enum: MAIN_CATEGORIES },
     subCategory: { type: String, trim: true },
 
     title: { type: String, required: true, trim: true },
@@ -165,9 +166,9 @@ const storySchema = new Schema(
     headline: { type: String, trim: true },
     description: { type: String, trim: true },
 
-    language: { type: String, default: "en", trim: true },
-    license: { type: String, default: "Public Domain", trim: true },
-    contentRating: { type: String, default: "13+", trim: true },
+    language: { type: String, default: "en", enum: LANGUAGES, trim: true },
+    license: { type: String, default: "public-domain", enum: LICENSES, trim: true },
+    contentRating: { type: String, default: "PG-13", enum: CONTENT_RATINGS, trim: true },
     tags: { type: [{ type: String, trim: true }], default: [] },
 
     assets: { type: mediaBlock, default: () => ({}) },

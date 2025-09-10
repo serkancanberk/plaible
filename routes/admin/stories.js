@@ -1,6 +1,8 @@
 import express from "express";
 import { Story } from "../../models/Story.js";
 import { logEvent } from "../../services/eventLog.js";
+import { MAIN_CATEGORIES, LANGUAGES, CONTENT_RATINGS, LICENSES, STORY_STATUS, AGE_GROUPS } from "../../src/config/categoryEnums.js";
+import { validateStoryEnums, validateArrayField, validateRequiredFields } from "../../src/utils/validation.js";
 
 const router = express.Router();
 
@@ -168,8 +170,22 @@ router.post("/", async (req, res) => {
     const storyData = req.body;
 
     // Validate required fields
-    if (!storyData.title || !storyData.summary || !storyData.pricing || !storyData.storyrunner) {
+    const requiredValidation = validateRequiredFields(storyData, ['title', 'summary', 'pricing', 'storyrunner']);
+    if (!requiredValidation.isValid) {
       return err(res, "BAD_REQUEST");
+    }
+
+    // Validate enum fields
+    const enumValidation = validateStoryEnums(storyData);
+    if (!enumValidation.isValid) {
+      console.error('Story creation validation errors:', enumValidation.errors);
+      return err(res, "BAD_REQUEST", enumValidation.errors[0]);
+    }
+
+    // Validate array fields
+    const genresValidation = validateArrayField(storyData.genres, 'genres');
+    if (!genresValidation.isValid) {
+      return err(res, "BAD_REQUEST", "genres");
     }
 
     // Check slug uniqueness
@@ -266,6 +282,32 @@ router.put("/:id", async (req, res) => {
       pricing: story.pricing,
       storyrunner: story.storyrunner
     };
+
+    // Process category fields if they come as objects
+    if (typeof updateData.mainCategory === 'object' && updateData.mainCategory?.value) {
+      updateData.mainCategory = updateData.mainCategory.value;
+    }
+
+    if (typeof updateData.subCategory === 'object' && updateData.subCategory?.value) {
+      updateData.subCategory = updateData.subCategory.value;
+    }
+
+    if (Array.isArray(updateData.genres) && updateData.genres.length > 0 && typeof updateData.genres[0] === 'object') {
+      updateData.genres = updateData.genres.map((g) => g.value || g);
+    }
+
+    // Validate enum fields
+    const enumValidation = validateStoryEnums(updateData);
+    if (!enumValidation.isValid) {
+      console.error('Story update validation errors:', enumValidation.errors);
+      return err(res, "BAD_REQUEST", enumValidation.errors[0]);
+    }
+
+    // Validate array fields
+    const genresValidation = validateArrayField(updateData.genres, 'genres');
+    if (!genresValidation.isValid) {
+      return err(res, "BAD_REQUEST", "genres");
+    }
 
     // Validate cast consistency if characters/roles/cast are being updated
     if (updateData.characters || updateData.roles || updateData.cast) {

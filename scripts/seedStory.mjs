@@ -16,7 +16,7 @@ async function run() {
   const doc = {
     _id: 'story_dorian_gray',
     slug: 'the-picture-of-dorian-gray',
-    mainCategory: 'Book',
+    mainCategory: 'book',
     subCategory: 'Gothic',
     title: 'The Picture of Dorian Gray',
     authorName: 'Oscar Wilde',
@@ -27,8 +27,8 @@ async function run() {
     headline: 'Beauty without consequence carries the heaviest cost.',
     description: 'A striking young man bargains with fate so that a portrait will bear the burden of his sins while he remains flawless.',
     language: 'en',
-    license: 'Public Domain',
-    contentRating: '13+',
+    license: 'public-domain',
+    contentRating: 'PG-13',
     tags: ['classic','vanity','morality','victorian','tragic'],
     assets: {
       images: ['https://cdn.plaible.art/stories/dorian-gray/cover.jpg'],

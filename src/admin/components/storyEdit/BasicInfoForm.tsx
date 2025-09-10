@@ -1,20 +1,28 @@
 // src/admin/components/storyEdit/BasicInfoForm.tsx
 import React, { useState, useEffect } from 'react';
 import { Story } from '../../api';
-import { categoryConfig } from '../../../config/categoryConfig';
+import { categoryConfig, CategoryConfigItem, I18nLabel } from '../../../config/categoryConfig';
 
 interface BasicInfoFormProps {
   story: Story;
   onUpdate: (updates: Partial<Story>) => void;
 }
 
+type SupportedLanguage = 'en' | 'tr';
+
 export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ story, onUpdate }) => {
-  const [availableSubCategories, setAvailableSubCategories] = useState<Array<{name: string, genres: string[]}>>([]);
-  const [availableGenres, setAvailableGenres] = useState<string[]>([]);
+  const [availableSubCategories, setAvailableSubCategories] = useState<Array<{label: I18nLabel, value: string, genres: Array<{label: I18nLabel, value: string}>}>>([]);
+  const [availableGenres, setAvailableGenres] = useState<Array<{label: I18nLabel, value: string}>>([]);
+  const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>('en');
+
+  // Helper function to get label in current language
+  const getLabel = (label: I18nLabel, fallback?: string): string => {
+    return label[currentLanguage] || label.en || fallback || 'Untitled';
+  };
 
   // Update available subcategories when mainCategory changes
   useEffect(() => {
-    const selectedMainCategory = categoryConfig.find(cat => cat.mainCategory === story.mainCategory);
+    const selectedMainCategory = categoryConfig.find(cat => cat.value === story.mainCategory);
     if (selectedMainCategory) {
       setAvailableSubCategories(selectedMainCategory.subCategories);
     } else {
@@ -24,7 +32,7 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ story, onUpdate })
 
   // Update available genres when subCategory changes
   useEffect(() => {
-    const selectedSubCategory = availableSubCategories.find(sub => sub.name === story.subCategory);
+    const selectedSubCategory = availableSubCategories.find(sub => sub.value === story.subCategory);
     if (selectedSubCategory) {
       setAvailableGenres(selectedSubCategory.genres);
     } else {
@@ -70,7 +78,20 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ story, onUpdate })
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">📌 Basic Information</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">📌 Basic Information</h2>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-600">Language:</span>
+            <select
+              value={currentLanguage}
+              onChange={(e) => setCurrentLanguage(e.target.value as SupportedLanguage)}
+              className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="en">English</option>
+              <option value="tr">Türkçe</option>
+            </select>
+          </div>
+        </div>
         <p className="text-sm text-gray-600 mb-6">Configure the core story metadata and publishing details.</p>
       </div>
 
@@ -124,13 +145,14 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ story, onUpdate })
             Main Category *
           </label>
           <select
-            value={story.mainCategory}
+            value={story.mainCategory || ''}
             onChange={(e) => handleMainCategoryChange(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
+            <option value="">Select a main category...</option>
             {categoryConfig.map((category) => (
-              <option key={category.mainCategory} value={category.mainCategory}>
-                {category.mainCategory}
+              <option key={category.value} value={category.value}>
+                {getLabel(category.label)}
               </option>
             ))}
           </select>
@@ -149,8 +171,8 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ story, onUpdate })
           >
             <option value="">Select a subcategory...</option>
             {availableSubCategories.map((subCategory) => (
-              <option key={subCategory.name} value={subCategory.name}>
-                {subCategory.name}
+              <option key={subCategory.value} value={subCategory.value}>
+                {getLabel(subCategory.label)}
               </option>
             ))}
           </select>
@@ -168,19 +190,19 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ story, onUpdate })
             <div className="space-y-2">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {availableGenres.map((genre) => {
-                  const isSelected = story.genres?.includes(genre) || false;
+                  const isSelected = story.genres?.includes(genre.value) || false;
                   return (
                     <button
-                      key={genre}
+                      key={genre.value}
                       type="button"
-                      onClick={() => handleGenreToggle(genre)}
+                      onClick={() => handleGenreToggle(genre.value)}
                       className={`px-3 py-2 text-sm rounded-md border transition-colors ${
                         isSelected
                           ? 'bg-blue-100 border-blue-300 text-blue-800'
                           : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                     >
-                      {genre}
+                      {getLabel(genre.label)}
                     </button>
                   );
                 })}
@@ -305,20 +327,6 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ story, onUpdate })
         </div>
       </div>
 
-      {/* Description */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Description
-        </label>
-        <textarea
-          value={story.description || ''}
-          onChange={(e) => handleInputChange('description', e.target.value)}
-          rows={4}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Brief description of the story..."
-        />
-      </div>
-
       {/* Headline */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -332,6 +340,20 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ story, onUpdate })
           placeholder="Catchy headline for the story"
         />
         <p className="text-xs text-gray-500 mt-1">Short, attention-grabbing headline</p>
+      </div>
+
+      {/* Description */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Description
+        </label>
+        <textarea
+          value={story.description || ''}
+          onChange={(e) => handleInputChange('description', e.target.value)}
+          rows={4}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Brief description of the story..."
+        />
       </div>
     </div>
   );

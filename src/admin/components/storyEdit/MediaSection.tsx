@@ -1,38 +1,31 @@
 // src/admin/components/storyEdit/MediaSection.tsx
 import React from 'react';
 import { Story, MediaBlock, Share } from '../../api';
+import { MediaUploader } from './MediaUploader';
 
 interface MediaSectionProps {
   story: Story;
   onUpdate: (updates: Partial<Story>) => void;
 }
 
+
 export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate }) => {
-  const handleArrayChange = (field: keyof MediaBlock | keyof Share, value: string) => {
-    const array = value.split('\n').map(item => item.trim()).filter(item => item);
-    
-    if (field === 'images' || field === 'videos' || field === 'ambiance') {
-      onUpdate({
-        assets: {
-          ...story.assets,
-          [field]: array
-        }
-      });
-    } else if (field === 'link' || field === 'text') {
-      onUpdate({
-        share: {
-          ...story.share,
-          [field]: value
-        }
-      });
-    } else {
-      onUpdate({
-        share: {
-          ...story.share,
-          [field]: array
-        }
-      });
-    }
+  const handleAssetsUpdate = (field: keyof MediaBlock, items: string[]) => {
+    onUpdate({
+      assets: {
+        ...story.assets,
+        [field]: items
+      }
+    });
+  };
+
+  const handleShareUpdate = (field: keyof Share, items: string[]) => {
+    onUpdate({
+      share: {
+        ...story.share,
+        [field]: items
+      }
+    });
   };
 
   const handleSingleChange = (field: keyof Share, value: string) => {
@@ -48,58 +41,43 @@ export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate }) =
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-gray-900 mb-4">🖼️ Media & Sharing</h2>
-        <p className="text-sm text-gray-600 mb-6">Manage story assets and sharing configuration.</p>
+        <p className="text-sm text-gray-600 mb-6">Manage story assets and sharing configuration with visual previews.</p>
       </div>
 
       {/* Story Assets */}
       <div className="bg-gray-50 rounded-lg p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Story Assets</h3>
         
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Images */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Images
-            </label>
-            <textarea
-              value={story.assets.images.join('\n')}
-              onChange={(e) => handleArrayChange('images', e.target.value)}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
-            />
-            <p className="text-xs text-gray-500 mt-1">One URL per line</p>
-          </div>
+          <MediaUploader
+            items={story.assets.images}
+            onUpdate={(items) => handleAssetsUpdate('images', items)}
+            placeholder="https://example.com/image1.jpg"
+            label="Images"
+            acceptedFileTypes=".jpg,.jpeg,.png,.gif,.webp,.svg"
+            mediaType="image"
+          />
 
           {/* Videos */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Videos
-            </label>
-            <textarea
-              value={story.assets.videos.join('\n')}
-              onChange={(e) => handleArrayChange('videos', e.target.value)}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="https://youtube.com/watch?v=...&#10;https://vimeo.com/..."
-            />
-            <p className="text-xs text-gray-500 mt-1">One URL per line</p>
-          </div>
+          <MediaUploader
+            items={story.assets.videos}
+            onUpdate={(items) => handleAssetsUpdate('videos', items)}
+            placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+            label="Videos"
+            acceptedFileTypes=".mp4,.webm,.ogg,.avi,.mov"
+            mediaType="video"
+          />
 
           {/* Ambiance */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Ambiance (Audio/Atmosphere)
-            </label>
-            <textarea
-              value={story.assets.ambiance.join('\n')}
-              onChange={(e) => handleArrayChange('ambiance', e.target.value)}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="https://soundcloud.com/...&#10;https://youtube.com/watch?v=..."
-            />
-            <p className="text-xs text-gray-500 mt-1">Audio/ambiance URLs, one per line</p>
-          </div>
+          <MediaUploader
+            items={story.assets.ambiance}
+            onUpdate={(items) => handleAssetsUpdate('ambiance', items)}
+            placeholder="https://soundcloud.com/... or https://youtube.com/watch?v=..."
+            label="Ambiance (Audio/Atmosphere)"
+            acceptedFileTypes=".mp3,.wav,.ogg,.m4a"
+            mediaType="audio"
+          />
         </div>
       </div>
 
@@ -107,7 +85,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate }) =
       <div className="bg-gray-50 rounded-lg p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Sharing Configuration</h3>
         
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Share Link */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -137,47 +115,40 @@ export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate }) =
           </div>
 
           {/* Share Images */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Share Images
-            </label>
-            <textarea
-              value={story.share.images.join('\n')}
-              onChange={(e) => handleArrayChange('images', e.target.value)}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="https://example.com/share-image1.jpg&#10;https://example.com/share-image2.jpg"
-            />
-            <p className="text-xs text-gray-500 mt-1">Images for social sharing, one URL per line</p>
-          </div>
+          <MediaUploader
+            items={story.share.images}
+            onUpdate={(items) => handleShareUpdate('images', items)}
+            placeholder="https://example.com/share-image1.jpg"
+            label="Share Images"
+            acceptedFileTypes=".jpg,.jpeg,.png,.gif,.webp,.svg"
+            mediaType="image"
+          />
 
           {/* Share Videos */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Share Videos
-            </label>
-            <textarea
-              value={story.share.videos.join('\n')}
-              onChange={(e) => handleArrayChange('videos', e.target.value)}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="https://youtube.com/watch?v=...&#10;https://vimeo.com/..."
-            />
-            <p className="text-xs text-gray-500 mt-1">Videos for social sharing, one URL per line</p>
-          </div>
+          <MediaUploader
+            items={story.share.videos}
+            onUpdate={(items) => handleShareUpdate('videos', items)}
+            placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+            label="Share Videos"
+            acceptedFileTypes=".mp4,.webm,.ogg,.avi,.mov"
+            mediaType="video"
+          />
         </div>
       </div>
 
-      {/* File Upload Placeholder */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 className="text-lg font-medium text-blue-900 mb-2">📁 File Upload</h3>
-        <p className="text-sm text-blue-700 mb-4">
-          File upload functionality will be implemented in a future update. For now, you can paste URLs directly into the fields above.
+      {/* Upload Information */}
+      <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+        <h3 className="text-lg font-medium text-green-900 mb-2">✅ File Upload Available</h3>
+        <p className="text-sm text-green-700 mb-4">
+          You can now upload files directly or add URLs manually. Use the "Upload File" button for each media type above.
         </p>
-        <div className="border-2 border-dashed border-blue-300 rounded-lg p-8 text-center">
-          <div className="text-blue-400 text-4xl mb-2">📤</div>
-          <p className="text-blue-600 font-medium">Drag & drop files here</p>
-          <p className="text-blue-500 text-sm">or click to browse</p>
+        <div className="text-sm text-green-600">
+          <p><strong>Supported formats:</strong></p>
+          <ul className="list-disc list-inside mt-2 space-y-1">
+            <li><strong>Images:</strong> JPG, PNG, GIF, WebP, SVG (max 50MB)</li>
+            <li><strong>Videos:</strong> MP4, WebM, OGG, AVI, MOV (max 50MB)</li>
+            <li><strong>Audio:</strong> MP3, WAV, OGG, M4A (max 50MB)</li>
+          </ul>
         </div>
       </div>
     </div>

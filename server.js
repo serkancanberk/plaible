@@ -35,6 +35,7 @@ import adminStoriesRouter from "./routes/admin/stories.js";
 import adminFeedbacksRouter from "./routes/admin/feedbacks.js";
 import adminAnalyticsRouter from "./routes/admin/analytics.js";
 import adminWalletAnalyticsRouter from "./routes/admin/walletAnalytics.js";
+import uploadRouter from "./routes/upload.js";
 
 const { ObjectId } = mongoose.Types;
 
@@ -252,6 +253,10 @@ app.use("/api/admin/feedbacks", authGuard, adminGuard, adminFeedbacksRouter);
 app.use("/api/admin/analytics", authGuard, adminGuard, adminAnalyticsRouter);
 app.use("/api/admin/wallet", authGuard, adminGuard, adminWalletAnalyticsRouter);
 app.use("/api/category-config", categoryConfigRouter);
+app.use("/api/upload", authGuard, uploadRouter);
+
+// Serve uploaded media files
+app.use("/uploads", express.static("uploads"));
 
 // Swagger UI documentation
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerOpts));

@@ -1,6 +1,6 @@
-// jest.config.js
+// jest.config.frontend.js
 export default {
-  testEnvironment: 'node',
+  testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
   moduleNameMapping: {
     '^@/(.*)$': '<rootDir>/src/$1',
@@ -11,16 +11,20 @@ export default {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   testMatch: [
-    '**/__tests__/**/*.(ts|tsx|js)',
-    '**/*.(test|spec).(ts|tsx|js)',
+    '**/src/**/__tests__/**/*.(ts|tsx|js)',
+    '**/src/**/*.(test|spec).(ts|tsx|js)',
   ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
-    'routes/**/*.js',
     '!src/**/*.d.ts',
     '!src/setupTests.ts',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
+  globals: {
+    'ts-jest': {
+      useESM: true,
+    },
+  },
 };

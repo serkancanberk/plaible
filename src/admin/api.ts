@@ -296,7 +296,7 @@ export interface StoryStats {
 export interface Story {
   _id: string;
   slug: string;
-  mainCategory: 'Book' | 'Story' | 'Biography';
+  mainCategory: string;
   subCategory?: string;
   title: string;
   authorName?: string;

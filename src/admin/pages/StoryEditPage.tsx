@@ -64,13 +64,36 @@ export const StoryEditPage: React.FC = () => {
     setHasChanges(true);
   };
 
+  // Normalize category payload before sending to API
+  const normalizeStoryPayload = (storyData: any): Story => {
+    const normalized = { ...storyData };
+
+    // Extract .value from category objects if they exist
+    if (typeof normalized.mainCategory === 'object' && normalized.mainCategory?.value) {
+      normalized.mainCategory = normalized.mainCategory.value;
+    }
+
+    if (typeof normalized.subCategory === 'object' && normalized.subCategory?.value) {
+      normalized.subCategory = normalized.subCategory.value;
+    }
+
+    if (Array.isArray(normalized.genres) && normalized.genres.length > 0 && typeof normalized.genres[0] === 'object') {
+      normalized.genres = normalized.genres.map((g: any) => g.value || g);
+    }
+
+    return normalized as Story;
+  };
+
   // Handle save changes
   const handleSave = async () => {
     if (!story || !storyId) return;
 
     try {
       setSaving(true);
-      const response = await adminApi.updateStory(storyId, story);
+      
+      // Normalize the payload before sending
+      const normalizedStory = normalizeStoryPayload(story);
+      const response = await adminApi.updateStory(storyId, normalizedStory);
       
       if (response.ok) {
         showToast('Story updated successfully', 'success');
