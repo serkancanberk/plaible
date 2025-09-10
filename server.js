@@ -19,6 +19,7 @@ import feedbacksRouter from "./routes/feedbacks.js";
 import { publicFeedbacksRouter } from "./routes/feedbacks.js";
 import savesRouter from "./routes/saves.js";
 import storyrunnerRouter from "./routes/storyrunner.js";
+import categoryConfigRouter from "./routes/categoryConfig.js";
 import { Event } from "./models/Event.js";
 import { attachRequestId, notFoundHandler, globalErrorHandler } from "./middleware/errors.js";
 import { requestLogger } from "./middleware/requestLogger.js";
@@ -250,6 +251,7 @@ app.use("/api/admin/stories", authGuard, adminGuard, adminStoriesRouter);
 app.use("/api/admin/feedbacks", authGuard, adminGuard, adminFeedbacksRouter);
 app.use("/api/admin/analytics", authGuard, adminGuard, adminAnalyticsRouter);
 app.use("/api/admin/wallet", authGuard, adminGuard, adminWalletAnalyticsRouter);
+app.use("/api/category-config", categoryConfigRouter);
 
 // Swagger UI documentation
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerOpts));

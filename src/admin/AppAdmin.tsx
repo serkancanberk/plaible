@@ -9,6 +9,7 @@ import { StoriesPage } from './pages/StoriesPage';
 import { StoryEditPage } from './pages/StoryEditPage';
 import { FeedbacksPage } from './pages/FeedbacksPage';
 import { WalletAnalyticsPage } from './pages/WalletAnalyticsPage';
+import { CategoryManagerPage } from './pages/CategoryManagerPage';
 
 export const AppAdmin: React.FC = () => {
   return (
@@ -28,6 +29,7 @@ export const AppAdmin: React.FC = () => {
                 <Route path="/stories/edit/:storyId" element={<StoryEditPage />} />
                 <Route path="/feedbacks" element={<FeedbacksPage />} />
                 <Route path="/wallet-analytics" element={<WalletAnalyticsPage />} />
+                <Route path="/category-manager" element={<CategoryManagerPage />} />
                 <Route path="*" element={<Navigate to="/users" replace />} />
               </Routes>
             </main>

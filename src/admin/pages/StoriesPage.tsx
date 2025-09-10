@@ -9,7 +9,6 @@ import { useToast } from '../components/Toast';
 import { debounce } from '../utils/debounce';
 import { adminApi, Story } from '../api';
 import { FilterBarStories } from '../components/FilterBarStories';
-import { StoryDetailModal } from '../components/StoryDetailModal';
 
 export const StoriesPage: React.FC = () => {
   const [stories, setStories] = useState<Story[]>([]);
@@ -21,7 +20,6 @@ export const StoriesPage: React.FC = () => {
     isActive: '' as '' | 'true' | 'false',
     page: 1
   });
-  const [selectedStoryId, setSelectedStoryId] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -220,7 +218,6 @@ export const StoriesPage: React.FC = () => {
         data={stories}
         columns={columns}
         emptyMessage={totalCount === 0 ? "No stories match your filters." : "No stories found"}
-        onRowClick={(story) => setSelectedStoryId(story._id)}
       />
       <Pagination
         currentPage={filters.page}
@@ -229,14 +226,6 @@ export const StoriesPage: React.FC = () => {
         limit={10}
         onPageChange={handlePageChange}
       />
-      
-      {/* Story Detail Modal */}
-      {selectedStoryId && (
-        <StoryDetailModal
-          storyId={selectedStoryId}
-          onClose={() => setSelectedStoryId(null)}
-        />
-      )}
     </div>
   );
 };

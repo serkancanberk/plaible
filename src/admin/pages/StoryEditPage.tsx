@@ -98,15 +98,15 @@ export const StoryEditPage: React.FC = () => {
 
   // Tab configuration
   const tabs = [
-    { id: 'basic', label: '📌 Basic Info', icon: '📌' },
-    { id: 'media', label: '🖼️ Media & Sharing', icon: '🖼️' },
-    { id: 'characters', label: '👥 Characters & Cast', icon: '👥' },
-    { id: 'summary', label: '💬 Hooks & Summaries', icon: '💬' },
-    { id: 'storyrunner', label: '🧠 Storyrunner', icon: '🧠' },
-    { id: 'pricing', label: '💰 Pricing', icon: '💰' },
-    { id: 'tags', label: '🏷️ Tags', icon: '🏷️' },
-    { id: 'funfacts', label: '💡 Fun Facts', icon: '💡' },
-    { id: 'reengagement', label: '🔁 Re-engagement', icon: '🔁' },
+    { id: 'basic', label: 'Basic Information', icon: '📌' },
+    { id: 'media', label: 'Media & Sharing', icon: '🖼️' },
+    { id: 'characters', label: 'Characters & Cast', icon: '🎭' },
+    { id: 'summary', label: 'Hooks & Summaries', icon: '🧠' },
+    { id: 'storyrunner', label: 'Storyrunner', icon: '🛠️' },
+    { id: 'pricing', label: 'Pricing', icon: '💰' },
+    { id: 'tags', label: 'Tags', icon: '🏷️' },
+    { id: 'funfacts', label: 'Fun Facts', icon: '🤓' },
+    { id: 'reengagement', label: 'Re-engagement', icon: '🔁' },
   ];
 
   if (loading) {

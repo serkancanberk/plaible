@@ -11,6 +11,7 @@ const menuItems = [
   { path: '/stories', label: 'Stories', icon: '📚' },
   { path: '/feedbacks', label: 'Feedbacks', icon: '💬' },
   { path: '/wallet-analytics', label: 'Wallet Analytics', icon: '💰' },
+  { path: '/category-manager', label: 'Category Manager', icon: '🏷️' },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {

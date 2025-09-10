@@ -1,6 +1,7 @@
 // src/admin/components/storyEdit/BasicInfoForm.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Story } from '../../api';
+import { categoryConfig } from '../../../config/categoryConfig';
 
 interface BasicInfoFormProps {
   story: Story;
@@ -8,6 +9,29 @@ interface BasicInfoFormProps {
 }
 
 export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ story, onUpdate }) => {
+  const [availableSubCategories, setAvailableSubCategories] = useState<Array<{name: string, genres: string[]}>>([]);
+  const [availableGenres, setAvailableGenres] = useState<string[]>([]);
+
+  // Update available subcategories when mainCategory changes
+  useEffect(() => {
+    const selectedMainCategory = categoryConfig.find(cat => cat.mainCategory === story.mainCategory);
+    if (selectedMainCategory) {
+      setAvailableSubCategories(selectedMainCategory.subCategories);
+    } else {
+      setAvailableSubCategories([]);
+    }
+  }, [story.mainCategory]);
+
+  // Update available genres when subCategory changes
+  useEffect(() => {
+    const selectedSubCategory = availableSubCategories.find(sub => sub.name === story.subCategory);
+    if (selectedSubCategory) {
+      setAvailableGenres(selectedSubCategory.genres);
+    } else {
+      setAvailableGenres([]);
+    }
+  }, [story.subCategory, availableSubCategories]);
+
   const handleInputChange = (field: keyof Story, value: any) => {
     onUpdate({ [field]: value });
   };
@@ -15,6 +39,32 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ story, onUpdate })
   const handleArrayChange = (field: keyof Story, value: string) => {
     const array = value.split(',').map(item => item.trim()).filter(item => item);
     onUpdate({ [field]: array });
+  };
+
+  const handleMainCategoryChange = (value: string) => {
+    // Reset subCategory and genres when mainCategory changes
+    onUpdate({ 
+      mainCategory: value, 
+      subCategory: '', 
+      genres: [] 
+    });
+  };
+
+  const handleSubCategoryChange = (value: string) => {
+    // Reset genres when subCategory changes
+    onUpdate({ 
+      subCategory: value, 
+      genres: [] 
+    });
+  };
+
+  const handleGenreToggle = (genre: string) => {
+    const currentGenres = story.genres || [];
+    const updatedGenres = currentGenres.includes(genre)
+      ? currentGenres.filter(g => g !== genre)
+      : [...currentGenres, genre];
+    
+    onUpdate({ genres: updatedGenres });
   };
 
   return (
@@ -75,12 +125,14 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ story, onUpdate })
           </label>
           <select
             value={story.mainCategory}
-            onChange={(e) => handleInputChange('mainCategory', e.target.value)}
+            onChange={(e) => handleMainCategoryChange(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="Book">Book</option>
-            <option value="Story">Story</option>
-            <option value="Biography">Biography</option>
+            {categoryConfig.map((category) => (
+              <option key={category.mainCategory} value={category.mainCategory}>
+                {category.mainCategory}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -89,13 +141,22 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ story, onUpdate })
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Sub Category
           </label>
-          <input
-            type="text"
+          <select
             value={story.subCategory || ''}
-            onChange={(e) => handleInputChange('subCategory', e.target.value)}
+            onChange={(e) => handleSubCategoryChange(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="e.g., Fiction, Non-fiction"
-          />
+            disabled={availableSubCategories.length === 0}
+          >
+            <option value="">Select a subcategory...</option>
+            {availableSubCategories.map((subCategory) => (
+              <option key={subCategory.name} value={subCategory.name}>
+                {subCategory.name}
+              </option>
+            ))}
+          </select>
+          {availableSubCategories.length === 0 && (
+            <p className="text-xs text-gray-500 mt-1">Please select a main category first</p>
+          )}
         </div>
 
         {/* Genres */}
@@ -103,14 +164,36 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ story, onUpdate })
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Genres
           </label>
-          <input
-            type="text"
-            value={story.genres.join(', ')}
-            onChange={(e) => handleArrayChange('genres', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Drama, Romance, Mystery"
-          />
-          <p className="text-xs text-gray-500 mt-1">Separate multiple genres with commas</p>
+          {availableGenres.length > 0 ? (
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {availableGenres.map((genre) => {
+                  const isSelected = story.genres?.includes(genre) || false;
+                  return (
+                    <button
+                      key={genre}
+                      type="button"
+                      onClick={() => handleGenreToggle(genre)}
+                      className={`px-3 py-2 text-sm rounded-md border transition-colors ${
+                        isSelected
+                          ? 'bg-blue-100 border-blue-300 text-blue-800'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {genre}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-500">
+                Click to select/deselect genres. Selected: {story.genres?.length || 0}
+              </p>
+            </div>
+          ) : (
+            <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
+              Please select a subcategory to see available genres
+            </div>
+          )}
         </div>
 
         {/* Language */}
