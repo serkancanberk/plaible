@@ -1,13 +1,15 @@
 // src/admin/components/storyEdit/CharacterEditor.tsx
 import React, { useState } from 'react';
 import { Story, Character, Role, Cast } from '../../api';
+import { CharacterMediaUploader } from './CharacterMediaUploader';
 
 interface CharacterEditorProps {
   story: Story;
   onUpdate: (updates: Partial<Story>) => void;
+  storyId?: string;
 }
 
-export const CharacterEditor: React.FC<CharacterEditorProps> = ({ story, onUpdate }) => {
+export const CharacterEditor: React.FC<CharacterEditorProps> = ({ story, onUpdate, storyId }) => {
   const [editingCharacter, setEditingCharacter] = useState<number | null>(null);
   const [editingRole, setEditingRole] = useState<number | null>(null);
 
@@ -187,39 +189,39 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({ story, onUpdat
                     <p className="text-xs text-gray-500 mt-1">One hook per line</p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Images
-                      </label>
-                      <textarea
-                        value={character.assets.images.join('\n')}
-                        onChange={(e) => updateCharacter(index, { 
+                      <CharacterMediaUploader
+                        items={character.assets.images}
+                        onUpdate={(images) => updateCharacter(index, { 
                           assets: { 
                             ...character.assets, 
-                            images: handleArrayChange(e.target.value) 
+                            images 
                           } 
                         })}
-                        rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         placeholder="https://example.com/character.jpg"
+                        label="Images"
+                        acceptedFileTypes=".jpg,.jpeg,.png,.gif,.webp,.svg"
+                        mediaType="image"
+                        characterId={character.id}
+                        storyId={storyId || 'unknown'}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Videos
-                      </label>
-                      <textarea
-                        value={character.assets.videos.join('\n')}
-                        onChange={(e) => updateCharacter(index, { 
+                      <CharacterMediaUploader
+                        items={character.assets.videos}
+                        onUpdate={(videos) => updateCharacter(index, { 
                           assets: { 
                             ...character.assets, 
-                            videos: handleArrayChange(e.target.value) 
+                            videos 
                           } 
                         })}
-                        rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         placeholder="https://youtube.com/watch?v=..."
+                        label="Videos"
+                        acceptedFileTypes=".mp4,.webm,.ogg,.avi,.mov"
+                        mediaType="video"
+                        characterId={character.id}
+                        storyId={storyId || 'unknown'}
                       />
                     </div>
                   </div>

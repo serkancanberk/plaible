@@ -56,11 +56,43 @@ export const StoryEditPage: React.FC = () => {
     loadStory();
   }, [storyId]);
 
+  // Deep merge helper function
+  const deepMerge = (target: any, source: any): any => {
+    const result = { ...target };
+    
+    for (const key in source) {
+      if (source[key] !== null && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        result[key] = deepMerge(target[key] || {}, source[key]);
+      } else {
+        result[key] = source[key];
+      }
+    }
+    
+    return result;
+  };
+
   // Handle story data updates
   const handleStoryUpdate = (updates: Partial<Story>) => {
     if (!story) return;
     
-    setStory(prev => prev ? { ...prev, ...updates } : null);
+    console.log("🔄 Story update:", {
+      updateKeys: Object.keys(updates),
+      updateTypes: Object.keys(updates).reduce((acc: any, key) => {
+        acc[key] = typeof (updates as any)[key];
+        return acc;
+      }, {}),
+      updates: JSON.stringify(updates, null, 2)
+    });
+    
+    setStory(prev => {
+      const merged = prev ? deepMerge(prev, updates) : null;
+      console.log("✅ Story state updated:", {
+        hasStory: !!merged,
+        storyKeys: merged ? Object.keys(merged) : [],
+        hasChanges: true
+      });
+      return merged;
+    });
     setHasChanges(true);
   };
 
@@ -94,6 +126,13 @@ export const StoryEditPage: React.FC = () => {
   // Handle save changes
   const handleSave = async () => {
     if (!story || !storyId) return;
+
+    // 🔹 Frontend validation: Check if genres array is empty
+    if (!story.genres || story.genres.length === 0) {
+      console.warn("Attempted to save story with empty genres");
+      showToast('Please select at least one genre before saving.', 'error');
+      return;
+    }
 
     try {
       setSaving(true);
@@ -286,7 +325,7 @@ export const StoryEditPage: React.FC = () => {
                   <MediaSection story={story} onUpdate={handleStoryUpdate} storyId={storyId} />
                 )}
                 {activeTab === 'characters' && (
-                  <CharacterEditor story={story} onUpdate={handleStoryUpdate} />
+                  <CharacterEditor story={story} onUpdate={handleStoryUpdate} storyId={storyId} />
                 )}
                 {activeTab === 'summary' && (
                   <SummaryHooksSection story={story} onUpdate={handleStoryUpdate} />

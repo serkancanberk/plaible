@@ -55,6 +55,14 @@ export function validateArrayField(value, fieldName) {
     };
   }
   
+  // 🔹 Backend validation: Check if genres array is empty
+  if (fieldName === 'genres' && Array.isArray(value) && value.length === 0) {
+    return {
+      isValid: false,
+      error: 'At least one genre must be selected.'
+    };
+  }
+  
   return { isValid: true };
 }
 

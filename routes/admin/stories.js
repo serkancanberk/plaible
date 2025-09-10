@@ -185,7 +185,7 @@ router.post("/", async (req, res) => {
     // Validate array fields
     const genresValidation = validateArrayField(storyData.genres, 'genres');
     if (!genresValidation.isValid) {
-      return err(res, "BAD_REQUEST", "genres");
+      return err(res, "BAD_REQUEST", genresValidation.error);
     }
 
     // Check slug uniqueness
@@ -263,17 +263,46 @@ router.post("/", async (req, res) => {
  *       404: { description: "Not Found", content: { application/json: { schema: { type: object, properties: { error: { type: string, example: "NOT_FOUND" } } } } } }
  */
 router.put("/:id", async (req, res) => {
+  // 🔹 Declare variables at function scope to prevent ReferenceError
+  let id = null;
+  let updateData = null;
+  
   try {
-    const { id } = req.params;
-    const updateData = req.body;
+    id = req.params.id;
+    updateData = req.body;
+
+    // 🔹 Enhanced validation and logging
+    console.log("📝 Story update request:", {
+      storyId: id,
+      updateKeys: Object.keys(updateData || {}),
+      updateDataTypes: Object.keys(updateData || {}).reduce((acc, key) => {
+        acc[key] = typeof updateData[key];
+        return acc;
+      }, {})
+    });
 
     if (!id || typeof id !== 'string') {
-      return err(res, "BAD_REQUEST", "id");
+      console.error("❌ Invalid story ID:", { id, type: typeof id });
+      return err(res, "BAD_REQUEST", "Invalid story ID");
     }
 
     const story = await Story.findById(id);
     if (!story) {
-      return err(res, "NOT_FOUND");
+      console.error("❌ Story not found:", { storyId: id });
+      return err(res, "NOT_FOUND", `Story with ID '${id}' not found`);
+    }
+
+    console.log("✅ Story found:", { 
+      storyId: id, 
+      title: story.title,
+      hasCharacters: story.characters?.length || 0,
+      hasAssets: !!story.assets
+    });
+
+    // 🔹 Validate updateData
+    if (!updateData || typeof updateData !== 'object') {
+      console.error("❌ Invalid update data:", { updateData, type: typeof updateData });
+      return err(res, "BAD_REQUEST", "Invalid update data");
     }
 
     const originalData = {
@@ -306,7 +335,7 @@ router.put("/:id", async (req, res) => {
     // Validate array fields
     const genresValidation = validateArrayField(updateData.genres, 'genres');
     if (!genresValidation.isValid) {
-      return err(res, "BAD_REQUEST", "genres");
+      return err(res, "BAD_REQUEST", genresValidation.error);
     }
 
     // Validate cast consistency if characters/roles/cast are being updated
@@ -341,9 +370,29 @@ router.put("/:id", async (req, res) => {
       level: "info"
     });
 
+    console.log("✅ Story update successful:", {
+      storyId: id,
+      changesCount: Object.keys(changes).length,
+      changedFields: Object.keys(changes)
+    });
+
     return ok(res);
   } catch (error) {
-    console.error("Admin story update error:", error);
+    // 🔹 Enhanced error logging for debugging (now with properly scoped variables)
+    console.error("❌ Admin story update error:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      storyId: id || 'unknown',
+      updateData: updateData ? JSON.stringify(updateData, null, 2) : 'null',
+      updateDataKeys: updateData ? Object.keys(updateData) : [],
+      updateDataTypes: updateData ? Object.keys(updateData).reduce((acc, key) => {
+        acc[key] = typeof updateData[key];
+        return acc;
+      }, {}) : {},
+      requestParams: req.params,
+      requestBody: req.body ? Object.keys(req.body) : []
+    });
     return err(res, "SERVER_ERROR");
   }
 });
