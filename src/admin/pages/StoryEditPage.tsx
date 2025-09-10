@@ -81,6 +81,13 @@ export const StoryEditPage: React.FC = () => {
       normalized.genres = normalized.genres.map((g: any) => g.value || g);
     }
 
+    // Validate and sanitize license field
+    const validLicenses = ['public-domain', 'creative-commons', 'copyrighted', 'fair-use'];
+    if (normalized.license && !validLicenses.includes(normalized.license)) {
+      console.warn(`⚠️ Invalid license value: "${normalized.license}". Defaulting to "public-domain".`);
+      normalized.license = 'public-domain';
+    }
+
     return normalized as Story;
   };
 
@@ -93,15 +100,29 @@ export const StoryEditPage: React.FC = () => {
       
       // Normalize the payload before sending
       const normalizedStory = normalizeStoryPayload(story);
+      
+      // 📦 Enhanced logging for debugging license field issues
+      console.log("📦 Story update payload:", JSON.stringify(normalizedStory, null, 2));
+      console.log("📌 license field:", normalizedStory.license, typeof normalizedStory.license);
+      
       const response = await adminApi.updateStory(storyId, normalizedStory);
       
       if (response.ok) {
         showToast('Story updated successfully', 'success');
         setHasChanges(false);
       } else {
+        console.error("❌ Story update failed:", response);
         showToast('Failed to update story', 'error');
       }
     } catch (err: any) {
+      // 📦 Enhanced error logging for debugging
+      console.error("❌ Story update error:", {
+        error: err,
+        errorType: typeof err,
+        errorMessage: err.message,
+        errorStatus: err.status,
+        errorStack: err.stack
+      });
       showToast(err.message || 'Failed to update story', 'error');
     } finally {
       setSaving(false);

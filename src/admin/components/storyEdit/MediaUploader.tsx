@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from 'react';
 interface MediaUploaderProps {
   items: string[];
   onUpdate: (items: string[]) => void;
-  onSaveItem?: (url: string, index: number) => Promise<void>;
   placeholder: string;
   label: string;
   acceptedFileTypes: string;
@@ -38,13 +37,12 @@ const getUrlType = (url: string): 'image' | 'video' | 'audio' | 'youtube' | 'unk
 const MediaItem: React.FC<{
   url: string;
   onRemove: () => void;
-  onSave: () => void;
   type: 'image' | 'video' | 'audio' | 'youtube' | 'unknown';
   isUploadSuccess?: boolean;
   isSaving?: boolean;
   isSaved?: boolean;
   isNew?: boolean;
-}> = ({ url, onRemove, onSave, type, isUploadSuccess = false, isSaving = false, isSaved = false, isNew = false }) => {
+}> = ({ url, onRemove, type, isUploadSuccess = false, isSaving = false, isSaved = false, isNew = false }) => {
   const [imageError, setImageError] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -182,6 +180,11 @@ const MediaItem: React.FC<{
           <p className="text-sm text-gray-600 truncate" title={url}>
             {url}
           </p>
+          {isNew && (
+            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium" title="New item - will be saved when you click Save Changes">
+              New
+            </span>
+          )}
           {isUploadSuccess && (
             <span className="text-green-500 text-sm" title="Upload successful">
               ✅
@@ -201,14 +204,6 @@ const MediaItem: React.FC<{
         
         {/* Hover Action Buttons */}
         <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <button
-            onClick={onSave}
-            disabled={isSaving}
-            className="bg-white text-gray-700 hover:bg-gray-50 text-sm rounded px-2 py-1 shadow-md border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-            title="Save this media item"
-          >
-            {isSaving ? '⏳' : '💾'} {isSaving ? 'Saving...' : 'Save'}
-          </button>
           <button
             onClick={handleRemoveClick}
             className="bg-white text-red-600 hover:bg-red-50 text-sm rounded px-2 py-1 shadow-md border border-red-200 transition-colors duration-200"
@@ -309,7 +304,6 @@ const MediaItem: React.FC<{
 export const MediaUploader: React.FC<MediaUploaderProps> = ({
   items,
   onUpdate,
-  onSaveItem,
   placeholder,
   label,
   acceptedFileTypes,
@@ -323,8 +317,6 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [showErrorToast, setShowErrorToast] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [savingItems, setSavingItems] = useState<Set<number>>(new Set());
-  const [savedItems, setSavedItems] = useState<Set<number>>(new Set());
   const [newItems, setNewItems] = useState<Set<number>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -357,52 +349,6 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
     });
   };
 
-  const handleSaveItem = async (index: number) => {
-    if (!onSaveItem) return;
-    
-    const url = items[index];
-    setSavingItems(prev => new Set([...prev, index]));
-    
-    try {
-      await onSaveItem(url, index);
-      // Mark as saved and show success toast
-      setSavedItems(prev => new Set([...prev, index]));
-      setShowSuccessToast(true);
-      setTimeout(() => setShowSuccessToast(false), 3000);
-      // Remove checkmark after 3 seconds
-      setTimeout(() => {
-        setSavedItems(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(index);
-          return newSet;
-        });
-      }, 3000);
-    } catch (error) {
-      // Enhanced error logging for debugging
-      console.error('❌ Save error (MediaUploader):', {
-        error: error,
-        errorType: typeof error,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        errorStack: error instanceof Error ? error.stack : undefined,
-        url: items[index],
-        index: index
-      });
-      
-      // Log full error data for debugging
-      console.log("❌ Error response data:", JSON.stringify(error, null, 2));
-      
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      setErrorMessage(errorMsg);
-      setShowErrorToast(true);
-      setTimeout(() => setShowErrorToast(false), 5000);
-    } finally {
-      setSavingItems(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(index);
-        return newSet;
-      });
-    }
-  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -516,10 +462,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
               url={url}
               type={getUrlType(url)}
               onRemove={() => handleRemove(index)}
-              onSave={() => handleSaveItem(index)}
               isUploadSuccess={uploadedItems.has(url)}
-              isSaving={savingItems.has(index)}
-              isSaved={savedItems.has(index)}
               isNew={newItems.has(index)}
             />
           ))}

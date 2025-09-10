@@ -46,9 +46,26 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const error = new Error(`HTTP ${response.status}: ${response.statusText}`) as ApiError;
-      error.status = response.status;
-      throw error;
+      // 📦 Enhanced error logging for debugging
+      console.error("❌ API Error Response:", {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+      
+      // Try to get error response body
+      try {
+        const errorData = await response.json();
+        console.error("❌ API Error Data:", JSON.stringify(errorData, null, 2));
+        const error = new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`) as ApiError;
+        error.status = response.status;
+        throw error;
+      } catch (parseError) {
+        const error = new Error(`HTTP ${response.status}: ${response.statusText}`) as ApiError;
+        error.status = response.status;
+        throw error;
+      }
     }
 
     return response;
@@ -307,8 +324,8 @@ export interface Story {
   headline?: string;
   description?: string;
   language: string;
-  license: string;
-  contentRating: string;
+  license: 'public-domain' | 'creative-commons' | 'copyrighted' | 'fair-use';
+  contentRating: 'G' | 'PG' | 'PG-13' | 'R' | 'NC-17';
   tags: string[];
   assets: MediaBlock;
   characters: Character[];

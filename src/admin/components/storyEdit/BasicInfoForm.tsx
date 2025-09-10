@@ -237,13 +237,16 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ story, onUpdate })
           <label className="block text-sm font-medium text-gray-700 mb-2">
             License
           </label>
-          <input
-            type="text"
+          <select
             value={story.license}
             onChange={(e) => handleInputChange('license', e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Public Domain"
-          />
+          >
+            <option value="public-domain">Public Domain</option>
+            <option value="creative-commons">Creative Commons</option>
+            <option value="copyrighted">Copyrighted</option>
+            <option value="fair-use">Fair Use</option>
+          </select>
         </div>
 
         {/* Published Year */}
@@ -301,9 +304,9 @@ export const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ story, onUpdate })
           >
             <option value="G">G - General Audiences</option>
             <option value="PG">PG - Parental Guidance</option>
-            <option value="13+">13+ - Teen</option>
-            <option value="16+">16+ - Mature Teen</option>
-            <option value="18+">18+ - Adult</option>
+            <option value="PG-13">13+ - Teen</option>
+            <option value="R">16+ - Mature Teen</option>
+            <option value="NC-17">18+ - Adult</option>
           </select>
         </div>
 
