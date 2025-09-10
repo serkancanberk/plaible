@@ -262,7 +262,7 @@ export const StoryEditPage: React.FC = () => {
                   <BasicInfoForm story={story} onUpdate={handleStoryUpdate} />
                 )}
                 {activeTab === 'media' && (
-                  <MediaSection story={story} onUpdate={handleStoryUpdate} />
+                  <MediaSection story={story} onUpdate={handleStoryUpdate} storyId={storyId} />
                 )}
                 {activeTab === 'characters' && (
                   <CharacterEditor story={story} onUpdate={handleStoryUpdate} />

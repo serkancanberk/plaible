@@ -474,4 +474,127 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/admin/stories/{id}/media:
+ *   patch:
+ *     tags: [Admin]
+ *     summary: Update individual media item for a story
+ *     description: Update a specific media item (image, video, audio) in a story's assets or share configuration
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path, name: id, required: true, schema: { type: string }, description: Story ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [mediaType, mediaField, url, index]
+ *             properties:
+ *               mediaType:
+ *                 type: string
+ *                 enum: [assets, share]
+ *                 description: Type of media (assets or share)
+ *               mediaField:
+ *                 type: string
+ *                 enum: [images, videos, ambiance]
+ *                 description: Specific media field to update
+ *               url:
+ *                 type: string
+ *                 description: The media URL to save
+ *               index:
+ *                 type: integer
+ *                 minimum: 0
+ *                 description: Index of the media item to update
+ *     responses:
+ *       200:
+ *         description: Media item updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Media item updated successfully"
+ *       400:
+ *         description: Bad request - invalid parameters
+ *       404:
+ *         description: Story not found
+ *       500:
+ *         description: Server error
+ */
+router.patch("/:id/media", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { mediaType, mediaField, url, index } = req.body;
+
+    // Validate required fields
+    if (!id || typeof id !== 'string') {
+      return err(res, "BAD_REQUEST", "id");
+    }
+
+    if (!mediaType || !['assets', 'share'].includes(mediaType)) {
+      return err(res, "BAD_REQUEST", "mediaType");
+    }
+
+    if (!mediaField || !['images', 'videos', 'ambiance'].includes(mediaField)) {
+      return err(res, "BAD_REQUEST", "mediaField");
+    }
+
+    if (!url || typeof url !== 'string') {
+      return err(res, "BAD_REQUEST", "url");
+    }
+
+    if (typeof index !== 'number' || index < 0) {
+      return err(res, "BAD_REQUEST", "index");
+    }
+
+    const story = await Story.findById(id);
+    if (!story) {
+      return err(res, "NOT_FOUND");
+    }
+
+    // Get the current media array
+    const mediaPath = `${mediaType}.${mediaField}`;
+    const currentMedia = story[mediaType]?.[mediaField] || [];
+
+    // Validate index
+    if (index >= currentMedia.length) {
+      return err(res, "BAD_REQUEST", "index");
+    }
+
+    // Update the specific media item
+    currentMedia[index] = url;
+
+    // Update the story
+    if (!story[mediaType]) {
+      story[mediaType] = {};
+    }
+    story[mediaType][mediaField] = currentMedia;
+
+    await story.save();
+
+    // Log the event
+    await logEvent('admin', 'story_media_updated', {
+      storyId: id,
+      mediaType,
+      mediaField,
+      index,
+      url
+    });
+
+    return ok(res, { message: "Media item updated successfully" });
+
+  } catch (error) {
+    console.error("Admin story media update error:", error);
+    return err(res, "SERVER_ERROR");
+  }
+});
+
 export default router;

@@ -6,10 +6,11 @@ import { MediaUploader } from './MediaUploader';
 interface MediaSectionProps {
   story: Story;
   onUpdate: (updates: Partial<Story>) => void;
+  storyId?: string;
 }
 
 
-export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate }) => {
+export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate, storyId }) => {
   const handleAssetsUpdate = (field: keyof MediaBlock, items: string[]) => {
     onUpdate({
       assets: {
@@ -26,6 +27,90 @@ export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate }) =
         [field]: items
       }
     });
+  };
+
+  const handleSaveMediaItem = async (url: string, index: number, mediaType: 'assets' | 'share', mediaField: 'images' | 'videos' | 'ambiance') => {
+    // 📦 Detailed payload logging for debugging
+    console.log("📦 Saving media item with payload:", {
+      storyId,
+      mediaType,
+      mediaField,
+      index: `${index} (type: ${typeof index})`,
+      url
+    });
+
+    if (!storyId) {
+      throw new Error('Story ID is required for saving media items');
+    }
+
+    // Validate URL
+    if (!url || typeof url !== 'string' || url.trim() === '') {
+      throw new Error('Link is not valid or missing required data. Please check and try again.');
+    }
+
+    // Validate index
+    const numericIndex = Number(index);
+    if (isNaN(numericIndex) || numericIndex < 0) {
+      throw new Error('Invalid index: must be a valid number >= 0');
+    }
+
+    // Basic URL validation
+    try {
+      new URL(url);
+    } catch {
+      // If it's not a valid URL, it might be a relative path or filename
+      if (!url.startsWith('/') && !url.startsWith('./') && !url.includes('.')) {
+        throw new Error('Link is not valid or missing required data. Please check and try again.');
+      }
+    }
+
+    const requestPayload = {
+      mediaType,
+      mediaField,
+      url: url.trim(),
+      index: numericIndex // use the validated numeric index
+    };
+
+    // 📦 Enhanced payload logging for debugging
+    console.log("📦 Full payload", JSON.stringify(requestPayload, null, 2));
+    console.log("📌 index", requestPayload.index, typeof requestPayload.index);
+    console.log("📌 mediaField", requestPayload.mediaField, typeof requestPayload.mediaField);
+    console.log("📌 mediaType", requestPayload.mediaType, typeof requestPayload.mediaType);
+    console.log("📌 url", requestPayload.url, typeof requestPayload.url);
+
+    console.log("🚀 Sending API request to:", `/api/admin/stories/${storyId}/media`);
+    console.log("📤 Request payload:", requestPayload);
+
+    const response = await fetch(`/api/admin/stories/${storyId}/media`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(requestPayload)
+    });
+
+    console.log("📥 Response status:", response.status, response.statusText);
+
+    if (!response.ok) {
+      // Log the entire response object for debugging
+      console.error("❌ Save error (Response):", {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        url: response.url,
+        type: response.type,
+        redirected: response.redirected
+      });
+
+      const errorData = await response.json().catch(() => ({ message: 'Unknown error occurred' }));
+      console.log("❌ Error response data:", JSON.stringify(errorData, null, 2));
+      throw new Error(errorData.message || 'Failed to save media item');
+    }
+
+    const responseData = await response.json();
+    console.log("✅ Success response data:", responseData);
+    return responseData;
   };
 
   const handleSingleChange = (field: keyof Share, value: string) => {
@@ -53,6 +138,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate }) =
           <MediaUploader
             items={story.assets.images}
             onUpdate={(items) => handleAssetsUpdate('images', items)}
+            onSaveItem={(url, index) => handleSaveMediaItem(url, index, 'assets', 'images')}
             placeholder="https://example.com/image1.jpg"
             label="Images"
             acceptedFileTypes=".jpg,.jpeg,.png,.gif,.webp,.svg"
@@ -63,6 +149,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate }) =
           <MediaUploader
             items={story.assets.videos}
             onUpdate={(items) => handleAssetsUpdate('videos', items)}
+            onSaveItem={(url, index) => handleSaveMediaItem(url, index, 'assets', 'videos')}
             placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
             label="Videos"
             acceptedFileTypes=".mp4,.webm,.ogg,.avi,.mov"
@@ -73,6 +160,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate }) =
           <MediaUploader
             items={story.assets.ambiance}
             onUpdate={(items) => handleAssetsUpdate('ambiance', items)}
+            onSaveItem={(url, index) => handleSaveMediaItem(url, index, 'assets', 'ambiance')}
             placeholder="https://soundcloud.com/... or https://youtube.com/watch?v=..."
             label="Ambiance (Audio/Atmosphere)"
             acceptedFileTypes=".mp3,.wav,.ogg,.m4a"
@@ -118,6 +206,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate }) =
           <MediaUploader
             items={story.share.images}
             onUpdate={(items) => handleShareUpdate('images', items)}
+            onSaveItem={(url, index) => handleSaveMediaItem(url, index, 'share', 'images')}
             placeholder="https://example.com/share-image1.jpg"
             label="Share Images"
             acceptedFileTypes=".jpg,.jpeg,.png,.gif,.webp,.svg"
@@ -128,6 +217,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate }) =
           <MediaUploader
             items={story.share.videos}
             onUpdate={(items) => handleShareUpdate('videos', items)}
+            onSaveItem={(url, index) => handleSaveMediaItem(url, index, 'share', 'videos')}
             placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
             label="Share Videos"
             acceptedFileTypes=".mp4,.webm,.ogg,.avi,.mov"
