@@ -1,7 +1,7 @@
 // src/admin/components/storyEdit/CharacterEditor.tsx
 import React, { useState } from 'react';
 import { Story, Character, Role, Cast } from '../../api';
-import { CharacterMediaUploader } from './CharacterMediaUploader';
+import { UnifiedMediaUploader, LAYOUT_CONFIGS } from '../media';
 import { HooksTagInput } from './HooksTagInput';
 
 interface CharacterEditorProps {
@@ -186,7 +186,7 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({ story, onUpdat
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <CharacterMediaUploader
+                      <UnifiedMediaUploader
                         items={character.assets.images}
                         onUpdate={(images) => updateCharacter(index, { 
                           assets: { 
@@ -198,12 +198,13 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({ story, onUpdat
                         label="Images"
                         acceptedFileTypes=".jpg,.jpeg,.png,.gif,.webp,.svg"
                         mediaType="image"
+                        config={{ layout: 'media-sharing', ...LAYOUT_CONFIGS['media-sharing'], uploadPath: 'character' }}
                         characterId={character.id}
                         storyId={storyId || 'unknown'}
                       />
                     </div>
                     <div>
-                      <CharacterMediaUploader
+                      <UnifiedMediaUploader
                         items={character.assets.videos}
                         onUpdate={(videos) => updateCharacter(index, { 
                           assets: { 
@@ -215,6 +216,7 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({ story, onUpdat
                         label="Videos"
                         acceptedFileTypes=".mp4,.webm,.ogg,.avi,.mov"
                         mediaType="video"
+                        config={{ layout: 'media-sharing', ...LAYOUT_CONFIGS['media-sharing'], uploadPath: 'character' }}
                         characterId={character.id}
                         storyId={storyId || 'unknown'}
                       />

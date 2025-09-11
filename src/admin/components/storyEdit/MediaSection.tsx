@@ -1,7 +1,7 @@
 // src/admin/components/storyEdit/MediaSection.tsx
 import React from 'react';
 import { Story, MediaBlock, Share } from '../../api';
-import { CompactMediaUploader } from './CompactMediaUploader';
+import { UnifiedMediaUploader, LAYOUT_CONFIGS } from '../media';
 
 interface MediaSectionProps {
   story: Story;
@@ -50,37 +50,46 @@ export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate, sto
       <div className="bg-gray-50 rounded-lg p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Story Assets</h3>
         
-        <div className="space-y-6">
-          {/* Images */}
-          <CompactMediaUploader
-            items={story.assets.images}
-            onUpdate={(items) => handleAssetsUpdate('images', items)}
-            placeholder="https://example.com/image1.jpg"
-            label="Images"
-            acceptedFileTypes=".jpg,.jpeg,.png,.gif,.webp,.svg"
-            mediaType="image"
-            storyId={storyId}
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Images Column */}
+          <div>
+            <UnifiedMediaUploader
+              items={story.assets.images}
+              onUpdate={(items) => handleAssetsUpdate('images', items)}
+              placeholder="https://example.com/image1.jpg"
+              label="Images"
+              acceptedFileTypes=".jpg,.jpeg,.png,.gif,.webp,.svg"
+              mediaType="image"
+              config={{ layout: 'media-sharing', ...LAYOUT_CONFIGS['media-sharing'], uploadPath: 'story' }}
+              storyId={storyId}
+            />
+          </div>
 
-          {/* Videos */}
-          <CompactMediaUploader
-            items={story.assets.videos}
-            onUpdate={(items) => handleAssetsUpdate('videos', items)}
-            placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
-            label="Videos"
-            acceptedFileTypes=".mp4,.webm,.ogg,.avi,.mov"
-            mediaType="video"
-            storyId={storyId}
-          />
+          {/* Videos Column */}
+          <div>
+            <UnifiedMediaUploader
+              items={story.assets.videos}
+              onUpdate={(items) => handleAssetsUpdate('videos', items)}
+              placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+              label="Videos"
+              acceptedFileTypes=".mp4,.webm,.ogg,.avi,.mov"
+              mediaType="video"
+              config={{ layout: 'media-sharing', ...LAYOUT_CONFIGS['media-sharing'], uploadPath: 'story' }}
+              storyId={storyId}
+            />
+          </div>
+        </div>
 
-          {/* Ambiance */}
-          <CompactMediaUploader
+        {/* Ambiance - Full Width */}
+        <div className="mt-6">
+          <UnifiedMediaUploader
             items={story.assets.ambiance}
             onUpdate={(items) => handleAssetsUpdate('ambiance', items)}
             placeholder="https://soundcloud.com/... or https://youtube.com/watch?v=..."
             label="Ambiance (Audio/Atmosphere)"
             acceptedFileTypes=".mp3,.wav,.ogg,.m4a"
             mediaType="audio"
+            config={{ layout: 'media-sharing', ...LAYOUT_CONFIGS['media-sharing'], uploadPath: 'story' }}
             storyId={storyId}
           />
         </div>
@@ -119,27 +128,36 @@ export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate, sto
             />
           </div>
 
-          {/* Share Images */}
-          <CompactMediaUploader
-            items={story.share.images}
-            onUpdate={(items) => handleShareUpdate('images', items)}
-            placeholder="https://example.com/share-image1.jpg"
-            label="Share Images"
-            acceptedFileTypes=".jpg,.jpeg,.png,.gif,.webp,.svg"
-            mediaType="image"
-            storyId={storyId}
-          />
+          {/* Share Media Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Share Images Column */}
+            <div>
+              <UnifiedMediaUploader
+                items={story.share.images}
+                onUpdate={(items) => handleShareUpdate('images', items)}
+                placeholder="https://example.com/share-image1.jpg"
+                label="Share Images"
+                acceptedFileTypes=".jpg,.jpeg,.png,.gif,.webp,.svg"
+                mediaType="image"
+                config={{ layout: 'media-sharing', ...LAYOUT_CONFIGS['media-sharing'], uploadPath: 'story' }}
+                storyId={storyId}
+              />
+            </div>
 
-          {/* Share Videos */}
-          <CompactMediaUploader
-            items={story.share.videos}
-            onUpdate={(items) => handleShareUpdate('videos', items)}
-            placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
-            label="Share Videos"
-            acceptedFileTypes=".mp4,.webm,.ogg,.avi,.mov"
-            mediaType="video"
-            storyId={storyId}
-          />
+            {/* Share Videos Column */}
+            <div>
+              <UnifiedMediaUploader
+                items={story.share.videos}
+                onUpdate={(items) => handleShareUpdate('videos', items)}
+                placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+                label="Share Videos"
+                acceptedFileTypes=".mp4,.webm,.ogg,.avi,.mov"
+                mediaType="video"
+                config={{ layout: 'media-sharing', ...LAYOUT_CONFIGS['media-sharing'], uploadPath: 'story' }}
+                storyId={storyId}
+              />
+            </div>
+          </div>
         </div>
       </div>
 

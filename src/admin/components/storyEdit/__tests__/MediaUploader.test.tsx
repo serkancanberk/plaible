@@ -1,9 +1,9 @@
-// src/admin/components/storyEdit/__tests__/MediaUploader.test.tsx
+// src/admin/components/storyEdit/__tests__/UnifiedMediaUploader.test.tsx
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { MediaUploader } from '../MediaUploader';
+import { UnifiedMediaUploader, LAYOUT_CONFIGS } from '../../media';
 
 // Mock fetch
 global.fetch = (global as any).jest?.fn() || (() => {});
@@ -14,7 +14,7 @@ const createMockFile = (name: string, type: string, content: string = 'test cont
   return file;
 };
 
-describe('MediaUploader Component', () => {
+describe('UnifiedMediaUploader Component', () => {
   const mockOnUpdate = (global as any).jest?.fn() || (() => {});
   const defaultProps = {
     items: [],
@@ -23,6 +23,7 @@ describe('MediaUploader Component', () => {
     label: 'Test Media',
     acceptedFileTypes: '.jpg,.jpeg,.png',
     mediaType: 'image' as const,
+    config: { ...LAYOUT_CONFIGS.compact, uploadPath: 'story' as const },
   };
 
   beforeEach(() => {
@@ -34,7 +35,7 @@ describe('MediaUploader Component', () => {
 
   describe('URL Input Mode', () => {
     it('should render URL input mode by default', () => {
-      render(<MediaUploader {...defaultProps} />);
+      render(<UnifiedMediaUploader {...defaultProps} />);
       
       expect(screen.getByText('🔗 Add Link')).toBeInTheDocument();
       expect(screen.getByText('📁 Upload File')).toBeInTheDocument();
@@ -43,7 +44,7 @@ describe('MediaUploader Component', () => {
 
     it('should add URL when Add button is clicked', async () => {
       const user = userEvent.setup();
-      render(<MediaUploader {...defaultProps} />);
+      render(<UnifiedMediaUploader {...defaultProps} />);
       
       const input = screen.getByPlaceholderText('https://example.com/test.jpg');
       const addButton = screen.getByText('➕ Add');
@@ -56,7 +57,7 @@ describe('MediaUploader Component', () => {
 
     it('should add URL when Enter key is pressed', async () => {
       const user = userEvent.setup();
-      render(<MediaUploader {...defaultProps} />);
+      render(<UnifiedMediaUploader {...defaultProps} />);
       
       const input = screen.getByPlaceholderText('https://example.com/test.jpg');
       
@@ -68,7 +69,7 @@ describe('MediaUploader Component', () => {
 
     it('should not add empty URL', async () => {
       const user = userEvent.setup();
-      render(<MediaUploader {...defaultProps} />);
+      render(<UnifiedMediaUploader {...defaultProps} />);
       
       const addButton = screen.getByText('➕ Add');
       await user.click(addButton);
@@ -80,7 +81,7 @@ describe('MediaUploader Component', () => {
   describe('File Upload Mode', () => {
     it('should switch to upload mode when Upload File button is clicked', async () => {
       const user = userEvent.setup();
-      render(<MediaUploader {...defaultProps} />);
+      render(<UnifiedMediaUploader {...defaultProps} />);
       
       const uploadButton = screen.getByText('📁 Upload File');
       await user.click(uploadButton);
@@ -91,7 +92,7 @@ describe('MediaUploader Component', () => {
 
     it('should handle file picker click', async () => {
       const user = userEvent.setup();
-      render(<MediaUploader {...defaultProps} />);
+      render(<UnifiedMediaUploader {...defaultProps} />);
       
       // Switch to upload mode
       const uploadButton = screen.getByText('📁 Upload File');
@@ -120,7 +121,7 @@ describe('MediaUploader Component', () => {
         })
       });
 
-      render(<MediaUploader {...defaultProps} />);
+      render(<UnifiedMediaUploader {...defaultProps} />);
       
       // Switch to upload mode
       const uploadButton = screen.getByText('📁 Upload File');
@@ -158,7 +159,7 @@ describe('MediaUploader Component', () => {
       // Mock alert
       const alertSpy = (global as any).jest?.spyOn(window, 'alert')?.mockImplementation(() => {}) || { mockRestore: () => {} };
 
-      render(<MediaUploader {...defaultProps} />);
+      render(<UnifiedMediaUploader {...defaultProps} />);
       
       // Switch to upload mode
       const uploadButton = screen.getByText('📁 Upload File');
@@ -187,7 +188,7 @@ describe('MediaUploader Component', () => {
   describe('Drag and Drop', () => {
     it('should handle drag over event', async () => {
       const user = userEvent.setup();
-      render(<MediaUploader {...defaultProps} />);
+      render(<UnifiedMediaUploader {...defaultProps} />);
       
       // Switch to upload mode
       const uploadButton = screen.getByText('📁 Upload File');
@@ -202,7 +203,7 @@ describe('MediaUploader Component', () => {
 
     it('should handle drag leave event', async () => {
       const user = userEvent.setup();
-      render(<MediaUploader {...defaultProps} />);
+      render(<UnifiedMediaUploader {...defaultProps} />);
       
       // Switch to upload mode
       const uploadButton = screen.getByText('📁 Upload File');
@@ -230,7 +231,7 @@ describe('MediaUploader Component', () => {
         })
       });
 
-      render(<MediaUploader {...defaultProps} />);
+      render(<UnifiedMediaUploader {...defaultProps} />);
       
       // Switch to upload mode
       const uploadButton = screen.getByText('📁 Upload File');
@@ -271,7 +272,7 @@ describe('MediaUploader Component', () => {
         ]
       };
       
-      render(<MediaUploader {...propsWithItems} />);
+      render(<UnifiedMediaUploader {...propsWithItems} />);
       
       expect(screen.getByText('https://example.com/image1.jpg')).toBeInTheDocument();
       expect(screen.getByText('https://example.com/video1.mp4')).toBeInTheDocument();
@@ -287,7 +288,7 @@ describe('MediaUploader Component', () => {
         ]
       };
       
-      render(<MediaUploader {...propsWithItems} />);
+      render(<UnifiedMediaUploader {...propsWithItems} />);
       
       const removeButtons = screen.getAllByText('❌ Remove');
       await user.click(removeButtons[0]);
@@ -301,7 +302,7 @@ describe('MediaUploader Component', () => {
         items: ['https://example.com/image1.jpg']
       };
       
-      render(<MediaUploader {...propsWithItems} />);
+      render(<UnifiedMediaUploader {...propsWithItems} />);
       
       const image = screen.getByAltText('Media preview');
       expect(image).toBeInTheDocument();
@@ -314,7 +315,7 @@ describe('MediaUploader Component', () => {
         items: ['https://example.com/video1.mp4']
       };
       
-      render(<MediaUploader {...propsWithItems} />);
+      render(<UnifiedMediaUploader {...propsWithItems} />);
       
       const video = screen.getByRole('application');
       expect(video).toBeInTheDocument();
@@ -327,7 +328,7 @@ describe('MediaUploader Component', () => {
         items: ['https://example.com/audio1.mp3']
       };
       
-      render(<MediaUploader {...propsWithItems} />);
+      render(<UnifiedMediaUploader {...propsWithItems} />);
       
       const audio = screen.getByRole('application');
       expect(audio).toBeInTheDocument();
@@ -340,7 +341,7 @@ describe('MediaUploader Component', () => {
         items: ['https://www.youtube.com/watch?v=dQw4w9WgXcQ']
       };
       
-      render(<MediaUploader {...propsWithItems} />);
+      render(<UnifiedMediaUploader {...propsWithItems} />);
       
       const iframe = screen.getByTitle('YouTube video player');
       expect(iframe).toBeInTheDocument();
@@ -353,7 +354,7 @@ describe('MediaUploader Component', () => {
       const user = userEvent.setup();
       (fetch as any).mockImplementation(() => new Promise(() => {})); // Never resolves
       
-      render(<MediaUploader {...defaultProps} />);
+      render(<UnifiedMediaUploader {...defaultProps} />);
       
       // Switch to upload mode
       const uploadButton = screen.getByText('📁 Upload File');
