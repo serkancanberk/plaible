@@ -58,7 +58,9 @@ const MediaItem: React.FC<{
         }
       `;
       document.head.appendChild(style);
-      return () => document.head.removeChild(style);
+      return () => {
+        document.head.removeChild(style);
+      };
     }
   }, [isNew]);
   
@@ -326,7 +328,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
       onUpdate([...items, newUrl.trim()]);
       setNewUrl('');
       // Mark as new item for animation
-      setNewItems(prev => new Set([...prev, newIndex]));
+      setNewItems(prev => new Set(Array.from(prev).concat(newIndex)));
       // Remove from new items after animation
       setTimeout(() => {
         setNewItems(prev => {
@@ -383,7 +385,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
       if (result.ok && result.url) {
         onUpdate([...items, result.url]);
         // Mark this item as successfully uploaded
-        setUploadedItems(prev => new Set([...prev, result.url]));
+        setUploadedItems(prev => new Set(Array.from(prev).concat(result.url)));
         // Show success toast
         setShowSuccessToast(true);
         setTimeout(() => setShowSuccessToast(false), 3000);

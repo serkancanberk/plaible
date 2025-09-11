@@ -300,6 +300,7 @@ export interface ReengagementTemplate {
 export interface Storyrunner {
   systemPrompt: string;
   openingBeats: string[];
+  guardrails: string[];
 }
 
 export interface StoryStats {

@@ -12,7 +12,7 @@ interface CompactMediaUploaderProps {
 }
 
 // Helper function to detect URL type
-const getUrlType = (url: string): 'image' | 'video' | 'youtube' | 'unknown' => {
+const getUrlType = (url: string): 'image' | 'video' | 'youtube' | 'audio' | 'unknown' => {
   const lowerUrl = url.toLowerCase();
   
   if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
@@ -94,8 +94,8 @@ const validateYouTubeVideo = async (videoId: string): Promise<boolean> => {
     }
     
     return false;
-  } catch (error) {
-    if (error.name === 'AbortError') {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'AbortError') {
       console.warn('YouTube validation timed out for video:', videoId);
     } else {
       console.warn('YouTube validation failed:', error);
@@ -108,7 +108,7 @@ const validateYouTubeVideo = async (videoId: string): Promise<boolean> => {
 const CompactMediaItem: React.FC<{
   url: string;
   onRemove: () => void;
-  type: 'image' | 'video' | 'youtube' | 'unknown';
+  type: 'image' | 'video' | 'youtube' | 'audio' | 'unknown';
   isUploadSuccess?: boolean;
   isNew?: boolean;
 }> = ({ url, onRemove, type, isUploadSuccess = false, isNew = false }) => {
@@ -136,7 +136,7 @@ const CompactMediaItem: React.FC<{
             setThumbnailLoading(false);
           }
           // Don't set thumbnailLoading to false here - let the image onLoad handle it
-        }).catch(error => {
+        }).catch((error: unknown) => {
           console.warn('YouTube validation failed:', error);
           setThumbnailError(true);
           setThumbnailLoading(false);
@@ -458,7 +458,7 @@ export const CompactMediaUploader: React.FC<CompactMediaUploaderProps> = ({
       onUpdate([...items, newUrl.trim()]);
       setNewUrl('');
       // Mark as new item for animation
-      setNewItems(prev => new Set([...prev, newIndex]));
+      setNewItems(prev => new Set(Array.from(prev).concat(newIndex)));
       // Remove from new items after animation
       setTimeout(() => {
         setNewItems(prev => {
@@ -522,12 +522,12 @@ export const CompactMediaUploader: React.FC<CompactMediaUploaderProps> = ({
       onUpdate([...items, uploadedUrl]);
       
       // Mark as uploaded and show success
-      setUploadedItems(prev => new Set([...prev, uploadedUrl]));
+      setUploadedItems(prev => new Set(Array.from(prev).concat(uploadedUrl)));
       setShowSuccessToast(true);
       setTimeout(() => setShowSuccessToast(false), 3000);
 
       // Mark as new item for animation
-      setNewItems(prev => new Set([...prev, newIndex]));
+      setNewItems(prev => new Set(Array.from(prev).concat(newIndex)));
       setTimeout(() => {
         setNewItems(prev => {
           const newSet = new Set(prev);
@@ -570,7 +570,7 @@ export const CompactMediaUploader: React.FC<CompactMediaUploaderProps> = ({
       // Create a fake event to reuse the upload logic
       const fakeEvent = {
         target: { files: [file] }
-      } as React.ChangeEvent<HTMLInputElement>;
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
       handleFileUpload(fakeEvent);
     }
   };
@@ -694,7 +694,7 @@ export const CompactMediaUploader: React.FC<CompactMediaUploaderProps> = ({
       )}
 
       {/* CSS Animation */}
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }

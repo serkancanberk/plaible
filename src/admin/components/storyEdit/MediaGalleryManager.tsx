@@ -58,7 +58,9 @@ const MediaGalleryItem: React.FC<{
         }
       `;
       document.head.appendChild(style);
-      return () => document.head.removeChild(style);
+      return () => {
+        document.head.removeChild(style);
+      };
     }
   }, [isNew]);
   
@@ -329,7 +331,7 @@ export const MediaGalleryManager: React.FC<MediaGalleryManagerProps> = ({
       onUpdate([...items, newUrl.trim()]);
       setNewUrl('');
       // Mark as new item for animation
-      setNewItems(prev => new Set([...prev, newIndex]));
+      setNewItems(prev => new Set(Array.from(prev).concat(newIndex)));
       // Remove from new items after animation
       setTimeout(() => {
         setNewItems(prev => {
@@ -393,12 +395,12 @@ export const MediaGalleryManager: React.FC<MediaGalleryManagerProps> = ({
       onUpdate([...items, uploadedUrl]);
       
       // Mark as uploaded and show success
-      setUploadedItems(prev => new Set([...prev, uploadedUrl]));
+      setUploadedItems(prev => new Set(Array.from(prev).concat(uploadedUrl)));
       setShowSuccessToast(true);
       setTimeout(() => setShowSuccessToast(false), 3000);
 
       // Mark as new item for animation
-      setNewItems(prev => new Set([...prev, newIndex]));
+      setNewItems(prev => new Set(Array.from(prev).concat(newIndex)));
       setTimeout(() => {
         setNewItems(prev => {
           const newSet = new Set(prev);
@@ -571,7 +573,7 @@ export const MediaGalleryManager: React.FC<MediaGalleryManagerProps> = ({
       )}
 
       {/* CSS Animation */}
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }

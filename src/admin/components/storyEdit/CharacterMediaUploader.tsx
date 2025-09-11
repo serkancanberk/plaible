@@ -208,7 +208,7 @@ export const CharacterMediaUploader: React.FC<CharacterMediaUploaderProps> = ({
       onUpdate([...items, newUrl.trim()]);
       setNewUrl('');
       // Mark as new item for animation
-      setNewItems(prev => new Set([...prev, newIndex]));
+      setNewItems(prev => new Set(Array.from(prev).concat(newIndex)));
       // Remove from new items after animation
       setTimeout(() => {
         setNewItems(prev => {
@@ -272,12 +272,12 @@ export const CharacterMediaUploader: React.FC<CharacterMediaUploaderProps> = ({
       onUpdate([...items, uploadedUrl]);
       
       // Mark as uploaded and show success
-      setUploadedItems(prev => new Set([...prev, uploadedUrl]));
+      setUploadedItems(prev => new Set(Array.from(prev).concat(uploadedUrl)));
       setShowSuccessToast(true);
       setTimeout(() => setShowSuccessToast(false), 3000);
 
       // Mark as new item for animation
-      setNewItems(prev => new Set([...prev, newIndex]));
+      setNewItems(prev => new Set(Array.from(prev).concat(newIndex)));
       setTimeout(() => {
         setNewItems(prev => {
           const newSet = new Set(prev);
@@ -320,7 +320,7 @@ export const CharacterMediaUploader: React.FC<CharacterMediaUploaderProps> = ({
       // Create a fake event to reuse the upload logic
       const fakeEvent = {
         target: { files: [file] }
-      } as React.ChangeEvent<HTMLInputElement>;
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
       handleFileUpload(fakeEvent);
     }
   };
@@ -444,7 +444,7 @@ export const CharacterMediaUploader: React.FC<CharacterMediaUploaderProps> = ({
       )}
 
       {/* CSS Animation */}
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
