@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Story, Character, Role, Cast } from '../../api';
 import { CharacterMediaUploader } from './CharacterMediaUploader';
+import { HooksTagInput } from './HooksTagInput';
 
 interface CharacterEditorProps {
   story: Story;
@@ -87,9 +88,6 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({ story, onUpdat
     onUpdate({ cast: updatedCast });
   };
 
-  const handleArrayChange = (value: string): string[] => {
-    return value.split('\n').map(item => item.trim()).filter(item => item);
-  };
 
   return (
     <div className="space-y-6">
@@ -179,14 +177,11 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({ story, onUpdat
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Hooks
                     </label>
-                    <textarea
-                      value={character.hooks.join('\n')}
-                      onChange={(e) => updateCharacter(index, { hooks: handleArrayChange(e.target.value) })}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      placeholder="Character hook 1&#10;Character hook 2"
+                    <HooksTagInput
+                      value={character.hooks}
+                      onChange={(hooks) => updateCharacter(index, { hooks })}
+                      placeholder="Type a hook and press Enter or comma..."
                     />
-                    <p className="text-xs text-gray-500 mt-1">One hook per line</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

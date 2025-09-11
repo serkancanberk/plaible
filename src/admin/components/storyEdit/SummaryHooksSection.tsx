@@ -1,6 +1,7 @@
 // src/admin/components/storyEdit/SummaryHooksSection.tsx
 import React, { useState } from 'react';
 import { Story, Highlight } from '../../api';
+import { HooksTagInput } from './HooksTagInput';
 
 interface SummaryHooksSectionProps {
   story: Story;
@@ -10,10 +11,6 @@ interface SummaryHooksSectionProps {
 export const SummaryHooksSection: React.FC<SummaryHooksSectionProps> = ({ story, onUpdate }) => {
   const [editingHighlight, setEditingHighlight] = useState<number | null>(null);
 
-  const handleHooksChange = (value: string) => {
-    const hooks = value.split('\n').map(hook => hook.trim()).filter(hook => hook);
-    onUpdate({ hooks });
-  };
 
   const handleSummaryChange = (field: 'original' | 'modern', value: string) => {
     onUpdate({
@@ -76,16 +73,11 @@ export const SummaryHooksSection: React.FC<SummaryHooksSectionProps> = ({ story,
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Hooks
           </label>
-          <textarea
-            value={story.hooks.join('\n')}
-            onChange={(e) => handleHooksChange(e.target.value)}
-            rows={6}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="What makes this story compelling?&#10;What draws readers in?&#10;What are the key emotional beats?"
+          <HooksTagInput
+            value={story.hooks}
+            onChange={(hooks) => onUpdate({ hooks })}
+            placeholder="What makes this story compelling? What draws readers in?"
           />
-          <p className="text-xs text-gray-500 mt-2">
-            One hook per line. These are the compelling elements that draw readers into your story.
-          </p>
         </div>
       </div>
 
