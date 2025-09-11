@@ -1,7 +1,7 @@
 // src/admin/components/storyEdit/MediaSection.tsx
 import React from 'react';
 import { Story, MediaBlock, Share } from '../../api';
-import { MediaUploader } from './MediaUploader';
+import { CompactMediaUploader } from './CompactMediaUploader';
 
 interface MediaSectionProps {
   story: Story;
@@ -52,33 +52,36 @@ export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate, sto
         
         <div className="space-y-6">
           {/* Images */}
-          <MediaUploader
+          <CompactMediaUploader
             items={story.assets.images}
             onUpdate={(items) => handleAssetsUpdate('images', items)}
             placeholder="https://example.com/image1.jpg"
             label="Images"
             acceptedFileTypes=".jpg,.jpeg,.png,.gif,.webp,.svg"
             mediaType="image"
+            storyId={storyId}
           />
 
           {/* Videos */}
-          <MediaUploader
+          <CompactMediaUploader
             items={story.assets.videos}
             onUpdate={(items) => handleAssetsUpdate('videos', items)}
             placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
             label="Videos"
             acceptedFileTypes=".mp4,.webm,.ogg,.avi,.mov"
             mediaType="video"
+            storyId={storyId}
           />
 
           {/* Ambiance */}
-          <MediaUploader
+          <CompactMediaUploader
             items={story.assets.ambiance}
             onUpdate={(items) => handleAssetsUpdate('ambiance', items)}
             placeholder="https://soundcloud.com/... or https://youtube.com/watch?v=..."
             label="Ambiance (Audio/Atmosphere)"
             acceptedFileTypes=".mp3,.wav,.ogg,.m4a"
             mediaType="audio"
+            storyId={storyId}
           />
         </div>
       </div>
@@ -117,23 +120,25 @@ export const MediaSection: React.FC<MediaSectionProps> = ({ story, onUpdate, sto
           </div>
 
           {/* Share Images */}
-          <MediaUploader
+          <CompactMediaUploader
             items={story.share.images}
             onUpdate={(items) => handleShareUpdate('images', items)}
             placeholder="https://example.com/share-image1.jpg"
             label="Share Images"
             acceptedFileTypes=".jpg,.jpeg,.png,.gif,.webp,.svg"
             mediaType="image"
+            storyId={storyId}
           />
 
           {/* Share Videos */}
-          <MediaUploader
+          <CompactMediaUploader
             items={story.share.videos}
             onUpdate={(items) => handleShareUpdate('videos', items)}
             placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
             label="Share Videos"
             acceptedFileTypes=".mp4,.webm,.ogg,.avi,.mov"
             mediaType="video"
+            storyId={storyId}
           />
         </div>
       </div>
