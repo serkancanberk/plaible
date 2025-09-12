@@ -28,7 +28,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
     walletBalance: 0
   });
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<CreateUserData>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const generateRandomUser = () => {
     const randomId = Math.floor(Math.random() * 1000);
@@ -45,7 +45,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<CreateUserData> = {};
+    const newErrors: Record<string, string> = {};
 
     if (!formData.displayName.trim()) {
       newErrors.displayName = 'Display name is required';

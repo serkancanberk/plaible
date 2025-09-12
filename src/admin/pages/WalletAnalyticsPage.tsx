@@ -5,7 +5,7 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { Spinner } from '../components/Spinner';
 import { SimpleChart } from '../components/SimpleChart';
 import { useToast } from '../components/Toast';
-import { adminApi, WalletAnalytics, TopCreditUser, DailySummary, TransactionStats } from '../api';
+import { adminApi, WalletAnalytics, TopCreditUser, TransactionStats } from '../api';
 
 interface Filters {
   startDate: string;
@@ -49,11 +49,11 @@ export const WalletAnalyticsPage: React.FC = () => {
         setAnalytics(analyticsRes.analytics);
         setTopUsers(analyticsRes.analytics.topUsers);
         
-        if (import.meta.env?.DEV) {
+        if (import.meta.env.DEV) {
           console.log("🔍 Frontend Analytics Data:", analyticsRes.analytics);
         }
       } else {
-        setError(analyticsRes.error || 'Failed to load analytics');
+        setError('Failed to load analytics');
       }
 
       if (topUsersRes.ok) {
@@ -63,7 +63,7 @@ export const WalletAnalyticsPage: React.FC = () => {
       if (statsRes.ok) {
         setTransactionStats(statsRes.stats);
         
-        if (import.meta.env?.DEV) {
+        if (import.meta.env.DEV) {
           console.log("🔍 Frontend Transaction Stats:", statsRes.stats);
         }
       }
@@ -171,7 +171,7 @@ export const WalletAnalyticsPage: React.FC = () => {
   if (error) {
     return (
       <div className="p-6">
-        <ErrorMessage message={error} />
+        <ErrorMessage title="Failed to load wallet analytics" message={error} />
       </div>
     );
   }

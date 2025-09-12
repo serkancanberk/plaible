@@ -26,7 +26,7 @@ export const EditUserModal: React.FC<Props> = ({ user, isOpen, onClose, onSave }
         displayName: user.displayName || '',
         email: user.email || '',
         roles: user.roles || [],
-        status: user.status || 'active'
+        status: (user.status === 'deleted' ? 'disabled' : user.status) || 'active'
       };
       setFormData(initialData);
       setHasChanges(false);
@@ -37,10 +37,11 @@ export const EditUserModal: React.FC<Props> = ({ user, isOpen, onClose, onSave }
   // Track changes
   useEffect(() => {
     if (user) {
+      const userStatus = (user.status === 'deleted' ? 'disabled' : user.status) || 'active';
       const hasFormChanges = 
         formData.displayName !== (user.displayName || '') ||
         JSON.stringify(formData.roles.sort()) !== JSON.stringify((user.roles || []).sort()) ||
-        formData.status !== (user.status || 'active');
+        formData.status !== userStatus;
       setHasChanges(hasFormChanges);
     }
   }, [formData, user]);

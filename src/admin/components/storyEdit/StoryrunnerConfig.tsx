@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Story } from '../../api';
 import { HooksTagInput } from './HooksTagInput';
+import { SystemPromptEditor } from './SystemPromptEditor';
 
 interface StoryrunnerConfigProps {
   story: Story;
@@ -78,7 +79,7 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
         >
           <div className="flex items-center">
             <span className="text-lg mr-2">🔧</span>
-            <span className="font-medium text-gray-900">Expert AI Configuration</span>
+            <span className="font-medium text-gray-900">Story Prompt Configuration</span>
           </div>
           <span className={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
             ▼
@@ -90,25 +91,18 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
             <div className="space-y-6">
               {/* System Prompt */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  System Prompt *
-                </label>
-                <textarea
+                <SystemPromptEditor
                   value={story.storyrunner.systemPrompt}
-                  onChange={(e) => handleSystemPromptChange(e.target.value)}
+                  onChange={handleSystemPromptChange}
+                  placeholder="You are an AI storyteller for {{STORY_TITLE}} by {{AUTHOR_NAME}}. Use tone: {{TONE_STYLE}}, and time flavor: {{TIME_FLAVOR}}..."
                   rows={12}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                  placeholder="You are an AI storyteller for [Story Title]. Your role is to..."
                 />
-                <p className="text-xs text-gray-500 mt-2">
-                  This prompt defines the AI's role, personality, and behavior. It's the core instruction that guides all AI responses.
-                </p>
               </div>
 
               {/* Opening Beats */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Opening Beats
+                  Story Opening Beats
                 </label>
                 <HooksTagInput
                   value={story.storyrunner.openingBeats}
@@ -123,7 +117,7 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
               {/* Guardrails */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Safety Guardrails
+                  Story Safety Guardrails
                 </label>
                 <HooksTagInput
                   value={story.storyrunner.guardrails || []}
@@ -147,10 +141,22 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
           <div>
             <h4 className="font-medium text-gray-700 mb-2">System Prompt Preview</h4>
             <div className="bg-white border rounded-lg p-3 max-h-32 overflow-y-auto">
-              <p className="text-sm text-gray-600 font-mono">
-                {story.storyrunner.systemPrompt.substring(0, 200)}
+              <div className="text-sm text-gray-600 font-mono">
+                {story.storyrunner.systemPrompt.split(/(\{\{[^}]+\}\})/g).map((part, index) => {
+                  if (part.match(/^\{\{[^}]+\}\}$/)) {
+                    return (
+                      <span
+                        key={index}
+                        className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs font-medium"
+                      >
+                        {part}
+                      </span>
+                    );
+                  }
+                  return part;
+                })}
                 {story.storyrunner.systemPrompt.length > 200 && '...'}
-              </p>
+              </div>
             </div>
           </div>
 
@@ -169,6 +175,12 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
                 <span className="text-gray-600">Guardrails:</span>
                 <span className="font-medium">{story.storyrunner.guardrails?.length || 0}</span>
               </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Variables Used:</span>
+                <span className="font-medium">
+                  {(story.storyrunner.systemPrompt.match(/\{\{[^}]+\}\}/g) || []).length}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -178,9 +190,10 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
         <h3 className="text-lg font-medium text-blue-900 mb-3">🎯 Best Practices</h3>
         <div className="text-sm text-blue-800 space-y-2">
-          <p><strong>System Prompt:</strong> Be specific about the AI's role, tone, and constraints. Include character information and story context.</p>
+          <p><strong>System Prompt:</strong> Be specific about the AI's role, tone, and constraints. Use variables like <code className="bg-blue-200 px-1 rounded">{'{{TONE_STYLE}}'}</code> and <code className="bg-blue-200 px-1 rounded">{'{{TIME_FLAVOR}}'}</code> to personalize prompts dynamically.</p>
           <p><strong>Opening Beats:</strong> Create compelling initial moments that draw users into the story and establish the narrative direction.</p>
           <p><strong>Guardrails:</strong> Define clear boundaries for content, tone, and character behavior to ensure appropriate user experience.</p>
+          <p><strong>Variables:</strong> Use interpolation variables to make prompts dynamic and personalized for each user's story session.</p>
           <p><strong>Testing:</strong> Always test configuration changes with sample interactions before deploying to users.</p>
         </div>
       </div>

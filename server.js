@@ -35,7 +35,9 @@ import adminStoriesRouter from "./routes/admin/stories.js";
 import adminFeedbacksRouter from "./routes/admin/feedbacks.js";
 import adminAnalyticsRouter from "./routes/admin/analytics.js";
 import adminWalletAnalyticsRouter from "./routes/admin/walletAnalytics.js";
+import adminStoryRunnerRouter from "./routes/admin/storyRunner.js";
 import uploadRouter from "./routes/upload.js";
+import storyRunnerRoutes from "./routes/storyRunnerRoutes.js";
 
 const { ObjectId } = mongoose.Types;
 
@@ -137,6 +139,9 @@ app.use("/api/sessions", authGuard, sessionsRouter);
 
 // StoryRunner router
 app.use("/api/storyrunner", authGuard, storyrunnerRouter);
+
+// Story Runner Routes (new AI-powered storytelling)
+app.use("/api/story", authGuard, storyRunnerRoutes);
 
 // Wallet router
 app.use("/api/wallet", authGuard, walletRouter);
@@ -252,6 +257,7 @@ app.use("/api/admin/stories", authGuard, adminGuard, adminStoriesRouter);
 app.use("/api/admin/feedbacks", authGuard, adminGuard, adminFeedbacksRouter);
 app.use("/api/admin/analytics", authGuard, adminGuard, adminAnalyticsRouter);
 app.use("/api/admin/wallet", authGuard, adminGuard, adminWalletAnalyticsRouter);
+app.use("/api/admin/storyrunner", authGuard, adminGuard, adminStoryRunnerRouter);
 app.use("/api/category-config", categoryConfigRouter);
 app.use("/api/upload", authGuard, uploadRouter);
 

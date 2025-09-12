@@ -74,11 +74,11 @@ export const FeedbacksPage: React.FC = () => {
         setTotalCount(0);
         setError(resp?.error || 'Failed to load feedbacks');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.debug('[feedbacks] error', e);
       setFeedbacks([]);
       setTotalCount(0);
-      setError(e?.message || 'Failed to load feedbacks');
+      setError((e as Error)?.message || 'Failed to load feedbacks');
     } finally {
       setLoading(false);
     }
@@ -94,7 +94,7 @@ export const FeedbacksPage: React.FC = () => {
       await adminApi.updateFeedbackStatus(feedbackId, newStatus as 'visible' | 'hidden' | 'flagged');
       await loadFeedbacks(); // Reload to get updated data
       showToast('Feedback status updated successfully', 'success');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update feedback status:', err);
       showToast('Failed to update feedback status', 'error');
     }
@@ -107,7 +107,7 @@ export const FeedbacksPage: React.FC = () => {
       await adminApi.deleteFeedback(feedbackId);
       await loadFeedbacks(); // Reload to get updated data
       showToast('Feedback deleted successfully', 'success');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to delete feedback:', err);
       showToast('Failed to delete feedback', 'error');
     }
@@ -162,7 +162,7 @@ export const FeedbacksPage: React.FC = () => {
     {
       key: 'actions',
       label: 'Actions',
-      render: (_: any, feedback: Feedback) => (
+      render: (_: unknown, feedback: AdminFeedback) => (
         <div className="flex space-x-2">
           <button
             onClick={() => handleStatusToggle(feedback._id, feedback.status)}

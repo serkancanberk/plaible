@@ -80,7 +80,7 @@ class ApiClient {
     return response.json();
   }
 
-  async post<T>(endpoint: string, data?: any): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown): Promise<T> {
     const url = buildUrl(endpoint);
     if (import.meta.env.DEV) {
       console.debug('[api] POST', url);
@@ -92,7 +92,7 @@ class ApiClient {
     return response.json();
   }
 
-  async patch<T>(endpoint: string, data?: any): Promise<T> {
+  async patch<T>(endpoint: string, data?: unknown): Promise<T> {
     const url = buildUrl(endpoint);
     if (import.meta.env.DEV) {
       console.debug('[api] PATCH', url);
@@ -104,7 +104,7 @@ class ApiClient {
     return response.json();
   }
 
-  async put<T>(endpoint: string, data?: any): Promise<T> {
+  async put<T>(endpoint: string, data?: unknown): Promise<T> {
     const url = buildUrl(endpoint);
     if (import.meta.env.DEV) {
       console.debug('[api] PUT', url);
@@ -166,7 +166,7 @@ export const adminApi = {
   updateStoryStatus: (id: string, isActive: boolean) =>
     api.patch<{ ok: boolean }>(`/admin/stories/${id}/status`, { isActive }),
   
-  updateStory: (id: string, data: any) =>
+  updateStory: (id: string, data: unknown) =>
     api.put<{ ok: boolean }>(`/admin/stories/${id}`, data),
 
   // Feedbacks
@@ -204,6 +204,26 @@ export const adminApi = {
 
   getUserTransactionHistory: (userId: string, params?: { limit?: number; offset?: number; type?: string; source?: string }) =>
     api.get<{ ok: boolean; transactions: WalletTransaction[] }>(`/admin/wallet/transactions/user/${userId}`, params || {}),
+
+  // StoryRunner
+  getStorySettings: () =>
+    api.get<{ ok: boolean; settings: StorySettings }>('/admin/storyrunner/settings'),
+
+  updateStorySettings: (data: Partial<StorySettings>) =>
+    api.put<{ ok: boolean; settings: StorySettings }>('/admin/storyrunner/settings', data),
+
+  getStorySessions: async (params?: { userId?: string; storyId?: string; status?: string; limit?: number; offset?: number }) => {
+    const q = { limit: 10, ...params };
+    const json = await api.get<{ ok: boolean; sessions: UserStorySession[]; totalCount?: number; error?: string }>('/admin/storyrunner/sessions', q);
+    if ((import.meta as any).env?.DEV) console.debug('[api] story sessions', json);
+    return json;
+  },
+
+  getStorySession: (id: string) =>
+    api.get<{ ok: boolean; session: UserStorySession }>(`/admin/storyrunner/sessions/${id}`),
+
+  getSessionChapters: (sessionId: string) =>
+    api.get<{ ok: boolean; chapters: Chapter[] }>(`/admin/storyrunner/sessions/${sessionId}/chapters`),
 };
 
 // Types
@@ -417,6 +437,63 @@ export interface WalletTransaction {
   amount: number;
   balanceAfter: number;
   note?: string;
-  metadata?: any;
+  metadata?: unknown;
   createdAt: string;
+}
+
+// StoryRunner interfaces
+export interface StorySetting {
+  id: string;
+  displayLabel: string;
+  description?: string;
+}
+
+export interface StorySettings {
+  _id: string;
+  tone_styles: StorySetting[];
+  time_flavors: StorySetting[];
+  version: string;
+  isActive: boolean;
+  lastUpdated: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserStorySession {
+  _id: string;
+  userId: string;
+  storyId: string;
+  toneStyleId: string;
+  timeFlavorId: string;
+  systemPrompt: string;
+  status: 'active' | 'finished' | 'abandoned';
+  currentChapter: number;
+  chaptersGenerated: number;
+  sessionStartedAt: string;
+  lastActivityAt: string;
+  userPreferences?: {
+    preferredPacing?: 'slow' | 'medium' | 'fast';
+    contentSensitivity?: 'low' | 'medium' | 'high';
+    interactionStyle?: 'passive' | 'interactive' | 'immersive';
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChapterChoice {
+  text: string;
+  nextChapterId?: string;
+}
+
+export interface Chapter {
+  _id: string;
+  sessionId: string;
+  chapterIndex: number;
+  systemPromptUsed: string;
+  openingBeat: string;
+  title: string;
+  content: string;
+  choices: ChapterChoice[];
+  createdAt: string;
+  updatedAt: string;
 }

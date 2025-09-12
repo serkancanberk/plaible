@@ -83,7 +83,7 @@ export function Table<T extends Record<string, any>>({
                         column.className || ''
                       }`}
                     >
-                      {column.render ? column.render(value, item) : value}
+                      {column.render ? column.render(value, item) : String(value ?? '')}
                     </td>
                   );
                 })}

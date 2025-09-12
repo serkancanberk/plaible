@@ -10,6 +10,7 @@ import { StoryEditPage } from './pages/StoryEditPage';
 import { FeedbacksPage } from './pages/FeedbacksPage';
 import { WalletAnalyticsPage } from './pages/WalletAnalyticsPage';
 import { CategoryManagerPage } from './pages/CategoryManagerPage';
+import { StoryRunnerPage } from './pages/StoryRunnerPage';
 
 export const AppAdmin: React.FC = () => {
   return (
@@ -30,6 +31,7 @@ export const AppAdmin: React.FC = () => {
                 <Route path="/feedbacks" element={<FeedbacksPage />} />
                 <Route path="/wallet-analytics" element={<WalletAnalyticsPage />} />
                 <Route path="/category-manager" element={<CategoryManagerPage />} />
+                <Route path="/storyrunner" element={<StoryRunnerPage />} />
                 <Route path="*" element={<Navigate to="/users" replace />} />
               </Routes>
             </main>

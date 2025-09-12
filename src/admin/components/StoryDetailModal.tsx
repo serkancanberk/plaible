@@ -47,7 +47,7 @@ export const StoryDetailModal: React.FC<StoryDetailModalProps> = ({ storyId, onC
             systemPrompt: response.story.storyrunner?.systemPrompt || ''
           });
         } else {
-          setError(response.error || 'Failed to load story');
+          setError('Failed to load story');
         }
       } catch (err: any) {
         setError(err.message || 'Failed to load story');
@@ -86,7 +86,7 @@ export const StoryDetailModal: React.FC<StoryDetailModalProps> = ({ storyId, onC
           setStory(updatedResponse.story);
         }
       } else {
-        showToast(response.error || 'Failed to update story', 'error');
+        showToast('Failed to update story', 'error');
       }
     } catch (err: any) {
       showToast(err.message || 'Failed to update story', 'error');
