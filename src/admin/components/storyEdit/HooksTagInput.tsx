@@ -75,15 +75,15 @@ export const HooksTagInput: React.FC<HooksTagInputProps> = ({
           {value.map((hook, index) => (
             <span
               key={index}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full border border-blue-200"
+              className="inline-flex items-start gap-1 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full border border-blue-200"
             >
-              <span className="truncate max-w-[200px]" title={hook}>
+              <span className="whitespace-normal break-words" title={hook}>
                 {hook}
               </span>
               <button
                 type="button"
                 onClick={() => removeHook(index)}
-                className="ml-1 text-blue-600 hover:text-blue-800 hover:bg-blue-200 rounded-full p-0.5 transition-colors duration-150"
+                className="ml-1 mt-0.5 flex-shrink-0 text-blue-600 hover:text-blue-800 hover:bg-blue-200 rounded-full p-0.5 transition-colors duration-150"
                 title="Remove hook"
               >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,6 +1,7 @@
 // src/admin/components/storyEdit/StoryrunnerConfig.tsx
 import React, { useState } from 'react';
 import { Story } from '../../api';
+import { HooksTagInput } from './HooksTagInput';
 
 interface StoryrunnerConfigProps {
   story: Story;
@@ -20,8 +21,7 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
     });
   };
 
-  const handleOpeningBeatsChange = (value: string) => {
-    const beats = value.split('\n').map(beat => beat.trim()).filter(beat => beat);
+  const handleOpeningBeatsChange = (beats: string[]) => {
     onUpdate({
       storyrunner: {
         ...story.storyrunner,
@@ -30,8 +30,7 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
     });
   };
 
-  const handleGuardrailsChange = (value: string) => {
-    const guardrails = value.split('\n').map(guard => guard.trim()).filter(guard => guard);
+  const handleGuardrailsChange = (guardrails: string[]) => {
     onUpdate({
       storyrunner: {
         ...story.storyrunner,
@@ -111,15 +110,13 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Opening Beats
                 </label>
-                <textarea
-                  value={story.storyrunner.openingBeats.join('\n')}
-                  onChange={(e) => handleOpeningBeatsChange(e.target.value)}
-                  rows={6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Opening beat 1&#10;Opening beat 2&#10;Opening beat 3"
+                <HooksTagInput
+                  value={story.storyrunner.openingBeats}
+                  onChange={handleOpeningBeatsChange}
+                  placeholder="Type an opening beat and press Enter or comma..."
                 />
                 <p className="text-xs text-gray-500 mt-2">
-                  Initial story beats that set the tone and direction. One beat per line.
+                  Initial story beats that set the tone and direction. Add multiple beats as separate tags.
                 </p>
               </div>
 
@@ -128,15 +125,13 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Safety Guardrails
                 </label>
-                <textarea
-                  value={story.storyrunner.guardrails?.join('\n') || ''}
-                  onChange={(e) => handleGuardrailsChange(e.target.value)}
-                  rows={6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Do not include explicit violence&#10;Maintain age-appropriate content&#10;Respect character boundaries"
+                <HooksTagInput
+                  value={story.storyrunner.guardrails || []}
+                  onChange={handleGuardrailsChange}
+                  placeholder="Type a safety rule and press Enter or comma..."
                 />
                 <p className="text-xs text-gray-500 mt-2">
-                  Safety rules and content boundaries. One rule per line.
+                  Safety rules and content boundaries. Add multiple rules as separate tags.
                 </p>
               </div>
             </div>
