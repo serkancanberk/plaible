@@ -104,7 +104,7 @@ async function run() {
         storyId: testStoryId,
         toneStyleId: testToneStyleId,
         timeFlavorId: testTimeFlavorId,
-        systemPrompt: 'Test system prompt for admin UI',
+        storyPrompt: 'Test system prompt for admin UI',
         status: 'active',
         currentChapter: 1,
         chaptersGenerated: 1,
@@ -126,7 +126,7 @@ async function run() {
       const testChapter = new Chapter({
         sessionId: testSession._id,
         chapterIndex: 1,
-        systemPromptUsed: 'Test system prompt for admin UI',
+        storyPromptUsed: 'Test system prompt for admin UI',
         openingBeat: 'The story begins with a mysterious event in the foggy streets of London.',
         title: 'Chapter 1: The Beginning',
         content: 'In the dim light of a gas lamp, a figure emerged from the shadows. The air was thick with anticipation as the story unfolded, revealing secrets that would change everything.',

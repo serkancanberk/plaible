@@ -2,7 +2,7 @@ import 'dotenv/config';
 import mongoose from 'mongoose';
 import { StoryPrompt } from '../src/models/storyPromptModel.js';
 import { UserStorySession } from '../models/UserStorySession.js';
-import { generateSystemPrompt } from '../src/utils/generateSystemPrompt.js';
+import { generateStoryPrompt } from '../src/utils/generateStoryPrompt.js';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -31,7 +31,7 @@ async function run() {
     console.log(`Story ID: ${existingSession.storyId}\n`);
 
     // Generate the system prompt
-    const generatedPrompt = await generateSystemPrompt(existingSession._id.toString());
+    const generatedPrompt = await generateStoryPrompt(existingSession._id.toString());
     if (!generatedPrompt) {
       console.log('❌ Failed to generate system prompt');
       process.exit(1);

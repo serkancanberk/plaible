@@ -1,7 +1,7 @@
-// src/admin/components/storyEdit/SystemPromptEditor.tsx
+// src/admin/components/storyEdit/StoryPromptEditor.tsx
 import React, { useState, useRef, useEffect } from 'react';
 
-interface SystemPromptEditorProps {
+interface StoryPromptEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -22,7 +22,7 @@ const AVAILABLE_VARIABLES = [
   { name: 'SAFETY_GUARDRAILS', description: 'Formatted list of safety guardrails' }
 ];
 
-export const SystemPromptEditor: React.FC<SystemPromptEditorProps> = ({
+export const StoryPromptEditor: React.FC<StoryPromptEditorProps> = ({
   value,
   onChange,
   placeholder = "You are an AI storyteller for [Story Title]. Your role is to...",

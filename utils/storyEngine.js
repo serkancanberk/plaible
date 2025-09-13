@@ -6,7 +6,7 @@ import { UserStorySession } from '../models/UserStorySession.js';
 import { Story } from '../models/Story.js';
 import { StoryPrompt } from '../src/models/storyPromptModel.js';
 import { Chapter } from '../models/Chapter.js';
-import { generateSystemPrompt } from '../src/utils/generateSystemPrompt.js';
+import { generateStoryPrompt } from '../src/utils/generateStoryPrompt.js';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -30,17 +30,17 @@ export async function generateFirstChapter(sessionId) {
     }
 
     // 2. Get the system prompt from story_prompts or generate it
-    let systemPrompt = await StoryPrompt.findBySessionId(sessionId);
-    if (!systemPrompt) {
+    let storyPrompt = await StoryPrompt.findBySessionId(sessionId);
+    if (!storyPrompt) {
       console.log('No stored prompt found, generating new one...');
-      const generatedPrompt = await generateSystemPrompt(sessionId);
+      const generatedPrompt = await generateStoryPrompt(sessionId);
       if (!generatedPrompt) {
-        console.error('Failed to generate system prompt');
+        console.error('Failed to generate story prompt');
         return null;
       }
-      systemPrompt = { finalPrompt: generatedPrompt };
+      storyPrompt = { finalPrompt: generatedPrompt };
     } else {
-      systemPrompt = { finalPrompt: systemPrompt.finalPrompt };
+      storyPrompt = { finalPrompt: storyPrompt.finalPrompt };
     }
 
     // 3. Load the corresponding story
@@ -67,7 +67,7 @@ export async function generateFirstChapter(sessionId) {
       messages: [
         {
           role: 'system',
-          content: systemPrompt.finalPrompt
+          content: storyPrompt.finalPrompt
         },
         {
           role: 'user',
@@ -99,7 +99,7 @@ export async function generateFirstChapter(sessionId) {
     const chapter = new Chapter({
       sessionId: sessionId,
       chapterIndex: 1,
-      systemPromptUsed: systemPrompt.finalPrompt,
+      storyPromptUsed: storyPrompt.finalPrompt,
       openingBeat: randomOpeningBeat,
       title: chapterData.title,
       content: chapterData.content,
@@ -259,8 +259,8 @@ export async function generateNextChapter(sessionId, previousChapterId, choiceIn
     }
 
     // Get system prompt
-    let systemPrompt = await StoryPrompt.findBySessionId(sessionId);
-    if (!systemPrompt) {
+    let storyPrompt = await StoryPrompt.findBySessionId(sessionId);
+    if (!storyPrompt) {
       console.error('System prompt not found for session');
       return null;
     }
@@ -283,7 +283,7 @@ export async function generateNextChapter(sessionId, previousChapterId, choiceIn
       messages: [
         {
           role: 'system',
-          content: systemPrompt.finalPrompt
+          content: storyPrompt.finalPrompt
         },
         {
           role: 'user',
@@ -313,7 +313,7 @@ export async function generateNextChapter(sessionId, previousChapterId, choiceIn
     const newChapter = new Chapter({
       sessionId: sessionId,
       chapterIndex: nextChapterIndex,
-      systemPromptUsed: systemPrompt.finalPrompt,
+      storyPromptUsed: storyPrompt.finalPrompt,
       openingBeat: `Based on choice: ${previousChapter.choices[choiceIndex].text}`,
       title: chapterData.title,
       content: chapterData.content,

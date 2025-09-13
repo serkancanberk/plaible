@@ -13,7 +13,7 @@ interface EditableStoryData {
   title: string;
   isActive: boolean;
   tags: string;
-  systemPrompt: string;
+  storyPrompt: string;
 }
 
 export const StoryDetailModal: React.FC<StoryDetailModalProps> = ({ storyId, onClose }) => {
@@ -26,7 +26,7 @@ export const StoryDetailModal: React.FC<StoryDetailModalProps> = ({ storyId, onC
     title: '',
     isActive: false,
     tags: '',
-    systemPrompt: ''
+    storyPrompt: ''
   });
   const { showToast } = useToast();
 
@@ -44,7 +44,7 @@ export const StoryDetailModal: React.FC<StoryDetailModalProps> = ({ storyId, onC
             title: response.story.title,
             isActive: response.story.isActive,
             tags: response.story.tags.join(', '),
-            systemPrompt: response.story.storyrunner?.systemPrompt || ''
+            storyPrompt: response.story.storyrunner?.storyPrompt || response.story.storyrunner?.systemPrompt || ''
           });
         } else {
           setError('Failed to load story');
@@ -71,7 +71,7 @@ export const StoryDetailModal: React.FC<StoryDetailModalProps> = ({ storyId, onC
         tags: editableData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
         storyrunner: {
           ...story.storyrunner,
-          systemPrompt: editableData.systemPrompt
+          storyPrompt: editableData.storyPrompt
         }
       };
 
@@ -102,7 +102,7 @@ export const StoryDetailModal: React.FC<StoryDetailModalProps> = ({ storyId, onC
         title: story.title,
         isActive: story.isActive,
         tags: story.tags.join(', '),
-        systemPrompt: story.storyrunner?.systemPrompt || ''
+        storyPrompt: story.storyrunner?.storyPrompt || story.storyrunner?.systemPrompt || ''
       });
     }
     setIsEditing(false);
@@ -383,23 +383,23 @@ export const StoryDetailModal: React.FC<StoryDetailModalProps> = ({ storyId, onC
                 <label className="block text-sm font-medium text-gray-700 mb-2">System Prompt</label>
                 {isEditing ? (
                   <textarea
-                    value={editableData.systemPrompt}
-                    onChange={(e) => setEditableData(prev => ({ ...prev, systemPrompt: e.target.value }))}
+                    value={editableData.storyPrompt}
+                    onChange={(e) => setEditableData(prev => ({ ...prev, storyPrompt: e.target.value }))}
                     rows={6}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter the AI system prompt..."
                   />
                 ) : (
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-gray-700 text-sm whitespace-pre-wrap">{story.storyrunner.systemPrompt}</p>
+                    <p className="text-gray-700 text-sm whitespace-pre-wrap">{story.storyrunner?.storyPrompt || story.storyrunner?.systemPrompt || 'No prompt configured'}</p>
                   </div>
                 )}
               </div>
-              {story.storyrunner.openingBeats.length > 0 && (
+              {(story.storyrunner?.openingBeats?.length || 0) > 0 && (
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Opening Beats</h4>
                   <ul className="space-y-1">
-                    {story.storyrunner.openingBeats.map((beat, index) => (
+                    {(story.storyrunner?.openingBeats || []).map((beat, index) => (
                       <li key={index} className="text-gray-700 text-sm">• {beat}</li>
                     ))}
                   </ul>

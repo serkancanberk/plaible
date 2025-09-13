@@ -19,7 +19,7 @@ async function run() {
     // Test 1: Check if we have stories with system prompts
     console.log('📋 Test 1: Checking existing stories with system prompts');
     
-    const stories = await Story.find({ 'storyrunner.systemPrompt': { $exists: true, $ne: '' } });
+    const stories = await Story.find({ 'storyrunner.storyPrompt': { $exists: true, $ne: '' } });
     console.log(`✅ Found ${stories.length} stories with system prompts`);
 
     if (stories.length === 0) {
@@ -33,7 +33,7 @@ async function run() {
         description: 'A test story for the system prompt editor',
         isActive: true,
         storyrunner: {
-          systemPrompt: `You are an AI storyteller for "{{STORY_TITLE}}" by {{AUTHOR_NAME}}.
+          storyPrompt: `You are an AI storyteller for "{{STORY_TITLE}}" by {{AUTHOR_NAME}}.
 
 Story Description: {{STORY_DESCRIPTION}}
 
@@ -146,7 +146,7 @@ Story description: {{STORY_DESCRIPTION}}`;
     
     const fs = await import('fs');
     const requiredFiles = [
-      'src/admin/components/storyEdit/SystemPromptEditor.tsx',
+      'src/admin/components/storyEdit/StoryPromptEditor.tsx',
       'src/admin/components/storyEdit/StoryrunnerConfig.tsx'
     ];
 

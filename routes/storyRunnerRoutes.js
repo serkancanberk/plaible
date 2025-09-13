@@ -6,7 +6,7 @@ import { UserStorySession } from '../models/UserStorySession.js';
 import { Story } from '../models/Story.js';
 import { StorySettings } from '../models/StorySettings.js';
 import { StoryPrompt } from '../src/models/storyPromptModel.js';
-import { generateSystemPrompt } from '../src/utils/generateSystemPrompt.js';
+import { generateStoryPrompt } from '../src/utils/generateStoryPrompt.js';
 import { generateFirstChapter } from '../utils/storyEngine.js';
 
 const router = express.Router();
@@ -112,7 +112,7 @@ router.post('/start', async (req, res) => {
       storyId: storyId,
       toneStyleId: finalToneStyleId,
       timeFlavorId: finalTimeFlavorId,
-      systemPrompt: 'Temporary prompt - will be updated', // Will be filled after generation
+      storyPrompt: 'Temporary prompt - will be updated', // Will be filled after generation
       status: 'active',
       currentChapter: 1,
       chaptersGenerated: 0,
@@ -124,7 +124,7 @@ router.post('/start', async (req, res) => {
     console.log(`✅ Session created with ID: ${savedSession._id}`);
 
     // 7. Generate system prompt
-    const generatedPrompt = await generateSystemPrompt(savedSession._id.toString());
+    const generatedPrompt = await generateStoryPrompt(savedSession._id.toString());
     if (!generatedPrompt) {
       // Clean up the session if prompt generation fails
       await UserStorySession.findByIdAndDelete(savedSession._id);
@@ -135,7 +135,7 @@ router.post('/start', async (req, res) => {
     }
 
     // 8. Update session with system prompt
-    savedSession.systemPrompt = generatedPrompt;
+    savedSession.storyPrompt = generatedPrompt;
     await savedSession.save();
 
     // 9. Save the prompt to story_prompts collection
@@ -154,7 +154,7 @@ router.post('/start', async (req, res) => {
       success: true,
       data: {
         sessionId: savedSession._id.toString(),
-        systemPrompt: generatedPrompt,
+        storyPrompt: generatedPrompt,
         storyId: storyId,
         toneStyleId: finalToneStyleId,
         timeFlavorId: finalTimeFlavorId,
@@ -243,7 +243,7 @@ router.get('/session/:sessionId', async (req, res) => {
       data: {
         session: session,
         story: story,
-        systemPrompt: storyPrompt?.finalPrompt || session.systemPrompt
+        storyPrompt: storyPrompt?.finalPrompt || session.storyPrompt
       }
     });
 

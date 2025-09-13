@@ -185,7 +185,7 @@ export const StoryEditPage: React.FC = () => {
     { id: 'media', label: 'Media & Sharing', icon: '🖼️' },
     { id: 'characters', label: 'Characters & Cast', icon: '🎭' },
     { id: 'summary', label: 'Hooks & Summaries', icon: '🧠' },
-    { id: 'storyrunner', label: 'Storyrunner', icon: '🛠️' },
+    { id: 'storyrunner', label: 'Prompt Template', icon: '🛠️' },
     { id: 'pricing', label: 'Pricing', icon: '💰' },
     { id: 'tags', label: 'Tags', icon: '🏷️' },
     { id: 'funfacts', label: 'Fun Facts', icon: '🤓' },

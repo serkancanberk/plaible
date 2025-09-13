@@ -142,7 +142,8 @@ const reengagementTemplateSchema = new Schema(
 
 const storyrunnerSchema = new Schema(
   {
-    systemPrompt: { type: String, required: true, trim: true },
+    storyPrompt: { type: String, required: true, trim: true },
+    systemPrompt: { type: String, trim: true }, // Legacy field for backward compatibility
     guardrails: { type: [String], default: [] },
     openingBeats: { type: [String], default: [] },
   },

@@ -58,14 +58,14 @@ async function openaiGenerateStart({ story, characterId, roleIds }) {
       .map(r => r.label)
       .join(', ');
     
-    const systemPrompt = story.storyrunner?.systemPrompt || 
+    const storyPrompt = story.storyrunner?.storyPrompt || 
       "You are a creative story assistant. Keep responses concise and engaging.";
     const guardrails = story.storyrunner?.guardrails || [];
     
     const userPrompt = `Start a new scene for ${characterName} in "${storyTitle}". ${roleLabels ? `Role: ${roleLabels}. ` : ''}Create an engaging opening scene with 2-4 meaningful choices. Keep the scene text under 120 words and make choices short and clear.`;
     
     const messages = [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: storyPrompt },
       { role: "user", content: userPrompt }
     ];
     
@@ -135,7 +135,7 @@ async function openaiGenerateTurn({ story, session, chosen, freeText }) {
     const characterName = character?.name || "You";
     const storyTitle = story.title || "Your Story";
     
-    const systemPrompt = story.storyrunner?.systemPrompt || 
+    const storyPrompt = story.storyrunner?.storyPrompt || 
       "You are a creative story assistant. Keep responses concise and engaging.";
     const guardrails = story.storyrunner?.guardrails || [];
     
@@ -161,7 +161,7 @@ User action: ${userAction}
 Create the next scene with 2-4 meaningful choices. Keep the scene text under 120 words and make choices short and clear.`;
     
     const messages = [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: storyPrompt },
       { role: "user", content: userPrompt }
     ];
     

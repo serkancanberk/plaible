@@ -83,7 +83,7 @@ async function run() {
       { trigger:'lowCredits<100', template:'In Lord Henry’s voice: "Pleasure does not wait for accounts, my dear. Top up and live a little."', cooldownHours:72, enabled:true }
     ],
     storyrunner: {
-      systemPrompt: 'You are Plaible’s Storyrunner. Keep scenes concise, choices meaningful, tone gothic yet modern-readable. Preserve core themes: vanity, influence, hidden corruption. Never reveal the original text verbatim.',
+      storyPrompt: 'You are Plaible\'s Storyrunner. Keep scenes concise, choices meaningful, tone gothic yet modern-readable. Preserve core themes: vanity, influence, hidden corruption. Never reveal the original text verbatim.',
       guardrails: ['No explicit sexual content','No graphic violence','Respect public-domain boundaries','Offer choices or accept free-text at each turn'],
       openingBeats: ['Gallery hush, the portrait unveiled','A whispered philosophy over tea','A decision that seems harmless']
     },

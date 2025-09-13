@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Story } from '../../api';
 import { HooksTagInput } from './HooksTagInput';
-import { SystemPromptEditor } from './SystemPromptEditor';
+import { StoryPromptEditor } from './StoryPromptEditor';
 
 interface StoryrunnerConfigProps {
   story: Story;
@@ -13,13 +13,27 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
   const [isExpanded, setIsExpanded] = useState(false);
   const [showWarning, setShowWarning] = useState(true);
 
-  const handleSystemPromptChange = (value: string) => {
+  const handleStoryPromptChange = (value: string) => {
     onUpdate({
       storyrunner: {
         ...story.storyrunner,
-        systemPrompt: value
+        storyPrompt: value,
+        systemPrompt: value // for backward compatibility
       }
     });
+  };
+
+  // Safe fallbacks for backward compatibility with legacy data
+  const getStoryPrompt = () => {
+    return story?.storyrunner?.storyPrompt || story?.storyrunner?.systemPrompt || '';
+  };
+
+  const getOpeningBeats = () => {
+    return story?.storyrunner?.openingBeats || [];
+  };
+
+  const getGuardrails = () => {
+    return story?.storyrunner?.guardrails || [];
   };
 
   const handleOpeningBeatsChange = (beats: string[]) => {
@@ -43,8 +57,14 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">🧠 Storyrunner Configuration</h2>
-        <p className="text-sm text-gray-600 mb-6">Configure the AI storyrunner behavior and safety settings.</p>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">🛠️ Prompt Template Configuration</h2>
+        <p className="text-sm text-gray-600 mb-4">Configure the AI storyrunner behavior and safety settings.</p>
+        <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            💡 <strong>Note:</strong> Advanced prompt management and story session monitoring is available in the 
+            <span className="font-semibold"> StoryRunner AI</span> section of the admin dashboard.
+          </p>
+        </div>
       </div>
 
       {/* Warning Section */}
@@ -79,7 +99,7 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
         >
           <div className="flex items-center">
             <span className="text-lg mr-2">🔧</span>
-            <span className="font-medium text-gray-900">Story Prompt Configuration</span>
+            <span className="font-medium text-gray-900">Prompt Configuration</span>
           </div>
           <span className={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
             ▼
@@ -91,9 +111,9 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
             <div className="space-y-6">
               {/* System Prompt */}
               <div>
-                <SystemPromptEditor
-                  value={story.storyrunner.systemPrompt}
-                  onChange={handleSystemPromptChange}
+                <StoryPromptEditor
+                  value={getStoryPrompt()}
+                  onChange={handleStoryPromptChange}
                   placeholder="You are an AI storyteller for {{STORY_TITLE}} by {{AUTHOR_NAME}}. Use tone: {{TONE_STYLE}}, and time flavor: {{TIME_FLAVOR}}..."
                   rows={12}
                 />
@@ -105,7 +125,7 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
                   Story Opening Beats
                 </label>
                 <HooksTagInput
-                  value={story.storyrunner.openingBeats}
+                  value={getOpeningBeats()}
                   onChange={handleOpeningBeatsChange}
                   placeholder="Type an opening beat and press Enter or comma..."
                 />
@@ -120,7 +140,7 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
                   Story Safety Guardrails
                 </label>
                 <HooksTagInput
-                  value={story.storyrunner.guardrails || []}
+                  value={getGuardrails()}
                   onChange={handleGuardrailsChange}
                   placeholder="Type a safety rule and press Enter or comma..."
                 />
@@ -142,7 +162,7 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
             <h4 className="font-medium text-gray-700 mb-2">System Prompt Preview</h4>
             <div className="bg-white border rounded-lg p-3 max-h-32 overflow-y-auto">
               <div className="text-sm text-gray-600 font-mono">
-                {story.storyrunner.systemPrompt.split(/(\{\{[^}]+\}\})/g).map((part, index) => {
+                {getStoryPrompt().split(/(\{\{[^}]+\}\})/g).map((part: string, index: number) => {
                   if (part.match(/^\{\{[^}]+\}\}$/)) {
                     return (
                       <span
@@ -155,7 +175,7 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
                   }
                   return part;
                 })}
-                {story.storyrunner.systemPrompt.length > 200 && '...'}
+                {getStoryPrompt().length > 200 && '...'}
               </div>
             </div>
           </div>
@@ -165,20 +185,20 @@ export const StoryrunnerConfig: React.FC<StoryrunnerConfigProps> = ({ story, onU
             <div className="bg-white border rounded-lg p-3 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">System Prompt Length:</span>
-                <span className="font-medium">{story.storyrunner.systemPrompt.length} chars</span>
+                <span className="font-medium">{getStoryPrompt().length} chars</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Opening Beats:</span>
-                <span className="font-medium">{story.storyrunner.openingBeats.length}</span>
+                <span className="font-medium">{getOpeningBeats().length}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Guardrails:</span>
-                <span className="font-medium">{story.storyrunner.guardrails?.length || 0}</span>
+                <span className="font-medium">{getGuardrails().length}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Variables Used:</span>
                 <span className="font-medium">
-                  {(story.storyrunner.systemPrompt.match(/\{\{[^}]+\}\}/g) || []).length}
+                  {(getStoryPrompt().match(/\{\{[^}]+\}\}/g) || []).length}
                 </span>
               </div>
             </div>

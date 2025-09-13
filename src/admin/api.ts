@@ -318,7 +318,8 @@ export interface ReengagementTemplate {
 }
 
 export interface Storyrunner {
-  systemPrompt: string;
+  storyPrompt: string;
+  systemPrompt?: string; // Legacy field for backward compatibility
   openingBeats: string[];
   guardrails: string[];
 }
@@ -465,7 +466,7 @@ export interface UserStorySession {
   storyId: string;
   toneStyleId: string;
   timeFlavorId: string;
-  systemPrompt: string;
+  storyPrompt: string;
   status: 'active' | 'finished' | 'abandoned';
   currentChapter: number;
   chaptersGenerated: number;
@@ -489,7 +490,7 @@ export interface Chapter {
   _id: string;
   sessionId: string;
   chapterIndex: number;
-  systemPromptUsed: string;
+  storyPromptUsed: string;
   openingBeat: string;
   title: string;
   content: string;

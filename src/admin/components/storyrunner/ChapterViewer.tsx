@@ -80,11 +80,11 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({ sessionId }) => {
   }
 
   if (error) {
-    return <ErrorMessage message={error} onRetry={loadData} />;
+    return <ErrorMessage title="Failed to load chapters" message={error} />;
   }
 
   if (!session) {
-    return <ErrorMessage message="Session not found" />;
+    return <ErrorMessage title="Session not found" message="Session not found" />;
   }
 
   return (
@@ -243,7 +243,7 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({ sessionId }) => {
                   <h4 className="text-sm font-medium text-gray-700 mb-2">System Prompt Used</h4>
                   <div className="bg-gray-50 rounded-lg p-4 max-h-32 overflow-y-auto">
                     <p className="text-xs text-gray-600 font-mono whitespace-pre-wrap">
-                      {selectedChapter.systemPromptUsed}
+                      {selectedChapter.storyPromptUsed}
                     </p>
                   </div>
                 </div>

@@ -48,7 +48,7 @@ const userStorySessionSchema = new Schema(
     },
     
     // Generated system prompt for this specific flavor combination
-    systemPrompt: { 
+    storyPrompt: { 
       type: String, 
       required: true,
       trim: true

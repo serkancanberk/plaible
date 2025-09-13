@@ -149,7 +149,7 @@ router.get("/:id", async (req, res) => {
  *               authorName: { type: string, example: "Oscar Wilde" }
  *               summary: { type: object, properties: { original: { type: string }, modern: { type: string } } }
  *               pricing: { type: object, properties: { creditsPerChapter: { type: number }, estimatedChapterCount: { type: number } } }
- *               storyrunner: { type: object, properties: { systemPrompt: { type: string } } }
+ *               storyrunner: { type: object, properties: { storyPrompt: { type: string } } }
  *               characters: { type: array, items: { type: object } }
  *               roles: { type: array, items: { type: object } }
  *               cast: { type: array, items: { type: object } }
@@ -246,7 +246,7 @@ router.post("/", async (req, res) => {
  *               title: { type: string, example: "The Picture of Dorian Gray - Updated" }
  *               isActive: { type: boolean, example: true }
  *               pricing: { type: object, properties: { creditsPerChapter: { type: number } } }
- *               storyrunner: { type: object, properties: { systemPrompt: { type: string } } }
+ *               storyrunner: { type: object, properties: { storyPrompt: { type: string } } }
  *               characters: { type: array, items: { type: object } }
  *               roles: { type: array, items: { type: object } }
  *               cast: { type: array, items: { type: object } }
@@ -338,6 +338,24 @@ router.put("/:id", async (req, res) => {
       return err(res, "BAD_REQUEST", genresValidation.error);
     }
 
+    // 🔹 Backward compatibility: Handle systemPrompt -> storyPrompt migration
+    if (updateData.storyrunner) {
+      // If storyrunner object exists but only has systemPrompt, migrate it to storyPrompt
+      if (!updateData.storyrunner.storyPrompt && updateData.storyrunner.systemPrompt) {
+        console.log("🔄 Migrating systemPrompt to storyPrompt for backward compatibility:", {
+          storyId: id,
+          hasSystemPrompt: !!updateData.storyrunner.systemPrompt,
+          hasStoryPrompt: !!updateData.storyrunner.storyPrompt
+        });
+        updateData.storyrunner.storyPrompt = updateData.storyrunner.systemPrompt;
+      }
+      
+      // Ensure both fields are present for full backward compatibility
+      if (updateData.storyrunner.storyPrompt && !updateData.storyrunner.systemPrompt) {
+        updateData.storyrunner.systemPrompt = updateData.storyrunner.storyPrompt;
+      }
+    }
+
     // Validate cast consistency if characters/roles/cast are being updated
     if (updateData.characters || updateData.roles || updateData.cast) {
       const mergedData = {
@@ -353,7 +371,20 @@ router.put("/:id", async (req, res) => {
     // Apply updates
     Object.assign(story, updateData);
     story.updatedAt = new Date();
-    await story.save();
+    
+    try {
+      await story.save();
+    } catch (saveError) {
+      console.error("❌ Failed to save story to database:", {
+        message: saveError.message,
+        stack: saveError.stack,
+        name: saveError.name,
+        storyId: id,
+        updateData: JSON.stringify(updateData, null, 2),
+        validationErrors: saveError.errors || 'none'
+      });
+      return err(res, "SERVER_ERROR", `Failed to save story: ${saveError.message}`);
+    }
 
     // Log admin action with diff
     const changes = {};

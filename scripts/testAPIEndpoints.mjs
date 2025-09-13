@@ -46,7 +46,7 @@ async function run() {
       storyId: testStoryId,
       toneStyleId: testToneStyleId,
       timeFlavorId: testTimeFlavorId,
-      systemPrompt: 'Test system prompt for API testing',
+      storyPrompt: 'Test system prompt for API testing',
       status: 'active',
       currentChapter: 1,
       chaptersGenerated: 0,

@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
-import { generateSystemPrompt, generateSystemPromptForNewSession, validateSystemPromptGeneration } from '../src/utils/generateSystemPrompt.js';
+import { generateStoryPrompt, generateStoryPromptForNewSession, validateStoryPromptGeneration } from '../src/utils/generateStoryPrompt.js';
 import { UserStorySession } from '../models/UserStorySession.js';
 import { Story } from '../models/Story.js';
 import { StorySettings } from '../models/StorySettings.js';
@@ -17,7 +17,7 @@ async function run() {
   console.log('MongoDB connected');
 
   try {
-    console.log('🧪 Testing generateSystemPrompt utility function...\n');
+    console.log('🧪 Testing generateStoryPrompt utility function...\n');
 
     // Test 1: Get an existing session
     const existingSession = await UserStorySession.findOne();
@@ -32,7 +32,7 @@ async function run() {
     console.log(`Tone Style: ${existingSession.toneStyleId}`);
     console.log(`Time Flavor: ${existingSession.timeFlavorId}\n`);
 
-    const generatedPrompt = await generateSystemPrompt(existingSession._id.toString());
+    const generatedPrompt = await generateStoryPrompt(existingSession._id.toString());
     if (generatedPrompt) {
       console.log('✅ System prompt generated successfully!');
       console.log('Generated Prompt:');
@@ -57,7 +57,7 @@ async function run() {
       console.log(`Tone Style: ${toneStyle.id} (${toneStyle.displayLabel})`);
       console.log(`Time Flavor: ${timeFlavor.id} (${timeFlavor.displayLabel})\n`);
 
-      const newSessionPrompt = await generateSystemPromptForNewSession(
+      const newSessionPrompt = await generateStoryPromptForNewSession(
         story._id,
         toneStyle.id,
         timeFlavor.id
@@ -75,7 +75,7 @@ async function run() {
     }
 
     console.log('\n📋 Test 3: Validation function');
-    const validationResult = await validateSystemPromptGeneration(
+    const validationResult = await validateStoryPromptGeneration(
       story._id,
       toneStyle.id,
       timeFlavor.id
@@ -89,7 +89,7 @@ async function run() {
     }
 
     console.log('\n📋 Test 4: Test with invalid parameters');
-    const invalidValidation = await validateSystemPromptGeneration(
+    const invalidValidation = await validateStoryPromptGeneration(
       'invalid_story_id',
       'invalid_tone',
       'invalid_time'
@@ -112,7 +112,7 @@ async function run() {
       authorName: 'Test Author',
       description: 'A test story for prompt generation',
       storyrunner: {
-        systemPrompt: `You are an AI storyteller for "{{STORY_TITLE}}" by {{AUTHOR_NAME}}.
+        storyPrompt: `You are an AI storyteller for "{{STORY_TITLE}}" by {{AUTHOR_NAME}}.
 
 Story Description: {{STORY_DESCRIPTION}}
 
@@ -139,7 +139,7 @@ Your role is to guide the user through this story with the specified tone and ti
       }
     };
 
-    const testPrompt = await generateSystemPromptForNewSession(
+    const testPrompt = await generateStoryPromptForNewSession(
       testStory._id,
       'horror',
       'futuristic'

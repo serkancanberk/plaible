@@ -35,7 +35,7 @@ const chapterSchema = new Schema(
       min: 1,
       index: true
     },
-    systemPromptUsed: {
+    storyPromptUsed: {
       type: String,
       required: true,
       trim: true
