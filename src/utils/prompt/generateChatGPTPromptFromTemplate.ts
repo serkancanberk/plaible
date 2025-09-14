@@ -28,8 +28,12 @@ export type StoryPromptTemplate = {
   storyPersonalization: {
     selectedCharacterId: string;       // placeholder tokens like "Character_Selection"
     selectedCharacterName: string;     // same
+    selectedCharacterRole: string;     // placeholder like "Role"
+    selectedCharacterSummary: string;  // placeholder like "Summary"
     toneStyle: string;                  // e.g. "Tone_Selection"
+    toneDescription: string;            // placeholder like "Tone_Description"
     timeFlavor: string;                 // e.g. "Time_Selection"
+    timeDescription: string;            // placeholder like "Time_Description"
   };
   guardrails: string[];
 };
@@ -97,8 +101,13 @@ function validateTemplate(template: StoryPromptTemplate): string | null {
 
   if (!template.storyPersonalization) return 'Missing storyPersonalization section';
   if (!template.storyPersonalization.selectedCharacterId) return 'Missing storyPersonalization.selectedCharacterId';
+  if (!template.storyPersonalization.selectedCharacterName) return 'Missing storyPersonalization.selectedCharacterName';
+  if (!template.storyPersonalization.selectedCharacterRole) return 'Missing storyPersonalization.selectedCharacterRole';
+  if (!template.storyPersonalization.selectedCharacterSummary) return 'Missing storyPersonalization.selectedCharacterSummary';
   if (!template.storyPersonalization.toneStyle) return 'Missing storyPersonalization.toneStyle';
+  if (!template.storyPersonalization.toneDescription) return 'Missing storyPersonalization.toneDescription';
   if (!template.storyPersonalization.timeFlavor) return 'Missing storyPersonalization.timeFlavor';
+  if (!template.storyPersonalization.timeDescription) return 'Missing storyPersonalization.timeDescription';
 
   if (!template.guardrails || !Array.isArray(template.guardrails)) {
     return 'Missing or invalid guardrails array';
@@ -113,23 +122,23 @@ function validateTemplate(template: StoryPromptTemplate): string | null {
 function buildPromptText(template: StoryPromptTemplate): string {
   const sections: string[] = [];
 
-  // 1. Role Assignment Section
-  sections.push('# StoryRunner AI Role');
-  sections.push('');
-  sections.push('Your role as Plaible\'s StoryRunner AI:');
-  template.brief.roleOfStoryrunnerAI.forEach(role => {
-    sections.push(`• ${role}`);
-  });
-  sections.push('');
-
-  // 2. What's Plaible Section
+  // 1. About Plaible Section
   sections.push('## About Plaible');
   sections.push(template.brief.whatsPlaible);
   sections.push('');
 
-  // 3. How to Play Section
+  // 2. How to Play Section
   sections.push('## How to Play');
   sections.push(template.brief.howToPlay);
+  sections.push('');
+
+  // 3. StoryRunner AI Role Section
+  sections.push('## StoryRunner AI Role');
+  sections.push('');
+  sections.push('Your role as Plaible\'s StoryRunner AI:');
+  template.brief.roleOfStoryrunnerAI.forEach(role => {
+    sections.push(`• ${role.trim()}`);
+  });
   sections.push('');
 
   // 4. Story Essentials Section
@@ -165,7 +174,7 @@ function buildPromptText(template: StoryPromptTemplate): string {
   
   sections.push('');
 
-  // 5. Characters Section
+  // 5. Available Characters Section
   if (template.storyEssentials.characters && template.storyEssentials.characters.length > 0) {
     sections.push('## Available Characters');
     template.storyEssentials.characters.forEach(character => {
@@ -185,12 +194,12 @@ function buildPromptText(template: StoryPromptTemplate): string {
 
   // 6. Player's Selections Section (with placeholders)
   sections.push('## Player\'s Selections');
-  sections.push(`**Selected Character:** {${template.storyPersonalization.selectedCharacterName}}`);
-  sections.push(`**Tone Style:** {${template.storyPersonalization.toneStyle}}`);
-  sections.push(`**Time Flavor:** {${template.storyPersonalization.timeFlavor}}`);
+  sections.push(`**Selected Character:** {${template.storyPersonalization.selectedCharacterName}} {${template.storyPersonalization.selectedCharacterRole}} {${template.storyPersonalization.selectedCharacterSummary}}`);
+  sections.push(`**Tone Style:** {${template.storyPersonalization.toneStyle}} {${template.storyPersonalization.toneDescription}}`);
+  sections.push(`**Time Flavor:** {${template.storyPersonalization.timeFlavor}} {${template.storyPersonalization.timeDescription}}`);
   sections.push('');
 
-  // 7. Guardrails Section
+  // 7. Safety Guardrails Section
   if (template.guardrails && template.guardrails.length > 0) {
     sections.push('## Safety Guardrails');
     template.guardrails.forEach(guardrail => {
@@ -199,7 +208,7 @@ function buildPromptText(template: StoryPromptTemplate): string {
     sections.push('');
   }
 
-  // 8. Final Instructions
+  // 8. Instructions Section
   sections.push('## Instructions');
   sections.push('Based on the player\'s selections above, create an engaging first chapter that:');
   sections.push('• Opens with a vivid scene that draws the player into the story');

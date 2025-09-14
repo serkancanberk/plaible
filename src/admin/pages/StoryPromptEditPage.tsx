@@ -25,7 +25,25 @@ const generateStoryPromptJSON = (story: Story, brief: Brief): string => {
 
   // Helper function to convert storyrunnerRole string to array
   const convertRoleToArray = (roleString: string): string[] => {
-    return roleString.split('\n').filter(line => line.trim()).map(line => line.trim());
+    const lines = roleString.split('\n').filter(line => line.trim()).map(line => line.trim());
+    
+    // Remove the introductory lines if they exist to avoid duplication
+    const filteredLines = lines.filter(line => {
+      // Skip lines that are introductory statements
+      return !line.startsWith('You are a Storyrunner AI') && 
+             !line.startsWith('You are Plaible\'s StoryRunner AI') &&
+             !line.startsWith('As the AI:') &&
+             !line.includes('narrate a unique journey from the eyes of the user-chosen character');
+    });
+    
+    // Clean up bullet prefixes and return clean role statements
+    const cleanLines = filteredLines.map(line => {
+      // Remove bullet prefixes (-, •, etc.)
+      return line.replace(/^[-•]\s*/, '').trim();
+    });
+    
+    // If we filtered out everything, return the original lines cleaned
+    return cleanLines.length > 0 ? cleanLines : lines.map(line => line.replace(/^[-•]\s*/, '').trim());
   };
 
   // Map characters with resolved roles
@@ -61,8 +79,12 @@ const generateStoryPromptJSON = (story: Story, brief: Brief): string => {
     storyPersonalization: {
       selectedCharacterId: "Character_Selection",
       selectedCharacterName: "Character_Selection",
+      selectedCharacterRole: "Role",
+      selectedCharacterSummary: "Summary",
       toneStyle: "Tone_Selection",
-      timeFlavor: "Time_Selection"
+      toneDescription: "Tone_Description",
+      timeFlavor: "Time_Selection",
+      timeDescription: "Time_Description"
     },
     guardrails: story.storyrunner?.guardrails || []
   };
