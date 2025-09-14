@@ -6,18 +6,18 @@ import { StoryPromptsView } from '../components/storyrunner/StoryPromptsView';
 import { ChapterViewer } from '../components/storyrunner/ChapterViewer';
 import { BriefTab } from '../components/storyrunner/BriefTab';
 
-type ViewType = 'settings' | 'prompts' | 'sessions' | 'chapters' | 'brief';
+type ViewType = 'brief' | 'settings' | 'prompts' | 'sessions' | 'chapters';
 
 export const StoryRunnerPage: React.FC = () => {
-  const [currentView, setCurrentView] = useState<ViewType>('settings');
+  const [currentView, setCurrentView] = useState<ViewType>('brief');
   const [selectedSessionId, setSelectedSessionId] = useState<string>('');
 
   const views = [
-    { id: 'settings' as ViewType, label: 'Story Settings', icon: '⚙️' },
-    { id: 'prompts' as ViewType, label: 'Story Prompts', icon: '📝' },
-    { id: 'sessions' as ViewType, label: 'Story Sessions', icon: '📊' },
-    { id: 'chapters' as ViewType, label: 'Chapter Viewer', icon: '📖' },
-    { id: 'brief' as ViewType, label: 'Brief', icon: '📋' }
+    { id: 'brief' as ViewType, label: 'Brief', icon: '📋' },
+    { id: 'settings' as ViewType, label: 'Settings', icon: '⚙️' },
+    { id: 'prompts' as ViewType, label: 'Prompts', icon: '📝' },
+    { id: 'sessions' as ViewType, label: 'Sessions', icon: '📊' },
+    { id: 'chapters' as ViewType, label: 'Chapters', icon: '📖' }
   ];
 
   const handleViewChange = (view: ViewType) => {
@@ -67,9 +67,9 @@ export const StoryRunnerPage: React.FC = () => {
 
         {/* View Content */}
         <div className="bg-white rounded-lg shadow">
+          {currentView === 'brief' && <BriefTab />}
           {currentView === 'settings' && <StorySettingsView />}
           {currentView === 'prompts' && <StoryPromptsView />}
-          {currentView === 'brief' && <BriefTab />}
           {currentView === 'sessions' && (
             <div className="p-6">
               <StorySessionsView />
@@ -103,14 +103,14 @@ export const StoryRunnerPage: React.FC = () => {
                     </svg>
                     <h3 className="mt-2 text-sm font-medium text-gray-900">No Session Selected</h3>
                     <p className="mt-1 text-sm text-gray-500">
-                      Go to the Story Sessions tab to select a session and view its chapters.
+                      Go to the Sessions tab to select a session and view its chapters.
                     </p>
                     <div className="mt-6">
                       <button
                         onClick={() => setCurrentView('sessions')}
                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
                       >
-                        View Story Sessions
+                        View Sessions
                       </button>
                     </div>
                   </div>

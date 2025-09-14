@@ -3,10 +3,11 @@ import React, { useState, useRef, useEffect } from 'react';
 
 interface StoryPromptEditorProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange?: (value: string) => void;
   placeholder?: string;
   rows?: number;
   className?: string;
+  readOnly?: boolean;
 }
 
 // Available interpolation variables
@@ -27,7 +28,8 @@ export const StoryPromptEditor: React.FC<StoryPromptEditorProps> = ({
   onChange,
   placeholder = "You are an AI storyteller for [Story Title]. Your role is to...",
   rows = 12,
-  className = ""
+  className = "",
+  readOnly = false
 }) => {
   const [showVariables, setShowVariables] = useState(false);
   const [cursorPosition, setCursorPosition] = useState(0);
@@ -43,7 +45,9 @@ export const StoryPromptEditor: React.FC<StoryPromptEditorProps> = ({
     const variable = `{{${variableName}}}`;
     
     const newValue = value.substring(0, start) + variable + value.substring(end);
-    onChange(newValue);
+    if (onChange) {
+      onChange(newValue);
+    }
     
     // Set cursor position after the inserted variable
     setTimeout(() => {
@@ -56,8 +60,10 @@ export const StoryPromptEditor: React.FC<StoryPromptEditorProps> = ({
 
   // Handle textarea changes
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(e.target.value);
-    setCursorPosition(e.target.selectionStart);
+    if (onChange && !readOnly) {
+      onChange(e.target.value);
+      setCursorPosition(e.target.selectionStart);
+    }
   };
 
   // Handle key events
@@ -79,22 +85,24 @@ export const StoryPromptEditor: React.FC<StoryPromptEditorProps> = ({
         <label className="block text-sm font-medium text-gray-700">
           Story Prompt Template*
         </label>
-        <div className="flex items-center space-x-2">
-          <button
-            type="button"
-            onClick={() => setShowVariables(!showVariables)}
-            className="text-xs text-blue-600 hover:text-blue-800 underline"
-          >
-            {showVariables ? 'Hide' : 'Show'} Variables
-          </button>
-          <span className="text-xs text-gray-500">
-            Ctrl+{'{'} to insert
-          </span>
-        </div>
+        {!readOnly && (
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setShowVariables(!showVariables)}
+              className="text-xs text-blue-600 hover:text-blue-800 underline"
+            >
+              {showVariables ? 'Hide' : 'Show'} Variables
+            </button>
+            <span className="text-xs text-gray-500">
+              Ctrl+{'{'} to insert
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Variables Panel */}
-      {showVariables && (
+      {showVariables && !readOnly && (
         <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
           <h4 className="text-sm font-medium text-gray-900 mb-3">Available Variables</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -126,7 +134,10 @@ export const StoryPromptEditor: React.FC<StoryPromptEditorProps> = ({
         onFocus={handleFocus}
         onBlur={handleBlur}
         rows={rows}
-        className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm ${className}`}
+        readOnly={readOnly}
+        className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm ${
+          readOnly ? 'bg-gray-50 cursor-default' : ''
+        } ${className}`}
         placeholder={placeholder}
       />
 
