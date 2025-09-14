@@ -5,7 +5,7 @@ import { Table } from '../Table';
 import { Spinner } from '../Spinner';
 import { ErrorMessage } from '../ErrorMessage';
 import { useToast } from '../Toast';
-import { adminApi, AdminStory } from '../../api';
+import { adminApi, Story } from '../../api';
 
 interface StoryPromptData {
   _id: string;
@@ -37,7 +37,7 @@ export const StoryPromptsView: React.FC = () => {
 
       if (response?.ok && response.items) {
         // Transform stories to include prompt data
-        const promptData: StoryPromptData[] = response.items.map((story: AdminStory) => ({
+        const promptData: StoryPromptData[] = response.items.map((story: Story) => ({
           _id: story._id,
           title: story.title,
           storyPrompt: story.storyrunner?.storyPrompt || story.storyrunner?.systemPrompt || '',

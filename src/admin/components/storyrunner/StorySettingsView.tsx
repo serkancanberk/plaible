@@ -128,11 +128,11 @@ export const StorySettingsView: React.FC = () => {
   }
 
   if (error) {
-    return <ErrorMessage message={error} onRetry={loadSettings} />;
+    return <ErrorMessage title="Error Loading Settings" message={error} />;
   }
 
   if (!settings) {
-    return <ErrorMessage message="No story settings found" />;
+    return <ErrorMessage title="No Settings Found" message="No story settings found" />;
   }
 
   const currentSettings = editing ? editedSettings! : settings;

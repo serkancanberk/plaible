@@ -4,8 +4,9 @@ import { StorySettingsView } from '../components/storyrunner/StorySettingsView';
 import { StorySessionsView } from '../components/storyrunner/StorySessionsView';
 import { StoryPromptsView } from '../components/storyrunner/StoryPromptsView';
 import { ChapterViewer } from '../components/storyrunner/ChapterViewer';
+import { BriefTab } from '../components/storyrunner/BriefTab';
 
-type ViewType = 'settings' | 'prompts' | 'sessions' | 'chapters';
+type ViewType = 'settings' | 'prompts' | 'sessions' | 'chapters' | 'brief';
 
 export const StoryRunnerPage: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewType>('settings');
@@ -15,7 +16,8 @@ export const StoryRunnerPage: React.FC = () => {
     { id: 'settings' as ViewType, label: 'Story Settings', icon: '⚙️' },
     { id: 'prompts' as ViewType, label: 'Story Prompts', icon: '📝' },
     { id: 'sessions' as ViewType, label: 'Story Sessions', icon: '📊' },
-    { id: 'chapters' as ViewType, label: 'Chapter Viewer', icon: '📖' }
+    { id: 'chapters' as ViewType, label: 'Chapter Viewer', icon: '📖' },
+    { id: 'brief' as ViewType, label: 'Brief', icon: '📋' }
   ];
 
   const handleViewChange = (view: ViewType) => {
@@ -67,6 +69,7 @@ export const StoryRunnerPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow">
           {currentView === 'settings' && <StorySettingsView />}
           {currentView === 'prompts' && <StoryPromptsView />}
+          {currentView === 'brief' && <BriefTab />}
           {currentView === 'sessions' && (
             <div className="p-6">
               <StorySessionsView />

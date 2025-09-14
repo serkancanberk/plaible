@@ -224,6 +224,13 @@ export const adminApi = {
 
   getSessionChapters: (sessionId: string) =>
     api.get<{ ok: boolean; chapters: Chapter[] }>(`/admin/storyrunner/sessions/${sessionId}/chapters`),
+
+  // Brief
+  getBrief: () =>
+    api.get<{ ok: boolean; brief: Brief }>('/admin/brief'),
+
+  updateBrief: (data: { title?: string; whatIsPlaible: string; howToPlay: string; storyrunnerRole: string }) =>
+    api.put<{ ok: boolean; brief: Brief }>('/admin/brief', data),
 };
 
 // Types
@@ -495,6 +502,20 @@ export interface Chapter {
   title: string;
   content: string;
   choices: ChapterChoice[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Brief interface for StoryRunner AI Dashboard
+export interface Brief {
+  _id: string;
+  title: string;
+  whatIsPlaible: string;
+  howToPlay: string;
+  storyrunnerRole: string;
+  version: string;
+  isActive: boolean;
+  lastUpdated: string;
   createdAt: string;
   updatedAt: string;
 }

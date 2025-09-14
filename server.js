@@ -36,6 +36,7 @@ import adminFeedbacksRouter from "./routes/admin/feedbacks.js";
 import adminAnalyticsRouter from "./routes/admin/analytics.js";
 import adminWalletAnalyticsRouter from "./routes/admin/walletAnalytics.js";
 import adminStoryRunnerRouter from "./routes/admin/storyRunner.js";
+import adminBriefRouter from "./routes/admin/brief.js";
 import uploadRouter from "./routes/upload.js";
 import storyRunnerRoutes from "./routes/storyRunnerRoutes.js";
 
@@ -258,6 +259,7 @@ app.use("/api/admin/feedbacks", authGuard, adminGuard, adminFeedbacksRouter);
 app.use("/api/admin/analytics", authGuard, adminGuard, adminAnalyticsRouter);
 app.use("/api/admin/wallet", authGuard, adminGuard, adminWalletAnalyticsRouter);
 app.use("/api/admin/storyrunner", authGuard, adminGuard, adminStoryRunnerRouter);
+app.use("/api/admin/brief", authGuard, adminGuard, adminBriefRouter);
 app.use("/api/category-config", categoryConfigRouter);
 app.use("/api/upload", authGuard, uploadRouter);
 
