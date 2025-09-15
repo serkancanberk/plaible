@@ -141,31 +141,6 @@ export const StoryPromptEditor: React.FC<StoryPromptEditorProps> = ({
         placeholder={placeholder}
       />
 
-      {/* Highlighted Preview (shown when focused or has content) */}
-      {(isFocused || value) && (
-        <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-md">
-          <div className="text-xs text-gray-600 mb-2 font-medium">Preview with highlighted variables:</div>
-          <div className="font-mono text-sm text-gray-800 whitespace-pre-wrap">
-            {value.split(/(\{\{[^}]+\}\})/g).map((part, index) => {
-              if (part.match(/^\{\{[^}]+\}\}$/)) {
-                return (
-                  <span
-                    key={index}
-                    className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-sm font-medium"
-                    title={`Interpolation variable: ${part}`}
-                  >
-                    {part}
-                  </span>
-                );
-              }
-              return part;
-            })}
-            {!value && (
-              <span className="text-gray-400 italic">Start typing to see variable highlighting...</span>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Help Text */}
       <div className="mt-2 space-y-1">

@@ -22,7 +22,7 @@ async function run() {
     authorName: 'Oscar Wilde',
     publisher: 'Public Domain',
     genres: ['Gothic','Psychological','Philosophical'],
-    publishedEra: '1890s',
+    storySettingTime: 'Victorian London, 1890s',
     publishedYear: 1890,
     headline: 'Beauty without consequence carries the heaviest cost.',
     description: 'A striking young man bargains with fate so that a portrait will bear the burden of his sins while he remains flawless.',

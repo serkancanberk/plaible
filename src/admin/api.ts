@@ -327,6 +327,7 @@ export interface ReengagementTemplate {
 export interface Storyrunner {
   storyPrompt: string;
   systemPrompt?: string; // Legacy field for backward compatibility
+  editableFinalPrompt?: string; // User-edited Final Prompt text
   openingBeats: string[];
   guardrails: string[];
 }
@@ -348,7 +349,7 @@ export interface Story {
   authorName?: string;
   publisher?: string;
   genres: string[];
-  publishedEra?: string;
+  storySettingTime?: string;
   publishedYear?: number;
   headline?: string;
   description?: string;

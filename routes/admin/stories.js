@@ -169,6 +169,12 @@ router.post("/", async (req, res) => {
   try {
     const storyData = req.body;
 
+    // 🔹 Backward compatibility: Map publishedEra to storySettingTime
+    if (storyData.publishedEra !== undefined && storyData.storySettingTime === undefined) {
+      storyData.storySettingTime = storyData.publishedEra;
+      console.log("🔄 Backward compatibility: Mapped publishedEra to storySettingTime");
+    }
+
     // Validate required fields
     const requiredValidation = validateRequiredFields(storyData, ['title', 'summary', 'pricing', 'storyrunner']);
     if (!requiredValidation.isValid) {
@@ -305,6 +311,13 @@ router.put("/:id", async (req, res) => {
       return err(res, "BAD_REQUEST", "Invalid update data");
     }
 
+
+    // 🔹 Backward compatibility: Map publishedEra to storySettingTime
+    if (updateData.publishedEra !== undefined && updateData.storySettingTime === undefined) {
+      updateData.storySettingTime = updateData.publishedEra;
+      console.log("🔄 Backward compatibility: Mapped publishedEra to storySettingTime");
+    }
+
     const originalData = {
       title: story.title,
       isActive: story.isActive,
@@ -368,8 +381,20 @@ router.put("/:id", async (req, res) => {
       }
     }
 
-    // Apply updates
-    Object.assign(story, updateData);
+    // Apply updates - handle nested objects properly for Mongoose
+    Object.keys(updateData).forEach(key => {
+      if (key === 'storyrunner' && updateData.storyrunner) {
+        // Handle storyrunner nested object updates properly
+        Object.keys(updateData.storyrunner).forEach(subKey => {
+          story.storyrunner[subKey] = updateData.storyrunner[subKey];
+        });
+        // Mark the nested object as modified for Mongoose
+        story.markModified('storyrunner');
+      } else {
+        // Handle top-level fields normally
+        story[key] = updateData[key];
+      }
+    });
     story.updatedAt = new Date();
     
     try {

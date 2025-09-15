@@ -68,10 +68,11 @@ const generateStoryPromptJSON = (story: Story, brief: Brief): string => {
       title: story.title,
       author: story.authorName || 'Unknown',
       publishedYear: story.publishedYear || null,
-      publishedEra: story.publishedEra || 'Unknown',
+      storySettingTime: story.storySettingTime || 'Unknown',
       category: story.mainCategory,
       subCategory: story.subCategory || null,
       genres: story.genres || [],
+      tags: story.tags || [],
       headline: story.headline || '',
       description: story.description || '',
       characters: mappedCharacters
@@ -146,6 +147,16 @@ export const StoryPromptEditPage: React.FC = () => {
             briefResponse.brief
           );
           setPromptValue(jsonStructure);
+          
+          // Load Final Prompt: prefer editableFinalPrompt, fallback to generated
+          const savedFinalPrompt = storyResponse.story.storyrunner?.editableFinalPrompt;
+          if (savedFinalPrompt) {
+            setPreviewText(savedFinalPrompt);
+          } else {
+            // Generate from JSON Template if no saved version
+            const result = generateChatGPTPromptFromTemplate(jsonStructure);
+            setPreviewText(result.ok ? result.text : '');
+          }
         } else {
           // Fallback to existing prompt if JSON generation fails
           const prompt = storyResponse.story.storyrunner?.storyPrompt || 
@@ -163,39 +174,30 @@ export const StoryPromptEditPage: React.FC = () => {
     loadData();
   }, [storyId]);
 
-  // Handle preview generation when promptValue or viewMode changes
+  // Clear preview error when switching modes
   useEffect(() => {
     if (viewMode === 'preview') {
-      const result = generateChatGPTPromptFromTemplate(promptValue);
-      if (result.ok) {
-        setPreviewText(result.text);
-        setPreviewError(null);
-      } else {
-        setPreviewText('');
-        setPreviewError(result.error);
-      }
-    } else {
-      // Clear preview when not in preview mode
-      setPreviewText('');
       setPreviewError(null);
     }
-  }, [promptValue, viewMode]);
+  }, [viewMode]);
 
   const handleSave = async () => {
     if (!story || !storyId) return;
 
     setSaving(true);
     try {
-      await adminApi.updateStory(storyId, {
-        storyrunner: {
-          ...story.storyrunner,
-          storyPrompt: promptValue,
-          systemPrompt: promptValue // Keep both for backward compatibility
-        }
-      });
-      
-      showToast('Story prompt updated successfully', 'success');
-      navigate('/storyrunner');
+      // Only save when on Final Prompt tab (JSON Template saves are disabled)
+      if (viewMode === 'preview') {
+        await adminApi.updateStory(storyId, {
+          storyrunner: {
+            ...story.storyrunner,
+            editableFinalPrompt: previewText
+          }
+        });
+        
+        showToast('Final prompt updated successfully', 'success');
+        navigate('/storyrunner');
+      }
     } catch (err: unknown) {
       console.error('Failed to save story prompt:', err);
       showToast('Failed to save story prompt', 'error');
@@ -218,6 +220,52 @@ export const StoryPromptEditPage: React.FC = () => {
         console.error('Failed to copy to clipboard:', err);
         showToast('Failed to copy to clipboard', 'error');
       }
+    }
+  };
+
+  // Revert to original prompt generated from JSON Template
+  const handleRevertToOriginal = async () => {
+    if (!story || !storyId) return;
+
+    setSaving(true);
+    try {
+      // Generate the original prompt from JSON Template
+      const result = generateChatGPTPromptFromTemplate(promptValue);
+      if (result.ok) {
+        const regeneratedPrompt = result.text;
+        
+        // Update the editor content immediately
+        setPreviewText(regeneratedPrompt);
+        
+        // Update the story state to reflect the change
+        setStory(prevStory => {
+          if (!prevStory) return prevStory;
+          return {
+            ...prevStory,
+            storyrunner: {
+              ...prevStory.storyrunner,
+              editableFinalPrompt: regeneratedPrompt
+            }
+          };
+        });
+        
+        // Save the regenerated prompt to the database
+        await adminApi.updateStory(storyId, {
+          storyrunner: {
+            ...story.storyrunner,
+            editableFinalPrompt: regeneratedPrompt
+          }
+        });
+        
+        showToast('Final prompt has been reset to the original version', 'success');
+      } else {
+        showToast('Failed to regenerate prompt from JSON template', 'error');
+      }
+    } catch (err: unknown) {
+      console.error('Failed to revert to original prompt:', err);
+      showToast('Failed to revert to original prompt', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -270,29 +318,11 @@ export const StoryPromptEditPage: React.FC = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Edit Story Prompt</h1>
-              <p className="mt-2 text-gray-600">
-                Editing prompt template for: <span className="font-medium">{story.title}</span>
-              </p>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={handleCancel}
-                disabled={saving}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-              >
-                {saving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Edit Story Prompt</h1>
+            <p className="mt-2 text-gray-600">
+              Editing prompt template for: <span className="font-medium">{story.title}</span>
+            </p>
           </div>
         </div>
 
@@ -300,7 +330,7 @@ export const StoryPromptEditPage: React.FC = () => {
         <div className="mb-6 bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Story Information</h3>
           
-          <CollapsibleSection title="Essentials" defaultOpen={true}>
+          <CollapsibleSection title="Essentials" defaultOpen={false}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Story ID</label>
@@ -309,6 +339,10 @@ export const StoryPromptEditPage: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Title</label>
                 <p className="mt-1 text-sm text-gray-900">{story.title}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Author Name</label>
+                <p className="mt-1 text-sm text-gray-900">{story.authorName || 'Unknown'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Category</label>
@@ -323,6 +357,18 @@ export const StoryPromptEditPage: React.FC = () => {
                 <p className="mt-1 text-sm text-gray-900">{story.genres && story.genres.length > 0 ? story.genres.join(', ') : 'None'}</p>
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700">Tags</label>
+                <p className="mt-1 text-sm text-gray-900">{story.tags && story.tags.length > 0 ? story.tags.join(', ') : 'None'}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Published Year</label>
+                <p className="mt-1 text-sm text-gray-900">{story.publishedYear || 'Not specified'}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Story Setting Time</label>
+                <p className="mt-1 text-sm text-gray-900">{story.storySettingTime || 'Not specified'}</p>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700">Status</label>
                 <p className="mt-1 text-sm text-gray-900">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -334,24 +380,12 @@ export const StoryPromptEditPage: React.FC = () => {
                   </span>
                 </p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Author Name</label>
-                <p className="mt-1 text-sm text-gray-900">{story.authorName || 'Unknown'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Published Year</label>
-                <p className="mt-1 text-sm text-gray-900">{story.publishedYear || 'Not specified'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Published Era</label>
-                <p className="mt-1 text-sm text-gray-900">{story.publishedEra || 'Not specified'}</p>
-              </div>
             </div>
           </CollapsibleSection>
 
           {/* Characters & Roles Section */}
           {story.characters && story.characters.length > 0 && (
-            <CollapsibleSection title="Selectable Characters" defaultOpen={true} className="mt-6">
+            <CollapsibleSection title="Selectable Characters" defaultOpen={false} className="mt-6">
               <div className="space-y-3">
                 {story.characters.map((character) => {
                   const getCharacterRoles = (characterId: string) => {
@@ -400,7 +434,7 @@ export const StoryPromptEditPage: React.FC = () => {
           )}
 
           {/* Selectables Section */}
-          <CollapsibleSection title="Selectable Options" defaultOpen={true} className="mt-6">
+          <CollapsibleSection title="Selectable Options" defaultOpen={false} className="mt-6">
             {storySettings ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Tone Style Options */}
@@ -535,11 +569,43 @@ export const StoryPromptEditPage: React.FC = () => {
           {/* Editor */}
           <StoryPromptEditor
             value={viewMode === 'json' ? promptValue : previewText}
-            onChange={viewMode === 'json' ? setPromptValue : undefined}
-            placeholder={viewMode === 'json' ? "You are an AI storyteller for this story. Your role is to..." : "Preview will appear here..."}
+            onChange={viewMode === 'json' ? setPromptValue : (value) => setPreviewText(value)}
+            placeholder={viewMode === 'json' ? "You are an AI storyteller for this story. Your role is to..." : "Edit the final prompt here..."}
             rows={15}
-            readOnly={viewMode === 'preview'}
+            readOnly={false}
           />
+
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-3 mt-4">
+            <button
+              onClick={handleCancel}
+              disabled={saving}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            {viewMode === 'preview' && (
+              <button
+                onClick={handleRevertToOriginal}
+                disabled={saving}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                Revert to Original
+              </button>
+            )}
+            <button
+              onClick={handleSave}
+              disabled={saving || viewMode === 'json'}
+              title={viewMode === 'json' ? 'Edits to the JSON Template are not saved. Please use Final Prompt for changes.' : ''}
+              className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 ${
+                viewMode === 'json' 
+                  ? 'text-gray-400 bg-gray-300 cursor-not-allowed' 
+                  : 'text-white bg-blue-600 hover:bg-blue-700'
+              }`}
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
         </div>
 
         {/* Current Prompt Info */}

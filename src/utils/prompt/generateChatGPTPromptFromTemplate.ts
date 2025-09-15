@@ -11,10 +11,11 @@ export type StoryPromptTemplate = {
     title: string;
     author: string;
     publishedYear: number | null;
-    publishedEra: string | null;
+    storySettingTime: string | null;
     category: string;
     subCategory?: string | null;
     genres: string[];
+    tags: string[];
     headline?: string;
     description?: string;
     characters: Array<{
@@ -150,8 +151,8 @@ function buildPromptText(template: StoryPromptTemplate): string {
     sections.push(`**Published Year:** ${template.storyEssentials.publishedYear}`);
   }
   
-  if (template.storyEssentials.publishedEra) {
-    sections.push(`**Published Era:** ${template.storyEssentials.publishedEra}`);
+  if (template.storyEssentials.storySettingTime) {
+    sections.push(`**Story Setting Time:** ${template.storyEssentials.storySettingTime}`);
   }
   
   sections.push(`**Category:** ${template.storyEssentials.category}`);
@@ -162,6 +163,10 @@ function buildPromptText(template: StoryPromptTemplate): string {
   
   if (template.storyEssentials.genres && template.storyEssentials.genres.length > 0) {
     sections.push(`**Genres:** ${template.storyEssentials.genres.join(', ')}`);
+  }
+  
+  if (template.storyEssentials.tags && template.storyEssentials.tags.length > 0) {
+    sections.push(`**Tags:** ${template.storyEssentials.tags.join(', ')}`);
   }
   
   if (template.storyEssentials.headline) {

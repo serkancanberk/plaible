@@ -144,6 +144,7 @@ const storyrunnerSchema = new Schema(
   {
     storyPrompt: { type: String, required: true, trim: true },
     systemPrompt: { type: String, trim: true }, // Legacy field for backward compatibility
+    editableFinalPrompt: { type: String, trim: true }, // User-edited Final Prompt text
     guardrails: { type: [String], default: [] },
     openingBeats: { type: [String], default: [] },
   },
@@ -162,7 +163,7 @@ const storySchema = new Schema(
     authorName: { type: String, trim: true },
     publisher: { type: String, trim: true },
     genres: { type: [{ type: String, trim: true }], default: [] },
-    publishedEra: { type: String, trim: true },
+    storySettingTime: { type: String, trim: true },
     publishedYear: { type: Number, min: 0 },
     headline: { type: String, trim: true },
     description: { type: String, trim: true },
