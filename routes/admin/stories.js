@@ -3,6 +3,7 @@ import { Story } from "../../models/Story.js";
 import { logEvent } from "../../services/eventLog.js";
 import { MAIN_CATEGORIES, LANGUAGES, CONTENT_RATINGS, LICENSES, STORY_STATUS, AGE_GROUPS } from "../../src/config/categoryEnums.js";
 import { validateStoryEnums, validateArrayField, validateRequiredFields } from "../../src/utils/validation.js";
+import { validatePlaibleCompliance } from "../../services/storyContentGenerator.js";
 
 const router = express.Router();
 
@@ -167,16 +168,113 @@ router.get("/:id", async (req, res) => {
  */
 router.post("/", async (req, res) => {
   try {
-    const storyData = req.body;
+    const { autoGenerate, ...storyData } = req.body;
 
-    // 🔹 Backward compatibility: Map publishedEra to storySettingTime
-    if (storyData.publishedEra !== undefined && storyData.storySettingTime === undefined) {
-      storyData.storySettingTime = storyData.publishedEra;
-      console.log("🔄 Backward compatibility: Mapped publishedEra to storySettingTime");
+    // 🔹 Check if this is a complete Story document (DB JSON import)
+    const isCompleteStoryDocument = storyData._id && storyData.slug && storyData.storyrunner;
+    
+    if (isCompleteStoryDocument) {
+      console.log("📄 Complete Story document import detected:", storyData._id);
+      
+      // Validate that it's a complete document
+      const requiredFields = ['_id', 'slug', 'mainCategory', 'title', 'authorName', 'storyrunner'];
+      const missingFields = requiredFields.filter(field => !storyData[field]);
+      
+      if (missingFields.length > 0) {
+        console.error("❌ Missing required fields for complete document:", missingFields);
+        return err(res, "BAD_REQUEST", `Missing required fields: ${missingFields.join(', ')}`);
+      }
+      
+      // Use the document as-is (it's already complete)
+      console.log("✅ Using complete Story document as-is");
+    } else if (autoGenerate) {
+      // 🎭 Auto-generation flow (legacy support)
+      console.log("🎭 Auto-generation requested for story:", storyData.title);
+      
+      // Validate minimum required fields for auto-generation
+      const requiredFields = ['title', 'authorName', 'publishedYear', 'mainCategory'];
+      const missingFields = requiredFields.filter(field => !storyData[field]);
+      
+      if (missingFields.length > 0) {
+        console.error("❌ Missing required fields for auto-generation:", missingFields);
+        return err(res, "BAD_REQUEST", `Missing required fields for auto-generation: ${missingFields.join(', ')}`);
+      }
+      
+      try {
+        // Import the story content generator
+        const { generateStoryContent } = await import('../../services/storyContentGenerator.js');
+        
+        // Generate comprehensive story content
+        const generatedContent = await generateStoryContent({
+          title: storyData.title,
+          authorName: storyData.authorName,
+          publishedYear: storyData.publishedYear,
+          mainCategory: storyData.mainCategory
+        });
+        
+        // Merge generated content with provided data (provided data takes precedence)
+        const mergedData = {
+          ...generatedContent,
+          ...storyData, // User-provided data overrides generated content
+          // Ensure storyrunner is properly merged
+          storyrunner: {
+            ...generatedContent.storyrunner,
+            ...storyData.storyrunner
+          }
+        };
+        
+        // Generate slug if not provided
+        if (!mergedData.slug) {
+          mergedData.slug = mergedData.title
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .trim('-');
+        }
+        
+        // Set default pricing if not provided
+        if (!mergedData.pricing) {
+          mergedData.pricing = {
+            creditsPerChapter: 10,
+            estimatedChapterCount: 10
+          };
+        }
+        
+        // Set default values
+        mergedData.language = mergedData.language || 'en';
+        mergedData.license = mergedData.license || 'public-domain';
+        mergedData.contentRating = mergedData.contentRating || 'PG-13';
+        mergedData.isActive = mergedData.isActive !== undefined ? mergedData.isActive : true;
+        
+        console.log("✅ Story content generated successfully");
+        storyData = mergedData;
+      } catch (error) {
+        console.error("❌ Auto-generation failed:", error.message);
+        return err(res, "SERVER_ERROR", "Failed to generate story content");
+      }
+    } else {
+      // 🔹 Backward compatibility: Map publishedEra to storySettingTime
+      if (storyData.publishedEra !== undefined && storyData.storySettingTime === undefined) {
+        storyData.storySettingTime = storyData.publishedEra;
+        console.log("🔄 Backward compatibility: Mapped publishedEra to storySettingTime");
+      }
     }
 
-    // Validate required fields
-    const requiredValidation = validateRequiredFields(storyData, ['title', 'summary', 'pricing', 'storyrunner']);
+    // Validate required fields (different validation based on document type)
+    let requiredFields;
+    if (isCompleteStoryDocument) {
+      // Complete documents should have all required fields
+      requiredFields = ['_id', 'slug', 'mainCategory', 'title', 'authorName', 'summary', 'pricing', 'storyrunner'];
+    } else if (autoGenerate) {
+      // Auto-generated stories have these filled
+      requiredFields = ['title', 'summary', 'pricing', 'storyrunner'];
+    } else {
+      // Manual stories need all fields
+      requiredFields = ['title', 'summary', 'pricing', 'storyrunner'];
+    }
+    
+    const requiredValidation = validateRequiredFields(storyData, requiredFields);
     if (!requiredValidation.isValid) {
       return err(res, "BAD_REQUEST");
     }
@@ -228,6 +326,70 @@ router.post("/", async (req, res) => {
       return err(res, "BAD_REQUEST", "slug");
     }
     return err(res, "SERVER_ERROR");
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/stories/generate:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Generate story content (test endpoint)
+ *     description: Generate story content using GPT without saving to database
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [title, authorName, publishedYear, mainCategory]
+ *             properties:
+ *               title: { type: string, example: "The Great Gatsby" }
+ *               authorName: { type: string, example: "F. Scott Fitzgerald" }
+ *               publishedYear: { type: number, example: 1925 }
+ *               mainCategory: { type: string, enum: ["book", "story", "biography"], example: "book" }
+ *     responses:
+ *       200: { description: "Story content generated successfully", content: { application/json: { schema: { type: object, properties: { ok: { type: boolean, example: true }, generatedContent: { type: object } } } } } }
+ *       400: { description: "Bad Request", content: { application/json: { schema: { type: object, properties: { error: { type: string, example: "BAD_REQUEST" } } } } } }
+ *       500: { description: "Server Error", content: { application/json: { schema: { type: object, properties: { error: { type: string, example: "SERVER_ERROR" } } } } } }
+ */
+router.post("/generate", async (req, res) => {
+  try {
+    const { title, authorName, publishedYear, mainCategory } = req.body;
+    
+    // Validate required fields
+    const requiredFields = ['title', 'authorName', 'publishedYear', 'mainCategory'];
+    const missingFields = requiredFields.filter(field => !req.body[field]);
+    
+    if (missingFields.length > 0) {
+      console.error("❌ Missing required fields for generation:", missingFields);
+      return err(res, "BAD_REQUEST", `Missing required fields: ${missingFields.join(', ')}`);
+    }
+    
+    console.log("🎭 Generating story content for testing:", title);
+    
+    // Import the story content generator
+    const { generateStoryContent } = await import('../../services/storyContentGenerator.js');
+    
+    // Generate story content
+    const generatedContent = await generateStoryContent({
+      title,
+      authorName,
+      publishedYear,
+      mainCategory
+    });
+    
+    console.log("✅ Story content generated successfully for testing");
+    
+    return ok(res, { 
+      ok: true,
+      story: generatedContent
+    });
+  } catch (error) {
+    console.error("❌ Story generation test failed:", error);
+    return err(res, "SERVER_ERROR", "Failed to generate story content");
   }
 });
 
@@ -699,6 +861,35 @@ router.patch("/:id/media", async (req, res) => {
   } catch (error) {
     console.error("Admin story media update error:", error);
     return err(res, "SERVER_ERROR");
+  }
+});
+
+// POST /api/admin/stories/validate-compliance
+// Validate story content against Plaible Story Content Compliance Checklist
+router.post('/validate-compliance', async (req, res) => {
+  try {
+    const storyData = req.body;
+    
+    if (!storyData) {
+      return err(res, "BAD_REQUEST", "Story data is required");
+    }
+    
+    console.log("🔍 Validating story compliance:", storyData.title || 'Untitled');
+    
+    const validationResult = validatePlaibleCompliance(storyData);
+    
+    console.log("📊 Compliance validation result:", {
+      isCompliant: validationResult.isCompliant,
+      issuesCount: validationResult.issues.length
+    });
+    
+    return ok(res, {
+      validation: validationResult
+    });
+    
+  } catch (error) {
+    console.error("Story compliance validation error:", error);
+    return err(res, "SERVER_ERROR", "Failed to validate story compliance");
   }
 });
 

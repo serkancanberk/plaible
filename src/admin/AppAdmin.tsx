@@ -12,6 +12,7 @@ import { WalletAnalyticsPage } from './pages/WalletAnalyticsPage';
 import { CategoryManagerPage } from './pages/CategoryManagerPage';
 import { StoryRunnerPage } from './pages/StoryRunnerPage';
 import { StoryPromptEditPage } from './pages/StoryPromptEditPage';
+import { NewStoryWizardPage } from './pages/NewStoryWizardPage';
 
 export const AppAdmin: React.FC = () => {
   return (
@@ -34,6 +35,7 @@ export const AppAdmin: React.FC = () => {
                 <Route path="/category-manager" element={<CategoryManagerPage />} />
                 <Route path="/storyrunner" element={<StoryRunnerPage />} />
                 <Route path="/storyrunner/prompts/edit/:storyId" element={<StoryPromptEditPage />} />
+                <Route path="/storyrunner/stories/new" element={<NewStoryWizardPage />} />
                 <Route path="*" element={<Navigate to="/users" replace />} />
               </Routes>
             </main>

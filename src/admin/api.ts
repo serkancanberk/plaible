@@ -169,6 +169,18 @@ export const adminApi = {
   updateStory: (id: string, data: unknown) =>
     api.put<{ ok: boolean }>(`/admin/stories/${id}`, data),
 
+  createStoryWithGeneration: (data: { title: string; authorName: string; publishedYear: number; mainCategory: string }) =>
+    api.post<{ ok: boolean; storyId: string; error?: string }>('/admin/stories', { ...data, autoGenerate: true }),
+
+  generateStoryDBJSON: (data: { title: string; authorName: string; publishedYear: number; mainCategory: string }) =>
+    api.post<{ ok: boolean; story: any; error?: string }>('/admin/stories/generate', data),
+
+  createStoryFromDBJSON: (doc: any) =>
+    api.post<{ ok: boolean; storyId: string; error?: string }>('/admin/stories', doc),
+
+  validateStoryCompliance: (storyData: any) =>
+    api.post<{ ok: boolean; validation: { isCompliant: boolean; issues: string[] }; error?: string }>('/admin/stories/validate-compliance', storyData),
+
   // Feedbacks
   getFeedbacks: async (params?: { storyId?: string; userId?: string; status?: string; starsGte?: number; limit?: number; cursor?: string }) => {
     const q = { storyId: '', userId: '', status: '', limit: 10, ...params };
