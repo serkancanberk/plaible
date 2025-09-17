@@ -1,6 +1,7 @@
 // src/admin/components/Topbar.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { AdminProfile } from './AdminProfile';
 
 interface TopbarProps {
   className?: string;
@@ -22,6 +23,7 @@ export const Topbar: React.FC<TopbarProps> = ({ className = '' }) => {
           
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-600">Admin Panel</span>
+            <AdminProfile />
           </div>
         </div>
       </div>

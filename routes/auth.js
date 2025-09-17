@@ -7,6 +7,7 @@ const NODE_ENV = process.env.NODE_ENV || "development";
 const isProduction = NODE_ENV === "production";
 const FORCE_SECURE_COOKIE = String(process.env.FORCE_SECURE_COOKIE || "").toLowerCase() === "true";
 import { User } from "../models/User.js";
+import { RefreshToken } from "../models/RefreshToken.js";
 import passportCore from "passport";
 
 const router = Router();
@@ -59,18 +60,68 @@ router.get("/google", (req, res, next) => {
 router.get(
   "/google/callback",
   passport.authenticate("google", { session: false, failureRedirect: "/api/auth/failure" }),
-  (req, res) => {
+  async (req, res) => {
     try {
-      const token = signJwt({ sub: req.user._id.toString() });
-      const cookieOpts = {
-        httpOnly: true,
-        sameSite: isProduction ? "lax" : "lax",
-        secure: isProduction || FORCE_SECURE_COOKIE,
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: "/",
-      };
-      res.cookie("plaible_jwt", token, cookieOpts);
-      return res.redirect(FE_ORIGIN);
+      const user = req.user;
+      const userEmail = user.email?.toLowerCase();
+      const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
+      
+      // Check if this is an admin user
+      const isAdmin = adminEmail && userEmail === adminEmail;
+      
+      if (isAdmin) {
+        // Issue admin JWT cookie for admin dashboard
+        const adminToken = signJwt({ 
+          sub: user._id.toString(),
+          email: user.email,
+          name: user.identity?.displayName || user.fullName,
+          role: 'admin'
+        }, { expiresIn: '1h' });
+        
+        // Create refresh token
+        const userAgent = req.get('User-Agent') || '';
+        const ipAddress = req.ip || req.connection.remoteAddress || '';
+        const refreshTokenDoc = await RefreshToken.createToken(
+          user._id, 
+          user.email, 
+          userAgent, 
+          ipAddress
+        );
+        
+        const adminCookieOpts = {
+          httpOnly: true,
+          sameSite: isProduction ? "strict" : "lax",
+          secure: isProduction || FORCE_SECURE_COOKIE,
+          maxAge: 60 * 60 * 1000, // 1 hour
+          path: "/",
+        };
+        
+        const refreshCookieOpts = {
+          httpOnly: true,
+          sameSite: isProduction ? "strict" : "lax",
+          secure: isProduction || FORCE_SECURE_COOKIE,
+          maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+          path: "/",
+        };
+        
+        res.cookie("admin_token", adminToken, adminCookieOpts);
+        res.cookie("admin_refresh_token", refreshTokenDoc.token, refreshCookieOpts);
+        
+        console.log("Admin login successful:", user.email);
+        return res.redirect(FE_ORIGIN);
+      } else {
+        // Regular user - issue regular JWT cookie
+        const token = signJwt({ sub: user._id.toString() });
+        const cookieOpts = {
+          httpOnly: true,
+          sameSite: isProduction ? "lax" : "lax",
+          secure: isProduction || FORCE_SECURE_COOKIE,
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+          path: "/",
+        };
+        res.cookie("plaible_jwt", token, cookieOpts);
+        return res.redirect(FE_ORIGIN);
+      }
     } catch (e) {
       console.error("JWT issue in callback", e);
       return res.redirect("/api/auth/failure");
@@ -101,29 +152,145 @@ router.get("/me", async (req, res) => {
   }
 });
 
+// Admin authentication check
+router.get("/admin/check", (req, res) => {
+  const adminToken = req.cookies?.admin_token;
+  if (!adminToken) {
+    return res.status(401).json({ error: "UNAUTHENTICATED" });
+  }
+  
+  try {
+    const decoded = verifyJwt(adminToken);
+    const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
+    
+    // Verify the token email matches admin email
+    if (decoded.email?.toLowerCase() !== adminEmail) {
+      return res.status(403).json({ error: "FORBIDDEN" });
+    }
+    
+    res.json({
+      ok: true,
+      user: {
+        email: decoded.email,
+        name: decoded.name,
+        role: decoded.role
+      }
+    });
+  } catch (err) {
+    console.error("Admin token verification failed:", err);
+    return res.status(401).json({ error: "INVALID_TOKEN" });
+  }
+});
+
+// Admin refresh token endpoint
+router.post("/admin/refresh", async (req, res) => {
+  const refreshToken = req.cookies?.admin_refresh_token;
+  
+  if (!refreshToken) {
+    return res.status(401).json({ error: "NO_REFRESH_TOKEN" });
+  }
+  
+  try {
+    // Find and validate the refresh token
+    const tokenDoc = await RefreshToken.findAndValidate(refreshToken);
+    
+    if (!tokenDoc) {
+      return res.status(401).json({ error: "INVALID_REFRESH_TOKEN" });
+    }
+    
+    // Verify the user is still the admin
+    const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
+    if (tokenDoc.userEmail?.toLowerCase() !== adminEmail) {
+      // Revoke the token if user is no longer admin
+      await RefreshToken.revokeToken(refreshToken);
+      return res.status(403).json({ error: "FORBIDDEN" });
+    }
+    
+    // Issue new access token
+    const newAccessToken = signJwt({ 
+      sub: tokenDoc.userId._id.toString(),
+      email: tokenDoc.userEmail,
+      name: tokenDoc.userId.identity?.displayName || tokenDoc.userId.fullName,
+      role: 'admin'
+    }, { expiresIn: '1h' });
+    
+    // Set new access token cookie
+    const cookieOpts = {
+      httpOnly: true,
+      sameSite: isProduction ? "strict" : "lax",
+      secure: isProduction || FORCE_SECURE_COOKIE,
+      maxAge: 60 * 60 * 1000, // 1 hour
+      path: "/",
+    };
+    res.cookie("admin_token", newAccessToken, cookieOpts);
+    
+    console.log("Admin token refreshed for:", tokenDoc.userEmail);
+    
+    res.json({
+      ok: true,
+      user: {
+        email: tokenDoc.userEmail,
+        name: tokenDoc.userId.identity?.displayName || tokenDoc.userId.fullName,
+        role: 'admin'
+      }
+    });
+  } catch (error) {
+    console.error("Admin refresh token error:", error);
+    return res.status(401).json({ error: "REFRESH_FAILED" });
+  }
+});
+
 // Logout
-router.post("/logout", (req, res) => {
+router.post("/logout", async (req, res) => {
   const cookieOpts = {
     httpOnly: true,
-    sameSite: isProduction ? "lax" : "lax",
+    sameSite: isProduction ? "strict" : "lax",
     secure: isProduction || FORCE_SECURE_COOKIE,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/",
   };
+  
+  // Revoke admin refresh token if present
+  const adminRefreshToken = req.cookies?.admin_refresh_token;
+  if (adminRefreshToken) {
+    try {
+      await RefreshToken.revokeToken(adminRefreshToken);
+      console.log("Admin refresh token revoked on logout");
+    } catch (error) {
+      console.error("Error revoking admin refresh token:", error);
+    }
+  }
+  
   res.clearCookie("plaible_jwt", { ...cookieOpts });
+  res.clearCookie("admin_token", { ...cookieOpts });
+  res.clearCookie("admin_refresh_token", { ...cookieOpts });
   return res.json({ ok: true });
 });
 
 // GET alias for logout (dev convenience)
-router.get('/logout', (req, res) => {
+router.get('/logout', async (req, res) => {
   const cookieOpts = {
     httpOnly: true,
-    sameSite: isProduction ? "lax" : "lax",
+    sameSite: isProduction ? "strict" : "lax",
     secure: isProduction || FORCE_SECURE_COOKIE,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/",
   };
+  
+  // Revoke admin refresh token if present
+  const adminRefreshToken = req.cookies?.admin_refresh_token;
+  if (adminRefreshToken) {
+    try {
+      await RefreshToken.revokeToken(adminRefreshToken);
+      console.log("Admin refresh token revoked on logout");
+    } catch (error) {
+      console.error("Error revoking admin refresh token:", error);
+    }
+  }
+  
   res.clearCookie('plaible_jwt', { ...cookieOpts });
+  res.clearCookie('admin_token', { ...cookieOpts });
+  res.clearCookie('admin_refresh_token', { ...cookieOpts });
   return res.json({ ok: true });
 });
 

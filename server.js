@@ -30,6 +30,7 @@ import devAchievementsRouter from "./routes/devAchievements.js";
 import sseRouter from "./routes/sse.js";
 import { swaggerSpec, swaggerUi, swaggerOpts } from "./docs/swagger.js";
 import adminGuard from "./middleware/adminGuard.js";
+import authenticateAdmin from "./middleware/authenticateAdmin.js";
 import adminUsersRouter from "./routes/admin/users.js";
 import adminStoriesRouter from "./routes/admin/stories.js";
 import adminFeedbacksRouter from "./routes/admin/feedbacks.js";
@@ -71,6 +72,20 @@ app.use(cors({
   methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
+
+// HTTPS enforcement in production
+if (isProduction) {
+  app.use((req, res, next) => {
+    // Check if the request is secure (HTTPS)
+    if (req.header('x-forwarded-proto') !== 'https') {
+      // Redirect to HTTPS
+      const httpsUrl = `https://${req.get('host')}${req.url}`;
+      return res.redirect(301, httpsUrl);
+    }
+    next();
+  });
+}
+
 app.use((req, res, next) => {
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
@@ -265,14 +280,14 @@ app.use("/api/dev/achievements", authGuard, devAchievementsRouter);
 // SSE router
 app.use("/api/sse", authGuard, sseRouter);
 
-// Admin routers (require authGuard + adminGuard)
-app.use("/api/admin/users", authGuard, adminGuard, adminUsersRouter);
-app.use("/api/admin/stories", authGuard, adminGuard, adminStoriesRouter);
-app.use("/api/admin/feedbacks", authGuard, adminGuard, adminFeedbacksRouter);
-app.use("/api/admin/analytics", authGuard, adminGuard, adminAnalyticsRouter);
-app.use("/api/admin/wallet", authGuard, adminGuard, adminWalletAnalyticsRouter);
-app.use("/api/admin/storyrunner", authGuard, adminGuard, adminStoryRunnerRouter);
-app.use("/api/admin/brief", authGuard, adminGuard, adminBriefRouter);
+// Admin routers (require authenticateAdmin middleware)
+app.use("/api/admin/users", authenticateAdmin, adminUsersRouter);
+app.use("/api/admin/stories", authenticateAdmin, adminStoriesRouter);
+app.use("/api/admin/feedbacks", authenticateAdmin, adminFeedbacksRouter);
+app.use("/api/admin/analytics", authenticateAdmin, adminAnalyticsRouter);
+app.use("/api/admin/wallet", authenticateAdmin, adminWalletAnalyticsRouter);
+app.use("/api/admin/storyrunner", authenticateAdmin, adminStoryRunnerRouter);
+app.use("/api/admin/brief", authenticateAdmin, adminBriefRouter);
 app.use("/api/category-config", categoryConfigRouter);
 app.use("/api/upload", authGuard, uploadRouter);
 
@@ -456,6 +471,21 @@ mongoose
   })
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
+
+// Import RefreshToken model for cleanup job
+import { RefreshToken } from "./models/RefreshToken.js";
+
+// Cleanup expired refresh tokens every hour
+setInterval(async () => {
+  try {
+    const result = await RefreshToken.cleanupExpired();
+    if (result.deletedCount > 0) {
+      console.log(`Cleaned up ${result.deletedCount} expired refresh tokens`);
+    }
+  } catch (error) {
+    console.error("Error cleaning up expired refresh tokens:", error);
+  }
+}, 60 * 60 * 1000); // 1 hour
 
 // Global error handler (must be last)
 app.use(globalErrorHandler);

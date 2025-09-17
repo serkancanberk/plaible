@@ -7,6 +7,70 @@
 
 const API_BASE = '/api';
 
+// Authentication state management
+let isAuthenticated = false;
+let currentUser: AdminUser | null = null;
+
+export interface AdminUser {
+  email: string;
+  name: string;
+  role: string;
+}
+
+// Check authentication status
+export async function checkAuth(): Promise<{ isAuthenticated: boolean; user: AdminUser | null }> {
+  try {
+    const response = await fetch('/api/auth/admin/check', {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      isAuthenticated = true;
+      currentUser = data.user;
+      return { isAuthenticated: true, user: data.user };
+    } else {
+      isAuthenticated = false;
+      currentUser = null;
+      return { isAuthenticated: false, user: null };
+    }
+  } catch (error) {
+    console.error('Auth check failed:', error);
+    isAuthenticated = false;
+    currentUser = null;
+    return { isAuthenticated: false, user: null };
+  }
+}
+
+// Logout function
+export async function logout(): Promise<void> {
+  try {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Logout failed:', error);
+  } finally {
+    isAuthenticated = false;
+    currentUser = null;
+    // Redirect to login
+    window.location.href = '/api/auth/google';
+  }
+}
+
+// Get current user
+export function getCurrentUser(): AdminUser | null {
+  return currentUser;
+}
+
+// Check if authenticated
+export function getIsAuthenticated(): boolean {
+  return isAuthenticated;
+}
+
 // helper: path'i normalize et → '/api/...' garantile
 function normalizeApiPath(path: string): string {
   if (!path) return '/api';
@@ -74,6 +138,17 @@ class ApiClient {
         url: response.url,
         headers: Object.fromEntries(response.headers.entries())
       });
+      
+      // Handle authentication errors
+      if (response.status === 401 || response.status === 403) {
+        console.error("❌ Authentication failed - redirecting to login");
+        isAuthenticated = false;
+        currentUser = null;
+        window.location.href = '/api/auth/google';
+        const error = new Error("Authentication required") as ApiError;
+        error.status = response.status;
+        throw error;
+      }
       
       // Handle specific error types
       if (response.status === 429) {
