@@ -102,6 +102,56 @@ export const StoriesPage: React.FC = () => {
     }
   };
 
+  const handleExportStory = async (story: Story) => {
+    try {
+      console.log('🔍 Exporting story:', story.title);
+      
+      // Call the export endpoint
+      const response = await fetch(`/api/admin/stories/${story._id}/export`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Get the filename from the Content-Disposition header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `story-${story.slug}-${new Date().toISOString().split('T')[0]}.json`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Get the JSON data
+      const storyData = await response.json();
+
+      // Create and download the file
+      const blob = new Blob([JSON.stringify(storyData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      console.log('🔍 Story exported successfully:', filename);
+      showToast(`✅ Story exported successfully as ${filename}`, 'success');
+    } catch (err: any) {
+      console.error('Failed to export story:', err);
+      showToast('❌ Failed to export story. Please try again.', 'error');
+    }
+  };
+
   // Pagination handler
   const handlePageChange = (newPage: number) => {
     setFilters(prev => ({ ...prev, page: newPage }));
@@ -155,6 +205,14 @@ export const StoriesPage: React.FC = () => {
           >
             Edit
           </button>
+          {story.isActive && (
+            <button
+              onClick={() => handleExportStory(story)}
+              className="px-3 py-1 text-xs rounded bg-gray-100 text-gray-800 hover:bg-gray-200"
+            >
+              Export JSON
+            </button>
+          )}
           <button
             onClick={() => handleStatusToggle(story._id, story.isActive)}
             className={`px-3 py-1 text-xs rounded ${

@@ -225,6 +225,9 @@ export const adminApi = {
   validateStoryCompliance: (storyData: any) =>
     api.post<{ ok: boolean; validation: { isCompliant: boolean; issues: string[] }; error?: string }>('/admin/stories/validate-compliance', storyData),
 
+  exportStory: (id: string) =>
+    api.get<Story>(`/admin/stories/${id}/export`),
+
   // Feedbacks
   getFeedbacks: async (params?: { storyId?: string; userId?: string; status?: string; starsGte?: number; limit?: number; cursor?: string }) => {
     const q = { storyId: '', userId: '', status: '', limit: 10, ...params };

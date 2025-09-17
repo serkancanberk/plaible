@@ -37,14 +37,53 @@ export async function generateStoryContent(minimalData) {
   }
   
   // Validate against Plaible Story Content Compliance Checklist
-  const validationResult = validatePlaibleCompliance(result);
-  if (!validationResult.isCompliant) {
-    console.log("⚠️ Compliance issues detected:", validationResult.issues);
-    // Fix common issues automatically
-    result = fixComplianceIssues(result);
-    console.log("🔧 Applied compliance fixes");
-  } else {
+  let validationResult = validatePlaibleCompliance(result);
+  let regenerationAttempts = 0;
+  const maxRegenerationAttempts = 3;
+  
+  while (!validationResult.isCompliant && regenerationAttempts < maxRegenerationAttempts) {
+    console.log(`⚠️ Compliance issues detected (attempt ${regenerationAttempts + 1}/${maxRegenerationAttempts}):`, validationResult.issues);
+    
+    // Check if it's a headline/description issue that requires regeneration
+    const hasHeadlineDescriptionIssues = validationResult.issues.some(issue => 
+      issue.includes('Headline') || issue.includes('Description')
+    );
+    
+    if (hasHeadlineDescriptionIssues && regenerationAttempts < maxRegenerationAttempts - 1) {
+      console.log("🔄 Regenerating content due to headline/description compliance issues...");
+      
+      // Try to regenerate with GPT first, then fallback to mock
+      try {
+        const regeneratedResult = await generateStoryWithGPT(minimalData);
+        if (regeneratedResult) {
+          result = regeneratedResult;
+          console.log("✅ GPT regeneration successful");
+        } else {
+          result = generateMockStoryContent(minimalData);
+          console.log("✅ Mock regeneration successful");
+        }
+      } catch (error) {
+        console.log("⚠️ GPT regeneration failed, using mock fallback");
+        result = generateMockStoryContent(minimalData);
+      }
+      
+      regenerationAttempts++;
+      validationResult = validatePlaibleCompliance(result);
+    } else {
+      // Fix common issues automatically for non-headline/description problems
+      result = fixComplianceIssues(result);
+      console.log("🔧 Applied compliance fixes");
+      validationResult = validatePlaibleCompliance(result);
+      break;
+    }
+  }
+  
+  if (validationResult.isCompliant) {
     console.log("✅ Story content is Plaible compliant");
+  } else {
+    console.log("⚠️ Story content still has compliance issues after maximum attempts:", validationResult.issues);
+    // Apply final fixes and accept the result
+    result = fixComplianceIssues(result);
   }
   
   return result;
@@ -101,8 +140,8 @@ Your task is to generate a **complete, DB-ready JSON object** for a new story th
 - **Genres**: Must be thematic and specific (e.g., \`gothic, horror, philosophical\`), not generic (\`literature, classic, fiction\`).  
 - **Tags**: Cover mood, conflict, and setting without duplicating genres.  
 - **storySettingTime**: Must be historically accurate and precise (e.g., "1810s", "1890s", "Victorian London"), not vague ("19th century").  
-- **Headline**: Single sentence that surfaces a playable conflict (like Dorian Gray's "Beauty without consequence carries the heaviest cost.").  
-- **Description**: 2-3 sentences inviting the player into the drama with choices and dilemmas.  
+- **Headline**: MUST be exactly 1 sentence - concise, dramatic, impactful. NO semicolons, NO run-ons. Example: "Beauty without consequence carries the heaviest cost."
+- **Description**: MUST be exactly 1-2 sentences maximum - short, dramatic, thematically aligned. NO generic summaries, NO trailing explanations. Example: "A striking young man bargains with fate so that a portrait will bear the burden of his sins while he remains flawless."  
 
 ### SUMMARY STRUCTURE (REQUIRED):
 - **original**: Faithful to the source material.  
@@ -772,27 +811,53 @@ function generateReengagementTemplates(characters) {
 }
 
 /**
- * Generate headline in Dorian Gray style
+ * Generate headline in Dorian Gray style - STRICT: exactly 1 sentence
  * @param {string} title - Story title
  * @param {string} mainCategory - Main category
- * @returns {string} Headline
+ * @returns {string} Headline (exactly 1 sentence)
  */
 function generateHeadline(title, mainCategory) {
+  const titleLower = title.toLowerCase();
+  
+  // Story-specific headlines for major works
+  if (titleLower.includes('frankenstein')) {
+    return "The price of playing God carries the weight of eternal consequence.";
+  } else if (titleLower.includes('dracula')) {
+    return "Darkness seduces the innocent with promises of eternal life.";
+  } else if (titleLower.includes('pride') && titleLower.includes('prejudice')) {
+    return "First impressions mask the truth that lies beneath the surface.";
+  } else if (titleLower.includes('gatsby')) {
+    return "The American Dream crumbles under the weight of impossible love.";
+  } else if (titleLower.includes('hamlet')) {
+    return "Madness and revenge consume the soul of a grieving prince.";
+  } else if (titleLower.includes('macbeth')) {
+    return "Ambition's poison corrupts even the noblest of hearts.";
+  } else if (titleLower.includes('jane eyre')) {
+    return "Independence and love collide in the shadows of hidden secrets.";
+  } else if (titleLower.includes('wuthering heights')) {
+    return "Passion's fire burns everything it touches to ashes.";
+  } else if (titleLower.includes('scarlet letter')) {
+    return "Shame becomes strength in the face of society's judgment.";
+  } else if (titleLower.includes('moby dick')) {
+    return "Obsession drives a man to destroy everything he holds dear.";
+  }
+  
+  // Generic headlines by category - all exactly 1 sentence
   const headlines = {
     book: [
-      `The price of knowledge carries the weight of consequence.`,
-      `Every choice echoes through the corridors of fate.`,
-      `In the shadows of ambition, truth waits to be discovered.`
+      "The price of knowledge carries the weight of consequence.",
+      "Every choice echoes through the corridors of fate.",
+      "In the shadows of ambition, truth waits to be discovered."
     ],
     story: [
-      `A moment's decision shapes an entire destiny.`,
-      `The line between hero and villain is drawn by choice.`,
-      `In the heart of conflict, character is revealed.`
+      "A moment's decision shapes an entire destiny.",
+      "The line between hero and villain is drawn by choice.",
+      "In the heart of conflict, character is revealed."
     ],
     biography: [
-      `The weight of legacy rests on every decision.`,
-      `History remembers not what was, but what could have been.`,
-      `In the footsteps of greatness, your path awaits.`
+      "The weight of legacy rests on every decision.",
+      "History remembers not what was, but what could have been.",
+      "In the footsteps of greatness, your path awaits."
     ]
   };
   
@@ -801,14 +866,59 @@ function generateHeadline(title, mainCategory) {
 }
 
 /**
- * Generate description in Dorian Gray style
+ * Generate description in Dorian Gray style - STRICT: exactly 1-2 sentences
  * @param {string} title - Story title
  * @param {string} authorName - Author name
  * @param {string} mainCategory - Main category
- * @returns {string} Description
+ * @returns {string} Description (exactly 1-2 sentences)
  */
 function generateDescription(title, authorName, mainCategory) {
-  return `Step into the world of ${title} where every choice carries weight and consequence. ${authorName}'s masterpiece becomes your interactive journey as you navigate the complex web of relationships, moral dilemmas, and fateful decisions that define this timeless ${mainCategory}. Will you follow the path of the original story, or forge your own destiny?`;
+  const titleLower = title.toLowerCase();
+  
+  // Story-specific descriptions for major works
+  if (titleLower.includes('frankenstein')) {
+    return "A brilliant scientist creates life from death, but his creation becomes a monster that haunts him across Europe.";
+  } else if (titleLower.includes('dracula')) {
+    return "An ancient vampire seeks to spread his curse to Victorian London, but a group of determined hunters stands in his way.";
+  } else if (titleLower.includes('pride') && titleLower.includes('prejudice')) {
+    return "Elizabeth Bennet and Mr. Darcy must overcome their pride and prejudice to find true love in Regency England.";
+  } else if (titleLower.includes('gatsby')) {
+    return "Jay Gatsby's obsession with recapturing the past leads to tragedy in the glittering world of 1920s America.";
+  } else if (titleLower.includes('hamlet')) {
+    return "Prince Hamlet struggles with grief, madness, and the need for revenge after his father's ghost reveals the truth.";
+  } else if (titleLower.includes('macbeth')) {
+    return "Macbeth's ambition leads him to murder and madness as he seeks to fulfill a prophecy of kingship.";
+  } else if (titleLower.includes('jane eyre')) {
+    return "Jane Eyre, an orphaned governess, finds love and independence despite the dark secrets of Thornfield Hall.";
+  } else if (titleLower.includes('wuthering heights')) {
+    return "Heathcliff's passionate love for Catherine Earnshaw becomes an obsession that destroys two generations.";
+  } else if (titleLower.includes('scarlet letter')) {
+    return "Hester Prynne bears the scarlet letter A for adultery while her secret lover suffers in silence.";
+  } else if (titleLower.includes('moby dick')) {
+    return "Captain Ahab's monomaniacal quest for the white whale leads to the destruction of his ship and crew.";
+  }
+  
+  // Generic descriptions by category - all exactly 1-2 sentences
+  const descriptions = {
+    book: [
+      `Step into ${title} where every choice carries weight and consequence.`,
+      `Navigate the complex web of relationships and moral dilemmas that define this timeless ${mainCategory}.`,
+      `Face the fateful decisions that will determine your path through ${authorName}'s masterpiece.`
+    ],
+    story: [
+      `Enter a world where a single moment can change everything.`,
+      `Your choices will shape the destiny of characters caught in the web of fate.`,
+      `Discover how one decision can alter the course of an entire narrative.`
+    ],
+    biography: [
+      `Walk in the footsteps of greatness and discover what choices shaped a legend.`,
+      `Experience the pivotal moments that defined a life of extraordinary achievement.`,
+      `Navigate the crossroads where history was made through decisive action.`
+    ]
+  };
+  
+  const categoryDescriptions = descriptions[mainCategory] || descriptions.book;
+  return categoryDescriptions[Math.floor(Math.random() * categoryDescriptions.length)];
 }
 
 /**
@@ -1220,6 +1330,63 @@ function getSpecificStorySettingTime(title, publishedYear) {
 export function validatePlaibleCompliance(story) {
   const issues = [];
   
+  // Check headline format (STRICT: exactly 1 sentence)
+  if (story.headline) {
+    const sentenceCount = (story.headline.match(/[.!?]+/g) || []).length;
+    if (sentenceCount !== 1) {
+      issues.push('Headline must be exactly 1 sentence (no semicolons or run-ons)');
+    }
+    
+    // Check for semicolons (not allowed)
+    if (story.headline.includes(';')) {
+      issues.push('Headline contains semicolons (not allowed)');
+    }
+    
+    // Check for generic marketing copy
+    const genericPhrases = ['step into', 'discover', 'experience', 'journey', 'adventure', 'explore'];
+    const hasGenericPhrases = genericPhrases.some(phrase => 
+      story.headline.toLowerCase().includes(phrase)
+    );
+    if (hasGenericPhrases) {
+      issues.push('Headline contains generic marketing copy (must be dramatic and literary)');
+    }
+  }
+  
+  // Check description format (STRICT: exactly 1-2 sentences)
+  if (story.description) {
+    const sentenceCount = (story.description.match(/[.!?]+/g) || []).length;
+    if (sentenceCount < 1 || sentenceCount > 2) {
+      issues.push('Description must be exactly 1-2 sentences maximum');
+    }
+    
+    // Check for trailing explanations or questions
+    if (story.description.includes('?') || story.description.toLowerCase().includes('will you')) {
+      issues.push('Description contains questions or trailing explanations (not allowed)');
+    }
+    
+    // Check for generic marketing copy
+    const genericPhrases = ['step into', 'discover', 'experience', 'journey', 'adventure', 'explore', 'interactive', 'choose your own'];
+    const hasGenericPhrases = genericPhrases.some(phrase => 
+      story.description.toLowerCase().includes(phrase)
+    );
+    if (hasGenericPhrases) {
+      issues.push('Description contains generic marketing copy (must be dramatic and literary)');
+    }
+    
+    // Check for story-specific keywords (should appear but not in long-winded exposition)
+    // Only check for generic stories, not specific canonical works
+    const titleLower = story.title.toLowerCase();
+    const isCanonicalWork = titleLower.includes('frankenstein') || titleLower.includes('dracula') || 
+                           titleLower.includes('pride') || titleLower.includes('gatsby') ||
+                           titleLower.includes('hamlet') || titleLower.includes('macbeth') ||
+                           titleLower.includes('jane eyre') || titleLower.includes('wuthering') ||
+                           titleLower.includes('scarlet letter') || titleLower.includes('moby dick');
+    
+    if (!isCanonicalWork && story.title && !story.description.toLowerCase().includes(story.title.toLowerCase().split(' ')[0])) {
+      issues.push('Description should reference the story title without long-winded exposition');
+    }
+  }
+  
   // Check canonical characters (no placeholders)
   if (story.characters) {
     const genericNames = ['The Hero', 'The Guide', 'The Protagonist', 'The Adversary', 'The Mentor', 'The Companion'];
@@ -1323,6 +1490,58 @@ export function validatePlaibleCompliance(story) {
  */
 function fixComplianceIssues(story) {
   const fixed = { ...story };
+  
+  // Fix headline format issues
+  if (fixed.headline) {
+    // Remove semicolons and replace with periods
+    fixed.headline = fixed.headline.replace(/;/g, '.');
+    
+    // Ensure exactly one sentence
+    const sentences = fixed.headline.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    if (sentences.length > 1) {
+      // Take the first sentence and ensure it ends with proper punctuation
+      fixed.headline = sentences[0].trim();
+      if (!fixed.headline.match(/[.!?]$/)) {
+        fixed.headline += '.';
+      }
+    }
+    
+    // Remove generic marketing phrases
+    const genericPhrases = ['step into', 'discover', 'experience', 'journey', 'adventure', 'explore'];
+    genericPhrases.forEach(phrase => {
+      const regex = new RegExp(`\\b${phrase}\\b`, 'gi');
+      fixed.headline = fixed.headline.replace(regex, '');
+    });
+    
+    // Clean up extra spaces
+    fixed.headline = fixed.headline.replace(/\s+/g, ' ').trim();
+  }
+  
+  // Fix description format issues
+  if (fixed.description) {
+    // Remove questions and trailing explanations
+    fixed.description = fixed.description.replace(/\?.*$/, '.');
+    fixed.description = fixed.description.replace(/will you.*$/gi, '');
+    
+    // Remove generic marketing phrases
+    const genericPhrases = ['step into', 'discover', 'experience', 'journey', 'adventure', 'explore', 'interactive', 'choose your own'];
+    genericPhrases.forEach(phrase => {
+      const regex = new RegExp(`\\b${phrase}\\b`, 'gi');
+      fixed.description = fixed.description.replace(regex, '');
+    });
+    
+    // Ensure 1-2 sentences maximum
+    const sentences = fixed.description.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    if (sentences.length > 2) {
+      fixed.description = sentences.slice(0, 2).join('. ').trim();
+      if (!fixed.description.match(/[.!?]$/)) {
+        fixed.description += '.';
+      }
+    }
+    
+    // Clean up extra spaces
+    fixed.description = fixed.description.replace(/\s+/g, ' ').trim();
+  }
   
   // Fix subCategory casing
   if (fixed.subCategory) {

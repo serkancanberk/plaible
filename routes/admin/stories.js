@@ -130,6 +130,55 @@ router.get("/:id", async (req, res) => {
 
 /**
  * @swagger
+ * /api/admin/stories/{id}/export:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Export story as JSON
+ *     description: Export the complete story document as a downloadable JSON file
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path, name: id, required: true, schema: { type: string }, description: Story ID (string)
+ *     responses:
+ *       200:
+ *         description: Story exported successfully as JSON file
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       404: { description: "Not Found", content: { application/json: { schema: { type: object, properties: { error: { type: string, example: "NOT_FOUND" } } } } } }
+ */
+router.get("/:id/export", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id || typeof id !== 'string') {
+      return err(res, "BAD_REQUEST", "id");
+    }
+
+    const story = await Story.findById(id).lean();
+    if (!story) {
+      return err(res, "NOT_FOUND");
+    }
+
+    // Generate filename with current date
+    const today = new Date().toISOString().split('T')[0];
+    const filename = `story-${story.slug}-${today}.json`;
+
+    // Set headers for file download
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    // Send the story as JSON
+    res.json(story);
+  } catch (error) {
+    console.error("Admin story export error:", error);
+    return err(res, "SERVER_ERROR");
+  }
+});
+
+/**
+ * @swagger
  * /api/admin/stories:
  *   post:
  *     tags: [Admin]
