@@ -101,8 +101,13 @@ export const UsersPage: React.FC = () => {
     }
   }, [filters.query, filters.role, filters.status, filters.searchField, filters.page]);
 
+  // Load users when filters change, but prevent duplicate calls
   useEffect(() => {
-    loadUsers();
+    const timeoutId = setTimeout(() => {
+      loadUsers();
+    }, 100); // Small delay to prevent rapid successive calls
+
+    return () => clearTimeout(timeoutId);
   }, [loadUsers]);
 
   // Modal handlers
@@ -146,10 +151,17 @@ export const UsersPage: React.FC = () => {
   const handleStatusToggle = async (userId: string, currentStatus: string) => {
     try {
       const newStatus = currentStatus === 'active' ? 'disabled' : 'active';
-      await adminApi.updateUserStatus(userId, newStatus as 'active' | 'disabled');
-      await loadUsers(); // Reload to get updated data
+      const response = await adminApi.updateUserStatus(userId, newStatus as 'active' | 'disabled');
+      
+      if (response?.ok) {
+        await loadUsers(); // Reload to get updated data
+        showToast(`User ${newStatus === 'active' ? 'enabled' : 'disabled'} successfully`, 'success');
+      } else {
+        showToast(response?.error || 'Failed to update user status', 'error');
+      }
     } catch (err: any) {
       console.error('Failed to update user status:', err);
+      showToast(err?.message || 'Failed to update user status', 'error');
     }
   };
 
@@ -207,11 +219,15 @@ export const UsersPage: React.FC = () => {
           </button>
           <button
             onClick={() => handleStatusToggle(user._id, user.status)}
+            disabled={user.roles?.includes('admin') && user.status === 'active'}
             className={`px-3 py-1 text-xs rounded ${
-              user.status === 'active'
+              user.roles?.includes('admin') && user.status === 'active'
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : user.status === 'active'
                 ? 'bg-red-100 text-red-800 hover:bg-red-200'
                 : 'bg-green-100 text-green-800 hover:bg-green-200'
             }`}
+            title={user.roles?.includes('admin') && user.status === 'active' ? 'Cannot disable admin users' : ''}
           >
             {user.status === 'active' ? 'Disable' : 'Enable'}
           </button>

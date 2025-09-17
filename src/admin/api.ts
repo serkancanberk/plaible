@@ -35,6 +35,27 @@ interface ApiError extends Error {
 }
 
 class ApiClient {
+  private async fetchWithRetry(url: string, options: RequestInit = {}, retryCount = 0): Promise<Response> {
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second base delay
+    
+    try {
+      return await this.fetchWithCredentials(url, options);
+    } catch (error: any) {
+      // Only retry on 429 errors and if we haven't exceeded max retries
+      if (error.status === 429 && retryCount < maxRetries) {
+        const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff
+        console.log(`⏳ Rate limited, retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.fetchWithRetry(url, options, retryCount + 1);
+      }
+      
+      // Re-throw the error if it's not a 429 or we've exceeded max retries
+      throw error;
+    }
+  }
+
   private async fetchWithCredentials(url: string, options: RequestInit = {}): Promise<Response> {
     const response = await fetch(url, {
       ...options,
@@ -53,6 +74,14 @@ class ApiClient {
         url: response.url,
         headers: Object.fromEntries(response.headers.entries())
       });
+      
+      // Handle specific error types
+      if (response.status === 429) {
+        console.error("❌ Rate limit exceeded - too many requests");
+        const error = new Error("Too many requests, please wait a moment and try again.") as ApiError;
+        error.status = 429;
+        throw error;
+      }
       
       // Try to get error response body
       try {
@@ -76,8 +105,16 @@ class ApiClient {
     if ((import.meta as any).env?.DEV) {
       console.debug('[api] GET', url);
     }
-    const response = await this.fetchWithCredentials(url);
-    return response.json();
+    const response = await this.fetchWithRetry(url);
+    const data = await response.json();
+    
+    // Handle 403 errors specifically
+    if (!response.ok && response.status === 403) {
+      console.error('❌ 403 Forbidden - Admin session may have expired');
+      // You could trigger a redirect to login here if needed
+    }
+    
+    return data;
   }
 
   async post<T>(endpoint: string, data?: unknown): Promise<T> {
@@ -85,7 +122,7 @@ class ApiClient {
     if (import.meta.env.DEV) {
       console.debug('[api] POST', url);
     }
-    const response = await this.fetchWithCredentials(url, {
+    const response = await this.fetchWithRetry(url, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
     });
@@ -97,11 +134,18 @@ class ApiClient {
     if (import.meta.env.DEV) {
       console.debug('[api] PATCH', url);
     }
-    const response = await this.fetchWithCredentials(url, {
+    const response = await this.fetchWithRetry(url, {
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
     });
-    return response.json();
+    const responseData = await response.json();
+    
+    // Handle 403 errors specifically
+    if (!response.ok && response.status === 403) {
+      console.error('❌ 403 Forbidden - Admin session may have expired');
+    }
+    
+    return responseData;
   }
 
   async put<T>(endpoint: string, data?: unknown): Promise<T> {
@@ -109,7 +153,7 @@ class ApiClient {
     if (import.meta.env.DEV) {
       console.debug('[api] PUT', url);
     }
-    const response = await this.fetchWithCredentials(url, {
+    const response = await this.fetchWithRetry(url, {
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
     });
@@ -121,7 +165,7 @@ class ApiClient {
     if (import.meta.env.DEV) {
       console.debug('[api] DELETE', url);
     }
-    const response = await this.fetchWithCredentials(url, {
+    const response = await this.fetchWithRetry(url, {
       method: 'DELETE',
     });
     return response.json();
@@ -216,6 +260,9 @@ export const adminApi = {
 
   getUserTransactionHistory: (userId: string, params?: { limit?: number; offset?: number; type?: string; source?: string }) =>
     api.get<{ ok: boolean; transactions: WalletTransaction[] }>(`/admin/wallet/transactions/user/${userId}`, params || {}),
+
+  getTransactionLogs: (params?: { limit?: number; offset?: number; startDate?: string; endDate?: string; type?: string; source?: string }) =>
+    api.get<{ ok: boolean; transactions: TransactionLog[]; totalCount: number }>('/admin/wallet/transactions/logs', params || {}),
 
   // StoryRunner
   getStorySettings: () =>
@@ -460,6 +507,22 @@ export interface WalletTransaction {
   note?: string;
   metadata?: unknown;
   createdAt: string;
+}
+
+export interface TransactionLog {
+  _id: string;
+  user: {
+    _id: string;
+    email: string;
+    displayName: string;
+  };
+  type: 'credit' | 'debit';
+  amount: number;
+  source: 'admin' | 'purchase' | 'ai' | 'topup' | 'play' | 'refund' | 'adjustment';
+  note?: string;
+  balanceAfter: number;
+  createdAt: string;
+  description: 'Added' | 'Deducted';
 }
 
 // StoryRunner interfaces

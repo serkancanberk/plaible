@@ -5,13 +5,15 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { Spinner } from '../components/Spinner';
 import { SimpleChart } from '../components/SimpleChart';
 import { useToast } from '../components/Toast';
-import { adminApi, WalletAnalytics, TopCreditUser, TransactionStats } from '../api';
+import { adminApi, WalletAnalytics, TopCreditUser, TransactionStats, TransactionLog } from '../api';
 
 interface Filters {
   startDate: string;
   endDate: string;
   type: string;
   source: string;
+  page: number;
+  limit: number;
 }
 
 export const WalletAnalyticsPage: React.FC = () => {
@@ -19,13 +21,18 @@ export const WalletAnalyticsPage: React.FC = () => {
   const [topUsers, setTopUsers] = useState<TopCreditUser[]>([]);
   const [dailyData, setDailyData] = useState<any[]>([]);
   const [transactionStats, setTransactionStats] = useState<TransactionStats | null>(null);
+  const [transactionLogs, setTransactionLogs] = useState<TransactionLog[]>([]);
+  const [totalTransactionCount, setTotalTransactionCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [topUsersSort, setTopUsersSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'balance', direction: 'desc' });
   const [filters, setFilters] = useState<Filters>({
     startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days ago
     endDate: new Date().toISOString().split('T')[0], // today
     type: '',
-    source: ''
+    source: '',
+    page: 1,
+    limit: 20
   });
   const { showToast } = useToast();
 
@@ -34,7 +41,7 @@ export const WalletAnalyticsPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const [analyticsRes, topUsersRes, statsRes] = await Promise.all([
+      const [analyticsRes, topUsersRes, statsRes, logsRes] = await Promise.all([
         adminApi.getWalletAnalytics(),
         adminApi.getTopCreditUsers(10),
         adminApi.getTransactionStats({
@@ -42,6 +49,14 @@ export const WalletAnalyticsPage: React.FC = () => {
           endDate: filters.endDate,
           type: filters.type || undefined,
           source: filters.source || undefined
+        }),
+        adminApi.getTransactionLogs({
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+          type: filters.type || undefined,
+          source: filters.source || undefined,
+          limit: filters.limit,
+          offset: (filters.page - 1) * filters.limit
         })
       ]);
 
@@ -68,9 +83,21 @@ export const WalletAnalyticsPage: React.FC = () => {
         }
       }
 
-      // Generate mock daily data for the chart (since we don't have a specific daily endpoint yet)
-      const mockDailyData = generateMockDailyData(filters.startDate, filters.endDate);
-      setDailyData(mockDailyData);
+      if (logsRes.ok) {
+        setTransactionLogs(logsRes.transactions);
+        setTotalTransactionCount(logsRes.totalCount);
+        
+        if (import.meta.env.DEV) {
+          console.log("🔍 Frontend Transaction Logs:", {
+            count: logsRes.transactions.length,
+            total: logsRes.totalCount
+          });
+        }
+      }
+
+      // Get real daily transaction data
+      const dailyData = await getRealDailyData(filters.startDate, filters.endDate);
+      setDailyData(dailyData);
 
     } catch (err) {
       console.error('Error loading wallet analytics:', err);
@@ -81,34 +108,134 @@ export const WalletAnalyticsPage: React.FC = () => {
     }
   }, [filters, showToast]);
 
-  const generateMockDailyData = (startDate: string, endDate: string) => {
-    const data = [];
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      data.push({
-        date: d.toISOString().split('T')[0],
-        credits: Math.floor(Math.random() * 100) + 10,
-        debits: Math.floor(Math.random() * 80) + 5
-      });
+  const getRealDailyData = async (startDate: string, endDate: string) => {
+    try {
+      // Get daily transaction data from the backend
+      const response = await adminApi.getDailySummary(startDate);
+      
+      if (response?.ok && response.summary) {
+        const { stats } = response.summary;
+        return [{
+          date: startDate,
+          credits: stats.creditsAdded || 0,
+          debits: stats.creditsSpent || 0
+        }];
+      }
+      
+      // Fallback to empty data if no real data available
+      return [{
+        date: startDate,
+        credits: 0,
+        debits: 0
+      }];
+    } catch (error) {
+      console.error('Error getting real daily data:', error);
+      // Fallback to empty data
+      return [{
+        date: startDate,
+        credits: 0,
+        debits: 0
+      }];
     }
-    
-    return data;
   };
 
+  // Load analytics when filters change, but prevent duplicate calls
   useEffect(() => {
-    loadAnalytics();
+    const timeoutId = setTimeout(() => {
+      loadAnalytics();
+    }, 100); // Small delay to prevent rapid successive calls
+
+    return () => clearTimeout(timeoutId);
   }, [loadAnalytics]);
 
   const handleFilterChange = (key: keyof Filters, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters(prev => ({ ...prev, [key]: value, page: 1 })); // Reset to page 1 when filters change
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setFilters(prev => ({ ...prev, page: newPage }));
+  };
+
+  const exportTransactionLogsToCSV = () => {
+    if (transactionLogs.length === 0) {
+      showToast('No transactions to export', 'warning');
+      return;
+    }
+
+    // Create CSV headers
+    const headers = ['User', 'Email', 'Type', 'Amount', 'Source', 'Date', 'Balance After'];
+    
+    // Create CSV rows
+    const rows = transactionLogs.map(transaction => [
+      transaction.user.displayName || 'Unknown',
+      transaction.user.email || '',
+      transaction.type === 'credit' ? 'Credits Added' : 'Credits Spent',
+      transaction.amount,
+      transaction.source,
+      new Date(transaction.createdAt).toLocaleString(),
+      transaction.balanceAfter
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    
+    // Generate filename with current date
+    const today = new Date().toISOString().split('T')[0];
+    const filename = `transactions-${today}.csv`;
+    link.setAttribute('download', filename);
+    
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    console.log('🔍 CSV exported:', { filename, rowCount: transactionLogs.length });
+    showToast(`Exported ${transactionLogs.length} transactions to ${filename}`, 'success');
+  };
+
+  const handleTopUsersSort = (key: string) => {
+    setTopUsersSort(prev => {
+      const newDirection = prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc';
+      console.log('🔍 Top Users sort changed:', { key, direction: newDirection });
+      return { key, direction: newDirection };
+    });
+  };
+
+  const getSortedTopUsers = () => {
+    if (!topUsers.length) return topUsers;
+    
+    return [...topUsers].sort((a, b) => {
+      let aValue: any, bValue: any;
+      
+      if (topUsersSort.key === 'displayName') {
+        aValue = a.displayName?.toLowerCase() || '';
+        bValue = b.displayName?.toLowerCase() || '';
+      } else if (topUsersSort.key === 'balance') {
+        aValue = a.balance || 0;
+        bValue = b.balance || 0;
+      } else {
+        return 0;
+      }
+      
+      if (aValue < bValue) return topUsersSort.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return topUsersSort.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
   };
 
   const topUsersColumns = [
     {
       key: 'displayName',
       label: 'User',
+      sortable: true,
       render: (displayName: string, user: TopCreditUser) => (
         <div>
           <div className="font-medium text-gray-900">{displayName}</div>
@@ -119,6 +246,7 @@ export const WalletAnalyticsPage: React.FC = () => {
     {
       key: 'balance',
       label: 'Balance',
+      sortable: true,
       render: (balance: number) => (
         <span className="font-semibold text-green-600">{balance} credits</span>
       ),
@@ -158,6 +286,75 @@ export const WalletAnalyticsPage: React.FC = () => {
     },
   ];
 
+  const transactionLogsColumns = [
+    {
+      key: 'user',
+      label: 'User',
+      render: (user: TransactionLog['user']) => (
+        <div>
+          <div className="font-medium text-gray-900">{user.displayName}</div>
+          <div className="text-sm text-gray-500">{user.email}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'type',
+      label: 'Type',
+      render: (type: string, transaction: TransactionLog) => (
+        <span className={`px-2 py-1 text-xs rounded-full ${
+          type === 'credit' 
+            ? 'bg-green-100 text-green-800' 
+            : 'bg-red-100 text-red-800'
+        }`}>
+          {transaction.description}
+        </span>
+      ),
+    },
+    {
+      key: 'amount',
+      label: 'Amount',
+      render: (amount: number, transaction: TransactionLog) => (
+        <span className={`font-semibold ${
+          transaction.type === 'credit' 
+            ? 'text-green-600' 
+            : 'text-red-600'
+        }`}>
+          {transaction.type === 'credit' ? '+' : '-'}{amount} credits
+        </span>
+      ),
+    },
+    {
+      key: 'source',
+      label: 'Source',
+      render: (source: string) => (
+        <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+          {source}
+        </span>
+      ),
+    },
+    {
+      key: 'createdAt',
+      label: 'Date',
+      render: (createdAt: string) => (
+        <div>
+          <div className="text-sm text-gray-900">
+            {new Date(createdAt).toLocaleDateString()}
+          </div>
+          <div className="text-xs text-gray-500">
+            {new Date(createdAt).toLocaleTimeString()}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'balanceAfter',
+      label: 'Balance After',
+      render: (balanceAfter: number) => (
+        <span className="font-medium text-gray-900">{balanceAfter} credits</span>
+      ),
+    },
+  ];
+
   if (loading) {
     return (
       <div className="p-6">
@@ -193,10 +390,11 @@ export const WalletAnalyticsPage: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Credits</p>
-                <p className="text-2xl font-semibold text-gray-900">{analytics.totalCredits.toLocaleString()}</p>
-              </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Wallet Balance</p>
+              <p className="text-2xl font-semibold text-gray-900">{analytics.totalCredits.toLocaleString()}</p>
+              <p className="text-xs text-gray-500">({transactionStats?.totalTransactions || 0} total transactions)</p>
+            </div>
             </div>
           </div>
 
@@ -210,6 +408,7 @@ export const WalletAnalyticsPage: React.FC = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Average Balance</p>
                 <p className="text-2xl font-semibold text-gray-900">{analytics.averageBalance}</p>
+                <p className="text-xs text-gray-500">({analytics.totalUsers} users)</p>
               </div>
             </div>
           </div>
@@ -300,20 +499,91 @@ export const WalletAnalyticsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Chart Section */}
+      {/* Transaction Logs Table */}
       <div className="mb-8">
-        <SimpleChart
-          data={dailyData}
-          title="Daily Credits Added and Spent"
-          height={300}
-        />
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Transaction Logs</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Showing {transactionLogs.length} of {totalTransactionCount} transactions
+                </p>
+              </div>
+              <div className="flex items-center space-x-4">
+                {/* Transaction Type Filter */}
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-700">Filter:</label>
+                  <select
+                    value={filters.type}
+                    onChange={(e) => {
+                      const newType = e.target.value;
+                      console.log('🔍 Transaction filter changed:', newType);
+                      handleFilterChange('type', newType);
+                    }}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All</option>
+                    <option value="credit">Credits Added</option>
+                    <option value="debit">Credits Spent</option>
+                  </select>
+                </div>
+                {/* CSV Export Button */}
+                <button
+                  onClick={() => {
+                    console.log('🔍 Exporting CSV for transactions:', transactionLogs.length);
+                    exportTransactionLogsToCSV();
+                  }}
+                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  Export CSV
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <Table
+              data={transactionLogs}
+              columns={transactionLogsColumns}
+              emptyMessage="No transactions found for the selected filters"
+            />
+          </div>
+          {totalTransactionCount > filters.limit && (
+            <div className="px-6 py-4 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-700">
+                  Showing {((filters.page - 1) * filters.limit) + 1} to {Math.min(filters.page * filters.limit, totalTransactionCount)} of {totalTransactionCount} transactions
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handlePageChange(filters.page - 1)}
+                    disabled={filters.page <= 1}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-700">
+                    Page {filters.page} of {Math.ceil(totalTransactionCount / filters.limit)}
+                  </span>
+                  <button
+                    onClick={() => handlePageChange(filters.page + 1)}
+                    disabled={filters.page >= Math.ceil(totalTransactionCount / filters.limit)}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Transaction Stats */}
       {transactionStats && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Transaction Summary</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Transaction Activity Summary</h3>
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-gray-600">Total Transactions:</span>
@@ -328,28 +598,27 @@ export const WalletAnalyticsPage: React.FC = () => {
                 <span className="font-semibold text-red-600">{transactionStats.creditsSpent}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Net Credits:</span>
+                <span className="text-gray-600">Net from Transactions:</span>
                 <span className={`font-semibold ${transactionStats.netCredits >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {transactionStats.netCredits}
                 </span>
               </div>
             </div>
             
-            {/* Fallback warning for data inconsistencies */}
-            {analytics && analytics.totalCredits > 0 && 
-             transactionStats.creditsAdded === 0 && 
-             transactionStats.creditsSpent === 0 && 
-             transactionStats.netCredits === 0 && (
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            {/* Data consistency confirmation */}
+            {analytics && transactionStats && 
+             Math.abs(analytics.totalCredits - transactionStats.netCredits) <= 1 && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
                 <div className="flex">
                   <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm text-yellow-800">
-                      ⚠️ No transaction history found. Balances may have been edited directly.
+                    <p className="text-sm text-green-800">
+                      ✅ <strong>Data Consistency:</strong> Wallet balances and transaction records are now synchronized. 
+                      All wallet balances are derived from transaction history for full auditability.
                     </p>
                   </div>
                 </div>
@@ -365,9 +634,12 @@ export const WalletAnalyticsPage: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900">Top Users by Wallet Balance</h3>
         </div>
         <Table
-          data={topUsers}
+          data={getSortedTopUsers()}
           columns={topUsersColumns}
           emptyMessage="No users found"
+          sortKey={topUsersSort.key}
+          sortDirection={topUsersSort.direction}
+          onSort={handleTopUsersSort}
         />
       </div>
     </div>

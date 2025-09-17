@@ -82,8 +82,13 @@ export const StoriesPage: React.FC = () => {
     }
   }, [filters.query, filters.isActive, filters.page]);
 
+  // Load stories when filters change, but prevent duplicate calls
   useEffect(() => {
-    loadStories();
+    const timeoutId = setTimeout(() => {
+      loadStories();
+    }, 100); // Small delay to prevent rapid successive calls
+
+    return () => clearTimeout(timeoutId);
   }, [loadStories]);
 
   const handleStatusToggle = async (storyId: string, currentStatus: boolean) => {

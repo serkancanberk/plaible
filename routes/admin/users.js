@@ -28,6 +28,7 @@ const err = (res, code, field = null) => {
  *       - in: query, name: role, schema: { type: string }, description: Filter by role
  *       - in: query, name: status, schema: { type: string, enum: [active, disabled, deleted] }, description: Filter by status
  *       - in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 20 }, description: Number of results per page
+ *       - in: query, name: offset, schema: { type: integer, minimum: 0, default: 0 }, description: Number of results to skip
  *       - in: query, name: cursor, schema: { type: string, format: date-time }, description: Pagination cursor (ISO date)
  *     responses:
  *       200:
@@ -39,13 +40,15 @@ const err = (res, code, field = null) => {
  *               properties:
  *                 ok: { type: boolean, example: true }
  *                 items: { type: array, items: { type: object } }
+ *                 totalCount: { type: integer, example: 42 }
  *                 nextCursor: { type: string, format: date-time, nullable: true }
  *       403: { description: "Forbidden", content: { application/json: { schema: { type: object, properties: { error: { type: string, example: "FORBIDDEN" } } } } } }
  */
 router.get("/", async (req, res) => {
   try {
-    const { query: searchQuery, role, status, limit = 20, cursor } = req.query;
+    const { query: searchQuery, role, status, limit = 20, cursor, offset = 0 } = req.query;
     const pageSize = Math.min(parseInt(limit) || 20, 100);
+    const skip = parseInt(offset) || 0;
 
     // Build filter
     const filter = {};
@@ -68,29 +71,29 @@ router.get("/", async (req, res) => {
       filter.createdAt = { $lt: new Date(cursor) };
     }
 
-    // Query with limit + 1 to check for more results
+    // Get total count for pagination
+    const totalCount = await User.countDocuments(filter);
+
+    // Query with offset and limit
     const users = await User.find(filter)
       .select('_id email identity.displayName displayName fullName roles status wallet.balance createdAt')
       .sort({ createdAt: -1 })
-      .limit(pageSize + 1)
+      .skip(skip)
+      .limit(pageSize)
       .lean();
 
-    const hasMore = users.length > pageSize;
-    const items = hasMore ? users.slice(0, pageSize) : users;
-    const nextCursor = hasMore ? items[items.length - 1].createdAt.toISOString() : null;
-
     // Transform items to match expected format
-    const transformedItems = items.map(user => ({
+    const transformedItems = users.map(user => ({
       _id: user._id,
       email: user.email,
       displayName: user.identity?.displayName || user.displayName || user.fullName || 'Unknown',
-      roles: user.roles,
-      status: user.status,
-      balance: user.wallet?.balance || 0,
+      roles: user.roles || ['user'],
+      status: user.status || 'active',
+      balance: (user.wallet && typeof user.wallet.balance === 'number') ? user.wallet.balance : 0,
       createdAt: user.createdAt
     }));
 
-    return ok(res, { items: transformedItems, nextCursor });
+    return ok(res, { items: transformedItems, totalCount });
   } catch (error) {
     console.error("Admin users list error:", error);
     return err(res, "SERVER_ERROR");
@@ -383,8 +386,20 @@ router.patch("/:id/status", async (req, res) => {
       return err(res, "NOT_FOUND");
     }
 
+    // Prevent admin users from disabling themselves
+    if (user._id.toString() === req.userId && status === 'disabled') {
+      return err(res, "BAD_REQUEST", "Cannot disable your own admin account");
+    }
+
     const oldStatus = user.status;
     user.status = status;
+    user.updatedAt = new Date();
+    
+    // Ensure wallet structure is valid before saving
+    if (!user.wallet || typeof user.wallet.balance !== 'number') {
+      user.wallet = { balance: 0, currency: 'CREDITS' };
+    }
+    
     await user.save();
 
     // Log admin action

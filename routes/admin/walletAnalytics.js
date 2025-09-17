@@ -195,16 +195,26 @@ router.get("/transactions/stats", async (req, res) => {
       }
     ]);
 
-    const added = stats.find(s => s._id === "credit") || { totalAmount: 0, count: 0 };
-    const spent = stats.find(s => s._id === "debit") || { totalAmount: 0, count: 0 };
+    // Handle both standard and non-standard transaction types
+    const added = stats.find(s => s._id === "credit" || s._id === "topup") || { totalAmount: 0, count: 0 };
+    const spent = stats.find(s => s._id === "debit" || s._id === "deduct") || { totalAmount: 0, count: 0 };
+    
+    // If we have non-standard types, aggregate them properly
+    const creditTypes = stats.filter(s => s._id === "credit" || s._id === "topup");
+    const debitTypes = stats.filter(s => s._id === "debit" || s._id === "deduct");
+    
+    const totalAdded = creditTypes.reduce((sum, s) => sum + s.totalAmount, 0);
+    const totalSpent = debitTypes.reduce((sum, s) => sum + s.totalAmount, 0);
+    const totalAddedCount = creditTypes.reduce((sum, s) => sum + s.count, 0);
+    const totalSpentCount = debitTypes.reduce((sum, s) => sum + s.count, 0);
 
     const result = {
-      totalTransactions: added.count + spent.count,
-      creditsAdded: added.totalAmount,
-      creditsSpent: spent.totalAmount,
-      netCredits: added.totalAmount - spent.totalAmount,
-      averageAmount: (added.count + spent.count) > 0 ? 
-        (added.totalAmount + spent.totalAmount) / (added.count + spent.count) : 0,
+      totalTransactions: totalAddedCount + totalSpentCount,
+      creditsAdded: totalAdded,
+      creditsSpent: totalSpent,
+      netCredits: totalAdded - totalSpent,
+      averageAmount: (totalAddedCount + totalSpentCount) > 0 ? 
+        (totalAdded + totalSpent) / (totalAddedCount + totalSpentCount) : 0,
       uniqueUserCount: 0 // We'll calculate this separately if needed
     };
 
@@ -279,16 +289,22 @@ router.get("/transactions/daily", async (req, res) => {
       }
     ]);
 
-    const added = dailyStats.find(s => s._id === "credit") || { totalAmount: 0, count: 0 };
-    const spent = dailyStats.find(s => s._id === "debit") || { totalAmount: 0, count: 0 };
+    // Handle both standard and non-standard transaction types
+    const creditTypes = dailyStats.filter(s => s._id === "credit" || s._id === "topup");
+    const debitTypes = dailyStats.filter(s => s._id === "debit" || s._id === "deduct");
+    
+    const totalAdded = creditTypes.reduce((sum, s) => sum + s.totalAmount, 0);
+    const totalSpent = debitTypes.reduce((sum, s) => sum + s.totalAmount, 0);
+    const totalAddedCount = creditTypes.reduce((sum, s) => sum + s.count, 0);
+    const totalSpentCount = debitTypes.reduce((sum, s) => sum + s.count, 0);
 
     const stats = {
-      totalTransactions: added.count + spent.count,
-      creditsAdded: added.totalAmount,
-      creditsSpent: spent.totalAmount,
-      netCredits: added.totalAmount - spent.totalAmount,
-      averageAmount: (added.count + spent.count) > 0 ? 
-        (added.totalAmount + spent.totalAmount) / (added.count + spent.count) : 0,
+      totalTransactions: totalAddedCount + totalSpentCount,
+      creditsAdded: totalAdded,
+      creditsSpent: totalSpent,
+      netCredits: totalAdded - totalSpent,
+      averageAmount: (totalAddedCount + totalSpentCount) > 0 ? 
+        (totalAdded + totalSpent) / (totalAddedCount + totalSpentCount) : 0,
       uniqueUserCount: 0
     };
 
@@ -340,6 +356,102 @@ router.get("/transactions/daily", async (req, res) => {
     return ok(res, { summary });
   } catch (error) {
     console.error("Admin wallet daily summary error:", error);
+    return err(res, "SERVER_ERROR");
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/wallet/transactions/logs:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get detailed transaction logs
+ *     description: Get paginated list of all wallet transactions with user details
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 50 }, description: Number of transactions to return
+ *       - in: query, name: offset, schema: { type: integer, minimum: 0, default: 0 }, description: Number of transactions to skip
+ *       - in: query, name: startDate, schema: { type: string, format: date }, description: Start date for filtering (YYYY-MM-DD)
+ *       - in: query, name: endDate, schema: { type: string, format: date }, description: End date for filtering (YYYY-MM-DD)
+ *       - in: query, name: type, schema: { type: string, enum: [credit, debit] }, description: Filter by transaction type
+ *       - in: query, name: source, schema: { type: string, enum: [admin, purchase, ai, topup, play, refund, adjustment] }, description: Filter by transaction source
+ *     responses:
+ *       200:
+ *         description: Transaction logs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok: { type: boolean, example: true }
+ *                 transactions: { type: array, items: { type: object } }
+ *                 totalCount: { type: integer, example: 150 }
+ *       403: { description: "Forbidden", content: { application/json: { schema: { type: object, properties: { error: { type: string, example: "FORBIDDEN" } } } } } }
+ */
+router.get("/transactions/logs", async (req, res) => {
+  try {
+    const { limit = 50, offset = 0, startDate, endDate, type, source } = req.query;
+    
+    // Build filter
+    const filter = {};
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+    if (type) filter.type = type;
+    if (source) filter.source = source;
+    
+    // Get total count for pagination
+    const totalCount = await WalletTransaction.countDocuments(filter);
+    
+    // Get paginated transactions with user details
+    const transactions = await WalletTransaction.find(filter)
+      .populate('userId', 'email identity.displayName displayName fullName')
+      .sort({ createdAt: -1 })
+      .limit(Math.min(parseInt(limit) || 50, 100))
+      .skip(Math.max(parseInt(offset) || 0, 0))
+      .lean();
+    
+    // Format transactions for frontend
+    const formattedTransactions = transactions.map(tx => {
+      const user = tx.userId;
+      const displayName = user?.identity?.displayName || user?.displayName || user?.fullName || 'Unknown';
+      
+      return {
+        _id: tx._id,
+        user: {
+          _id: user?._id,
+          email: user?.email,
+          displayName: displayName
+        },
+        type: tx.type,
+        amount: tx.amount,
+        source: tx.source,
+        note: tx.note,
+        balanceAfter: tx.balanceAfter,
+        createdAt: tx.createdAt,
+        description: tx.type === 'credit' ? 'Added' : 'Deducted'
+      };
+    });
+    
+    if (import.meta.env?.DEV) {
+      console.log("🔍 Transaction Logs:", {
+        filter,
+        totalCount,
+        returnedCount: formattedTransactions.length,
+        offset,
+        limit
+      });
+    }
+    
+    return ok(res, { 
+      transactions: formattedTransactions,
+      totalCount 
+    });
+  } catch (error) {
+    console.error("Admin wallet transaction logs error:", error);
     return err(res, "SERVER_ERROR");
   }
 });

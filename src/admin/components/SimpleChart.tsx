@@ -26,8 +26,11 @@ export const SimpleChart: React.FC<SimpleChartProps> = ({ data, title, height = 
   }
 
   const maxValue = Math.max(
-    ...data.map(d => Math.max(d.credits, d.debits))
+    ...data.map(d => Math.max(d.credits || 0, d.debits || 0))
   );
+
+  // Handle case where all values are 0 or invalid
+  const safeMaxValue = maxValue > 0 ? maxValue : 1;
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -37,8 +40,8 @@ export const SimpleChart: React.FC<SimpleChartProps> = ({ data, title, height = 
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
-      <div className="relative" style={{ height: `${height}px` }}>
-        <svg width="100%" height="100%" className="overflow-visible">
+      <div className="relative overflow-hidden" style={{ height: `${height + 40}px` }}>
+        <svg width="100%" height="100%" className="overflow-hidden">
           {/* Grid lines */}
           {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => (
             <g key={index}>
@@ -57,16 +60,16 @@ export const SimpleChart: React.FC<SimpleChartProps> = ({ data, title, height = 
                 fill="#6b7280"
                 textAnchor="start"
               >
-                {Math.round(maxValue * (1 - ratio))}
+                {Math.round(safeMaxValue * (1 - ratio))}
               </text>
             </g>
           ))}
 
           {/* Data bars */}
           {data.map((point, index) => {
-            const x = (index / (data.length - 1)) * 100;
-            const creditsHeight = (point.credits / maxValue) * height;
-            const debitsHeight = (point.debits / maxValue) * height;
+            const x = data.length > 1 ? (index / (data.length - 1)) * 100 : 50;
+            const creditsHeight = ((point.credits || 0) / safeMaxValue) * height;
+            const debitsHeight = ((point.debits || 0) / safeMaxValue) * height;
             const barWidth = Math.max(100 / data.length - 2, 2);
 
             return (
@@ -92,7 +95,7 @@ export const SimpleChart: React.FC<SimpleChartProps> = ({ data, title, height = 
                 {/* Date label */}
                 <text
                   x={`${x}%`}
-                  y={height + 20}
+                  y={height + 15}
                   fontSize="10"
                   fill="#6b7280"
                   textAnchor="middle"

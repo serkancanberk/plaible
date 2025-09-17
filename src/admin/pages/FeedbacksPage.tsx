@@ -84,8 +84,13 @@ export const FeedbacksPage: React.FC = () => {
     }
   }, [filters.storyId, filters.status, filters.starsGte, filters.page]);
 
+  // Load feedbacks when filters change, but prevent duplicate calls
   useEffect(() => {
-    loadFeedbacks();
+    const timeoutId = setTimeout(() => {
+      loadFeedbacks();
+    }, 100); // Small delay to prevent rapid successive calls
+
+    return () => clearTimeout(timeoutId);
   }, [loadFeedbacks]);
 
   const handleStatusToggle = async (feedbackId: string, currentStatus: string) => {

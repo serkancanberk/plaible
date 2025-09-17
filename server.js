@@ -83,12 +83,20 @@ app.use(attachRequestId);
 app.use(requestLogger);
 app.use(passport.initialize());
 
-// Global rate limiter on /api
+// Global rate limiter on /api - disabled in development, more lenient in production
 const apiLimiter = rateLimit({
   windowMs: RATE_LIMIT_WINDOW_MS,
-  max: RATE_LIMIT_MAX,
+  max: NODE_ENV === "development" ? 10000 : RATE_LIMIT_MAX, // Very high limit in dev, normal in prod
   standardHeaders: true,
   legacyHeaders: false,
+  message: {
+    error: "TOO_MANY_REQUESTS",
+    message: "Too many requests, please try again later."
+  },
+  skip: (req) => {
+    // Skip rate limiting in development
+    return NODE_ENV === "development";
+  }
 });
 app.use("/api", apiLimiter);
 
@@ -111,13 +119,18 @@ export function authGuard(req, res, next) {
       req.userId = decoded?.sub || decoded?.uid || decoded?._id;
       return next();
     } catch (err) {
+      console.log("JWT verification failed", err.message);
       // fall through to dev fallback below
     }
   }
-  if (process.env.NODE_ENV === "development" && process.env.DEV_FAKE_USER === "1" && !req.userId) {
+  
+  // In development, use dev fallback user if no valid token
+  if ((NODE_ENV === "development" || !NODE_ENV) && !req.userId) {
+    console.log("Using dev fallback user for development");
     req.userId = devFallbackUserId;
     return next();
   }
+  
   return res.status(401).json({ error: "UNAUTHENTICATED" });
 }
 

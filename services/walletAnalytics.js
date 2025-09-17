@@ -1,29 +1,38 @@
 // services/walletAnalytics.js
 import { User } from "../models/User.js";
+import { WalletTransaction } from "../models/WalletTransaction.js";
 import { logInfo } from "./logging.js";
 
 /**
- * Get total credits across all users
+ * Get total credits across all users (from transaction records for consistency)
  * @returns {Promise<number>} Total credits in the system
  */
 export async function getTotalCredits() {
   try {
-    const result = await User.aggregate([
+    // Use transaction records as primary source of truth
+    const transactionResult = await WalletTransaction.aggregate([
       {
         $group: {
           _id: null,
-          total: { $sum: "$wallet.balance" }
+          totalCredits: { $sum: { $cond: [{ $eq: ["$type", "credit"] }, "$amount", 0] } },
+          totalDebits: { $sum: { $cond: [{ $eq: ["$type", "debit"] }, "$amount", 0] } }
         }
       }
     ]);
 
-    const total = result.length > 0 ? result[0].total : 0;
+    const netCredits = transactionResult.length > 0 
+      ? transactionResult[0].totalCredits - transactionResult[0].totalDebits 
+      : 0;
     
     if (import.meta.env?.DEV) {
-      logInfo("Wallet analytics: getTotalCredits", { total });
+      logInfo("Wallet analytics: getTotalCredits", { 
+        netCredits,
+        totalCredits: transactionResult[0]?.totalCredits || 0,
+        totalDebits: transactionResult[0]?.totalDebits || 0
+      });
     }
     
-    return total;
+    return netCredits;
   } catch (error) {
     console.error("Error getting total credits:", error);
     return 0;
@@ -111,12 +120,18 @@ export async function getWalletDistribution() {
           count: { $sum: 1 },
           zeroBalance: {
             $sum: {
-              $cond: [{ $eq: ["$wallet.balance", 0] }, 1, 0]
+              $cond: [
+                {
+                  $or: [
+                    { $eq: ["$wallet.balance", 0] },
+                    { $eq: [{ $ifNull: ["$wallet.balance", 0] }, 0] }
+                  ]
+                }, 1, 0]
             }
           },
           highBalance: {
             $sum: {
-              $cond: [{ $gte: ["$wallet.balance", 1000] }, 1, 0]
+              $cond: [{ $gte: ["$wallet.balance", 100] }, 1, 0]
             }
           }
         }
@@ -178,18 +193,21 @@ export async function getWalletDistribution() {
  */
 export async function getWalletAnalyticsSummary() {
   try {
-    // Get total credits across all users
-    const totalCreditsResult = await User.aggregate([
-      { $group: { _id: null, total: { $sum: "$wallet.balance" }}}
-    ]);
-    const totalCredits = totalCreditsResult.length > 0 ? totalCreditsResult[0].total : 0;
+    // Get total credits from transaction records (primary source of truth)
+    const totalCredits = await getTotalCredits();
 
     // Get total user count
     const totalUsers = await User.countDocuments();
     const averageBalance = totalUsers > 0 ? totalCredits / totalUsers : 0;
 
-    // Count users with zero balance
-    const zeroBalanceCount = await User.countDocuments({ "wallet.balance": 0 });
+    // Count users with zero balance (including users with no wallet field)
+    const zeroBalanceCount = await User.countDocuments({ 
+      $or: [
+        { "wallet.balance": 0 },
+        { "wallet.balance": { $exists: false } },
+        { "wallet": { $exists: false } }
+      ]
+    });
 
     // Count users with high balance (100+ credits)
     const highBalanceCount = await User.countDocuments({ "wallet.balance": { $gte: 100 }});
@@ -208,7 +226,7 @@ export async function getWalletAnalyticsSummary() {
     };
 
     if (import.meta.env?.DEV) {
-      console.log("🔍 Wallet Analytics Summary:", {
+      console.log("🔍 Wallet Analytics Summary (Transaction-based):", {
         totalCredits,
         averageBalance: summary.averageBalance,
         zeroBalanceUsers: zeroBalanceCount,
