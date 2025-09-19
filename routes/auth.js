@@ -46,6 +46,23 @@ router.get("/google", (req, res, next) => {
   const opts = {
     scope: ["profile", "email"],
   };
+  // Capture optional redirect target and persist briefly in a secure cookie
+  const redirectParam = req.query?.redirect;
+  if (typeof redirectParam === "string" && redirectParam.length > 0) {
+    const looksLikeUrl = /^https?:\/\//i.test(redirectParam);
+    if (looksLikeUrl) {
+      const cookieOpts = {
+        httpOnly: true,
+        sameSite: isProduction ? "lax" : "lax",
+        secure: isProduction || FORCE_SECURE_COOKIE,
+        maxAge: 10 * 60 * 1000, // 10 minutes
+        path: "/",
+      };
+      try {
+        res.cookie("redirect_to", redirectParam, cookieOpts);
+      } catch (_) {}
+    }
+  }
   if (forceConsent) {
     // Force Google’s consent screen every time
     opts.prompt = "consent";
@@ -69,6 +86,20 @@ router.get(
       // Check if this is an admin user
       const isAdmin = adminEmail && userEmail === adminEmail;
       
+      // Determine dynamic redirect target from cookie if present
+      const redirectCookie = req.cookies?.redirect_to;
+      const redirectTo = (typeof redirectCookie === "string" && /^https?:\/\//i.test(redirectCookie))
+        ? redirectCookie
+        : FE_ORIGIN;
+      // Clear redirect cookie
+      try {
+        res.clearCookie("redirect_to", {
+          path: "/",
+          sameSite: isProduction ? "lax" : "lax",
+          secure: isProduction || FORCE_SECURE_COOKIE,
+        });
+      } catch (_) {}
+
       if (isAdmin) {
         // Issue admin JWT cookie for admin dashboard
         const adminToken = signJwt({ 
@@ -108,7 +139,7 @@ router.get(
         res.cookie("admin_refresh_token", refreshTokenDoc.token, refreshCookieOpts);
         
         console.log("Admin login successful:", user.email);
-        return res.redirect(FE_ORIGIN);
+        return res.redirect(redirectTo);
       } else {
         // Regular user - issue regular JWT cookie
         const token = signJwt({ sub: user._id.toString() });
@@ -120,7 +151,7 @@ router.get(
           path: "/",
         };
         res.cookie("plaible_jwt", token, cookieOpts);
-        return res.redirect(FE_ORIGIN);
+        return res.redirect(redirectTo);
       }
     } catch (e) {
       console.error("JWT issue in callback", e);

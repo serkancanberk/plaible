@@ -234,5 +234,6 @@ Google OAuth + JWT cookie-based auth is available.
 - Story content uses **public-domain classics**.  
 - Code is licensed under **MIT**.  
 - Bu güzel dünya kardeşim böyle!
+- Frontend wireframe branch started
 
 - Frontend wireframe branch started
