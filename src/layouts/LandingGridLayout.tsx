@@ -16,6 +16,7 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
   className,
 }) => {
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'playing' | 'saying'>('playing');
 
   const openStartModal = () => setIsStartModalOpen(true);
@@ -31,13 +32,64 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
 
   return (
     <>
-      <div className={`grid grid-cols-1 md:grid-cols-3 h-screen w-screen overflow-hidden ${className ?? ''}`}>
+      {/* Mobile top nav */}
+      <header className="md:hidden sticky top-0 z-30 border-b bg-white/80 backdrop-blur">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="text-base font-bold">🌚 Plaible</div>
+          <button
+            type="button"
+            aria-label="Toggle menu"
+            aria-expanded={isMobileMenuOpen}
+            onClick={() => setIsMobileMenuOpen((v) => !v)}
+            className="inline-flex items-center justify-center rounded-md p-2 text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300"
+          >
+            <svg
+              className={`h-6 w-6 transition-transform ${isMobileMenuOpen ? 'rotate-90' : ''}`}
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+            >
+              {isMobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              )}
+            </svg>
+          </button>
+        </div>
+        <div className={`md:hidden overflow-hidden transition-[max-height] duration-300 ${isMobileMenuOpen ? 'max-h-96' : 'max-h-0'}`}>
+          <nav className="bg-white">
+            <ul className="space-y-2 px-4 pb-4">
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setIsStartModalOpen(true);
+                  }}
+                  className="block w-full text-left text-sm font-semibold text-gray-700 hover:text-black transition"
+                >
+                  START TO PLAY NOW →
+                </button>
+              </li>
+              <li><a href="#" className="text-sm font-medium text-gray-700 hover:text-black transition">Get the app (Soon) →</a></li>
+              <li><a href="#" className="text-sm font-medium text-gray-700 hover:text-black transition">Pay as you go →</a></li>
+              <li><a href="#" className="text-sm font-medium text-gray-700 hover:text-black transition">Keep in touch →</a></li>
+              <li><a href="#" className="text-sm font-medium text-gray-700 hover:text-black transition">Check legal stuffs →</a></li>
+            </ul>
+          </nav>
+        </div>
+      </header>
+
+      <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-0 min-h-screen w-full overflow-x-hidden overflow-y-auto md:overflow-y-visible ${className ?? ''}`}>
         {/* Left */}
-        <aside className="h-full p-6 md:p-8 bg-red-100">
+        <aside className="md:h-screen p-6 md:p-8 bg-red-100">
           {left ?? (
-            <div className="flex flex-col h-full justify-between">
+            <div className="flex flex-col md:h-full justify-between">
               {/* Top (Logo) */}
-              <div>
+              <div className="hidden md:block">
                 <h1 className="font-bold text-left">🌚 Plaible</h1>
               </div>
 
@@ -53,7 +105,7 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
               </div>
 
               {/* Bottom (Nav links + Footer) */}
-              <div className="space-y-4">
+              <div className="space-y-4 hidden md:block">
                 <nav>
                   <ul className="space-y-2">
                     <li>
@@ -80,7 +132,7 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
         </aside>
 
         {/* Center (primary) */}
-        <section className="h-full p-6 md:p-8 bg-green-100 flex items-center justify-center">
+        <section className="md:h-screen p-6 md:p-8 bg-green-100 flex items-center justify-center">
           {center ?? (
             <div className="w-[min(100%,400px)] p-2 shadow rounded-[24px] bg-white/30">
               <div className="aspect-[9/16] rounded-[20px] bg-gray-300" />
@@ -89,7 +141,7 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
         </section>
 
         {/* Right */}
-        <aside className="h-full p-6 md:p-8 bg-blue-100 flex flex-col">
+        <aside className="md:h-screen p-6 md:p-8 bg-blue-100 flex flex-col">
           {right ?? (
             <>
               {/* Tabs */}
@@ -111,7 +163,7 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
               </div>
 
               {/* Cards Feed */}
-              <div className="flex-1 overflow-y-auto max-h-screen pt-4 space-y-4">
+              <div className="md:flex-1 md:overflow-y-auto md:max-h-screen pt-4 space-y-4">
                 {activeTab === 'playing' ? (
                   <>
                     <div className="rounded-xl bg-gray-900 p-4 space-y-2">
