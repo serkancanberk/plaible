@@ -1,4 +1,8 @@
 /// <reference types="vite/client" />
+declare module '*.jsx' {
+  const component: React.ComponentType<any>;
+  export default component;
+}
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string

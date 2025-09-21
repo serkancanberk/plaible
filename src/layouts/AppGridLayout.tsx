@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import PlaibleLogo from '../components/PlaibleLogo';
 
 type AppGridLayoutProps = {
   children?: React.ReactNode;
@@ -51,7 +52,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <div className="font-semibold">Plaible</div>
+        <div className="font-semibold"><PlaibleLogo size="sm" /></div>
       </header>
 
       <div className="relative mx-auto grid min-h-screen w-full max-w-7xl grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)]">
@@ -71,12 +72,12 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
           ].join(' ')}
         >
           <div className="mb-4 hidden items-center justify-between lg:flex">
-            <div className="text-lg font-semibold">Plaible</div>
+            <div className="text-lg font-semibold"><PlaibleLogo size="sm" /></div>
           </div>
 
           {/* Close button (mobile only) */}
           <div className="mb-4 flex items-center justify-between lg:hidden">
-            <div className="text-lg font-semibold">Plaible</div>
+            <div className="text-lg font-semibold"><PlaibleLogo size="sm" /></div>
             <button
               aria-label="Close navigation"
               onClick={closeSidebar}

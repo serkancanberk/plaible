@@ -11,9 +11,11 @@ export default {
         primary: '#192233',
         secondary: '#141416',
         accent: '#FFCC00',
-        'text-primary': '#595E6F',
+        'text-primary': '#192233',
         'text-secondary': '#6E7794',
         'text-tertiary': '#F4F0EC',
+        success: '#D3FF34',
+        alert: '#D23001',
       },
       fontFamily: {
         sans: ['Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'],

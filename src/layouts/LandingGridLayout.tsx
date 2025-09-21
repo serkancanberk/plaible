@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PlaibleLogo from '../components/PlaibleLogo';
 
 type LandingGridLayoutProps = {
   left?: React.ReactNode;
@@ -90,7 +91,9 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
             <div className="flex flex-col md:h-full justify-between">
               {/* Top (Logo) */}
               <div className="hidden md:block">
-                <h1 className="text-subheading font-sans text-secondary text-left">🌚 Plaible</h1>
+                <h1 className="text-subheading font-sans text-secondary text-left">
+                  <PlaibleLogo size="lg" />
+                </h1>
               </div>
 
               {/* Center (Heading + Paragraph) */}
