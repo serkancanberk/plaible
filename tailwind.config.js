@@ -16,6 +16,7 @@ export default {
         'text-tertiary': '#F4F0EC',
         success: '#D3FF34',
         alert: '#D23001',
+        'ui-muted': '#9A9FBF',
       },
       fontFamily: {
         sans: ['Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'],

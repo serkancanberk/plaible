@@ -3,6 +3,8 @@ import { LandingGridLayout } from '../layouts/LandingGridLayout';
 import { AppGridLayout } from '../layouts/AppGridLayout';
 import { PlayPage } from './PlayPage';
 const StyleGuide = React.lazy(() => import('../pages/StyleGuide.jsx'));
+import { StyleGuideLayout } from '../layouts/StyleGuideLayout';
+import { UI_BG_TOKENS } from '../pages/tokens';
 
 export const AppPublic: React.FC = () => {
   const isPlay = typeof window !== 'undefined' && window.location.pathname.startsWith('/play');
@@ -18,15 +20,11 @@ export const AppPublic: React.FC = () => {
 
   if (isStyleGuide) {
     return (
-      <LandingGridLayout
-        center={
-          <React.Suspense fallback={<div className="p-8 text-text-primary">Loading Style Guide…</div>}>
-            <div className="w-full">
-              <StyleGuide />
-            </div>
-          </React.Suspense>
-        }
-      />
+      <React.Suspense fallback={<div className="p-8 text-text-primary">Loading Style Guide…</div>}>
+        <StyleGuideLayout bgClass={UI_BG_TOKENS.muted}>
+          <StyleGuide />
+        </StyleGuideLayout>
+      </React.Suspense>
     );
   }
 
