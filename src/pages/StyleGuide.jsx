@@ -4,6 +4,10 @@ import C2AButton from '../components/C2AButton';
 import ColorCard from '../components/ColorCard';
 import WhatPeoplePlayingCardPreview from '../styleguide/WhatPeoplePlayingCardPreview';
 import WhatPeopleSayingCardPreview from '../styleguide/WhatPeopleSayingCardPreview';
+import MenuItemPreview from '../styleguide/MenuItemPreview';
+import ModalVariantsPreview from '../styleguide/ModalVariantsPreview';
+import C2AButtonsPreview from '../styleguide/C2AButtonsPreview';
+import C2AButtonGroupPreview from '../styleguide/C2AButtonGroupPreview';
 import { UI_BG_TOKENS } from './tokens';
 
 // Strict token lists (only configured/used tokens)
@@ -133,10 +137,77 @@ export default function StyleGuide() {
 
       <section id="cta-buttons" className="my-12">
         <h2 className="text-heading text-text-secondary mb-4">CTA Buttons</h2>
-        <div className="flex flex-wrap items-center gap-4">
-          <C2AButton variant="subheading">CTA</C2AButton>
-          <C2AButton variant="body">CTA</C2AButton>
+        <C2AButtonsPreview />
+      </section>
+
+      {/* Visual token-only previews for accent background context. */}
+      <section id="cta-on-accent" className="my-12">
+        <h2 className="text-heading text-text-secondary mb-4">Contextual: onAccent (accent BG)</h2>
+        {/* Note: These are visual, token-only previews. Actual variant support may be added later. */}
+        <div className="bg-accent p-spacing-md rounded-xl space-y-spacing-md">
+          {/* Primary on Accent */}
+          <div className="space-y-spacing-xs">
+            <p className="text-label">Primary on Accent</p>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-spacing-sm rounded-card py-spacing-md px-spacing-lg font-semibold text-subheading bg-primary text-text-tertiary transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-accent"
+            >
+              Primary on Accent
+            </button>
+          </div>
+
+          {/* Secondary on Accent */}
+          <div className="space-y-spacing-xs">
+            <p className="text-label">Secondary on Accent</p>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-spacing-sm rounded-card py-spacing-md px-spacing-lg font-semibold text-body bg-text-tertiary text-text-primary transition-colors duration-200 hover:bg-text-tertiary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-tertiary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-accent"
+            >
+              Secondary on Accent
+            </button>
+          </div>
+
+          {/* Ghost on Accent */}
+          <div className="space-y-spacing-xs">
+            <p className="text-label">Ghost on Accent</p>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-spacing-sm rounded-card py-spacing-md px-spacing-lg font-semibold text-body bg-transparent text-text-primary border border-text-primary transition-colors duration-200 hover:bg-text-tertiary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-accent"
+            >
+              Ghost on Accent
+            </button>
+          </div>
+
+          {/* Disabled example */}
+          <div className="space-y-spacing-xs">
+            <p className="text-label">Disabled (Secondary on Accent)</p>
+            <button
+              type="button"
+              disabled
+              className="inline-flex items-center justify-center gap-spacing-sm rounded-card py-spacing-md px-spacing-lg font-semibold text-body bg-text-tertiary text-text-primary transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              Disabled on Accent
+            </button>
+          </div>
         </div>
+      </section>
+
+      {/* Prop-based previews using C2AButton context="onAccent" */}
+      <section id="cta-on-accent-prop" className="my-12">
+        <h2 className="text-heading text-text-secondary mb-4">Contextual: onAccent (via C2AButton prop)</h2>
+        <div className="bg-accent p-spacing-md rounded-xl space-y-spacing-md">
+          <div className="flex flex-wrap items-center gap-spacing-md">
+            <C2AButton context="onAccent" variant="primary">Primary on Accent</C2AButton>
+            <C2AButton context="onAccent" variant="secondary" typography="body">Secondary on Accent</C2AButton>
+            <C2AButton context="onAccent" variant="ghost" typography="body">Ghost on Accent</C2AButton>
+            <C2AButton context="onAccent" variant="secondary" disabled typography="body">Disabled on Accent</C2AButton>
+          </div>
+        </div>
+      </section>
+
+      <section id="cta-button-groups" className="my-12">
+        <h2 className="text-heading text-text-secondary mb-4">CTA Button Groups</h2>
+        <C2AButtonGroupPreview />
       </section>
 
       <section id="what-people-playing-card" className="my-12">
@@ -147,6 +218,16 @@ export default function StyleGuide() {
       <section id="what-people-saying-card" className="my-12">
         <h2 className="text-heading text-text-secondary mb-4">What People Are Saying Card</h2>
         <WhatPeopleSayingCardPreview />
+      </section>
+
+      <section id="navigation-menu-item" className="my-12">
+        <h2 className="text-heading text-text-secondary mb-4">Navigation Menu Item</h2>
+        <MenuItemPreview />
+      </section>
+
+      <section id="modals" className="my-12">
+        <h2 className="text-heading text-text-secondary mb-4">Modals</h2>
+        <ModalVariantsPreview />
       </section>
 
     </div>

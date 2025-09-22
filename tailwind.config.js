@@ -27,13 +27,19 @@ export default {
         hero: ['40px', { lineHeight: '120%' }],
         heading: ['32px', { lineHeight: '120%' }],
         subheading: ['24px', { lineHeight: '130%' }],
-        label: ['14px', { lineHeight: '130%' }],
         body: ['16px', { lineHeight: '150%' }],
+        label: ['14px', { lineHeight: '130%' }],
         caption: ['13px', { lineHeight: '130%' }],
       },
       spacing: {
         section: '2rem',
         card: '1.5rem',
+        'spacing-xs': '0.5rem',   // 8px
+        'spacing-sm': '0.75rem',  // 12px
+        'spacing-md': '1rem',     // 16px
+        'spacing-lg': '1.5rem',   // 24px
+        'spacing-xl': '2rem',     // 32px
+        'spacing-2xl': '3rem',    // 48px
       },
       borderRadius: {
         card: '0.75rem',
