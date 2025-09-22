@@ -3,6 +3,7 @@ import PlaibleLogo from '../components/PlaibleLogo';
 import C2AButton from '../components/C2AButton';
 import ColorCard from '../components/ColorCard';
 import WhatPeoplePlayingCardPreview from '../styleguide/WhatPeoplePlayingCardPreview';
+import WhatPeopleSayingCardPreview from '../styleguide/WhatPeopleSayingCardPreview';
 import { UI_BG_TOKENS } from './tokens';
 
 // Strict token lists (only configured/used tokens)
@@ -53,7 +54,7 @@ const bgColors = [
 export default function StyleGuide() {
   return (
     <div className={`min-h-screen w-full max-w-5xl mx-auto p-8 space-y-10 ${UI_BG_TOKENS.muted}`}>
-              <h2 className="text-heading text-text-secondary mb-4">Text Styles</h2>
+              <h2 className="text-hero text-accent mb-4">Text Styles</h2>
       <section id="text-styles" className="space-y-3">
         <div className="text-subheading text-text-secondary">Geist Sans Text Styles</div>
         <div className="space-y-2">
@@ -96,6 +97,8 @@ export default function StyleGuide() {
         </div>
       </section>
 
+      <h2 className="text-hero text-accent mb-4">Color Styles</h2>
+
       <section id="other-styles" className="space-y-3 mt-10">
         <h2 className="text-heading text-text-secondary mb-4">Background Colors</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -105,6 +108,7 @@ export default function StyleGuide() {
         </div>
       </section>
 
+      <h2 className="text-hero text-accent mb-4">Logo Variants</h2>
       <section id="components" className="my-12">
         <h2 className="text-heading text-text-secondary mb-4">Plaible Logo Variants</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -115,19 +119,7 @@ export default function StyleGuide() {
         </div>
       </section>
 
-      <section id="what-people-playing-card" className="my-12">
-        <h2 className="text-heading text-text-secondary mb-4">What People Playing Card</h2>
-        <WhatPeoplePlayingCardPreview />
-      </section>
-
-      <section id="cta-buttons" className="my-12">
-        <h2 className="text-heading text-text-secondary mb-4">CTA Buttons</h2>
-        <div className="flex flex-wrap items-center gap-4">
-          <C2AButton variant="subheading">CTA</C2AButton>
-          <C2AButton variant="body">CTA</C2AButton>
-        </div>
-      </section>
-
+      
       <section className="my-12">
         <h2 className="text-heading text-text-secondary mb-4">Plaible Logo Sizes (sm / md / lg)</h2>
         <div className="flex flex-col gap-4">
@@ -137,6 +129,25 @@ export default function StyleGuide() {
         </div>
       </section>
 
+      <h2 className="text-hero text-accent mb-4">Components</h2>
+
+      <section id="cta-buttons" className="my-12">
+        <h2 className="text-heading text-text-secondary mb-4">CTA Buttons</h2>
+        <div className="flex flex-wrap items-center gap-4">
+          <C2AButton variant="subheading">CTA</C2AButton>
+          <C2AButton variant="body">CTA</C2AButton>
+        </div>
+      </section>
+
+      <section id="what-people-playing-card" className="my-12">
+        <h2 className="text-heading text-text-secondary mb-4">What People Are Playing Card</h2>
+        <WhatPeoplePlayingCardPreview />
+      </section>
+
+      <section id="what-people-saying-card" className="my-12">
+        <h2 className="text-heading text-text-secondary mb-4">What People Are Saying Card</h2>
+        <WhatPeopleSayingCardPreview />
+      </section>
 
     </div>
   );
