@@ -14,7 +14,7 @@ export type PlaibleLogoProps = {
 export default function PlaibleLogo({ variant = 'original', size = 'md' }: PlaibleLogoProps) {
   const sizeClass = size === 'sm' ? 'text-[30px]' : size === 'lg' ? 'text-[54px]' : 'text-[42px]';
   const sharedClass = 'font-semibold tracking-[-0.05em]';
-  const gapClass = size === 'sm' ? 'gap-1' : size === 'lg' ? 'gap-[10px]' : 'gap-[6px]';
+  const gapClass = size === 'sm' ? 'gap-[10px]' : size === 'lg' ? 'gap-[18px]' : 'gap-[14px]';
 
   const isAi = variant === 'ai-original' || variant === 'ai-light';
   const emoji = isAi ? '🌕' : '🌚';

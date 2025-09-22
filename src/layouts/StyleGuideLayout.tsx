@@ -18,7 +18,7 @@ export const StyleGuideLayout: React.FC<StyleGuideLayoutProps> = ({ sidebar, chi
               <ul className="space-y-2 text-body">
                 <li><a href="#text-styles" className="hover:text-accent">Text Styles</a></li>
                 <li><a href="#color-styles" className="hover:text-accent">Color Styles</a></li>
-                <li><a href="#other-styles" className="hover:text-accent">Other Styles</a></li>
+                <li><a href="#other-styles" className="hover:text-accent">Logo Variants</a></li>
                 <li><a href="#components" className="hover:text-accent">Components</a></li>
               </ul>
             </nav>
