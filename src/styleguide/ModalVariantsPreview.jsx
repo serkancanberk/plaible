@@ -3,14 +3,14 @@ import BaseModal from '../components/ui/BaseModal';
 import GetTheAppModal from '../components/ui/GetTheAppModal';
 import C2AButton from '../components/C2AButton';
 
-export default function ModalVariantsPreview() {
+export default function ModalVariantsPreview({ extraTriggers }) {
   const [openAccent, setOpenAccent] = React.useState(false);
   const [openPlain, setOpenPlain] = React.useState(false);
   const [openGetApp, setOpenGetApp] = React.useState(false);
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-spacing-md">
+      <div className="flex flex-wrap items-center gap-spacing-md">
         <button
           type="button"
           onClick={() => setOpenAccent(true)}
@@ -34,6 +34,8 @@ export default function ModalVariantsPreview() {
         >
           Open: Get The App Modal
         </button>
+
+        {extraTriggers}
       </div>
 
       <BaseModal

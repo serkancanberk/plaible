@@ -9,6 +9,9 @@ import ModalVariantsPreview from '../styleguide/ModalVariantsPreview';
 import C2AButtonsPreview from '../styleguide/C2AButtonsPreview';
 import C2AButtonGroupPreview from '../styleguide/C2AButtonGroupPreview';
 import { UI_BG_TOKENS } from './tokens';
+import CheckLegalStuffModal from '../components/ui/CheckLegalStuffModal';
+import KeepInTouchModal from '../components/ui/KeepInTouchModal';
+import PayAsYouGoModal from '../components/ui/PayAsYouGoModal';
 
 // Strict token lists (only configured/used tokens)
 const textTokenStyles = {
@@ -227,10 +230,46 @@ export default function StyleGuide() {
 
       <section id="modals" className="my-12">
         <h2 className="text-heading text-text-secondary mb-4">Modals</h2>
-        <ModalVariantsPreview />
+        <ModalVariantsPreview extraTriggers={<ExtraModalTriggers />} />
       </section>
 
     </div>
+  );
+}
+
+function ExtraModalTriggers() {
+  const [showLegalModal, setShowLegalModal] = React.useState(false);
+  const [showKeepInTouch, setShowKeepInTouch] = React.useState(false);
+  const [showPayAsYouGo, setShowPayAsYouGo] = React.useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setShowLegalModal(true)}
+        className="inline-flex items-center justify-center rounded-[10px] py-[12px] px-[24px] gap-[12px] bg-accent text-text-primary font-semibold text-body transition-colors hover:bg-accent/80"
+      >
+        Open: Check Legal Stuff
+      </button>
+      <button
+        type="button"
+        onClick={() => setShowKeepInTouch(true)}
+        className="inline-flex items-center justify-center rounded-[10px] py-[12px] px-[24px] gap-[12px] bg-accent text-text-primary font-semibold text-body transition-colors hover:bg-accent/80"
+      >
+        Open: Keep In Touch
+      </button>
+      <button
+        type="button"
+        onClick={() => setShowPayAsYouGo(true)}
+        className="inline-flex items-center justify-center rounded-[10px] py-[12px] px-[24px] gap-[12px] bg-accent text-text-primary font-semibold text-body transition-colors hover:bg-accent/80"
+      >
+        Open: Pay As You Go
+      </button>
+
+      <CheckLegalStuffModal open={showLegalModal} onClose={() => setShowLegalModal(false)} />
+      <KeepInTouchModal open={showKeepInTouch} onClose={() => setShowKeepInTouch(false)} />
+      <PayAsYouGoModal open={showPayAsYouGo} onClose={() => setShowPayAsYouGo(false)} />
+    </>
   );
 }
 
