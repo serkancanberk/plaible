@@ -87,12 +87,30 @@ export default function C2AButtonsPreview() {
         <p className="text-label mb-spacing-sm">Icons</p>
         <div className="flex flex-wrap items-center gap-spacing-md">
           <div>
-            <p className="text-caption mb-spacing-xs">Icon Left Only</p>
-            <C2AButton iconLeft={<IconSparkle />}>Start</C2AButton>
+            <p className="text-caption mb-spacing-xs">Google (brand, left)</p>
+            <C2AButton icon="google">Continue with Google</C2AButton>
           </div>
           <div>
-            <p className="text-caption mb-spacing-xs">Icon Left + Right</p>
-            <C2AButton iconLeft={<IconSparkle />} iconRight={<IconArrowRight />}>Continue</C2AButton>
+            <p className="text-caption mb-spacing-xs">Apple (black, left)</p>
+            <C2AButton icon="apple" iconColor="black">Continue with Apple</C2AButton>
+          </div>
+          <div>
+            <p className="text-caption mb-spacing-xs">TikTok (white, on accent)</p>
+            <div className="bg-accent p-spacing-md rounded-card">
+              <C2AButton context="onAccent" variant="secondary" icon="tiktok" iconColor="white">Continue with TikTok</C2AButton>
+            </div>
+          </div>
+          <div>
+            <p className="text-caption mb-spacing-xs">Instagram (brand, right)</p>
+            <C2AButton icon="instagram" iconPosition="right">Follow on Instagram</C2AButton>
+          </div>
+          <div>
+            <p className="text-caption mb-spacing-xs">App Store (brand, full width)</p>
+            <C2AButton icon="appstore" fullWidth>Download On The App Store</C2AButton>
+          </div>
+          <div>
+            <p className="text-caption mb-spacing-xs">Google Play (brand, full width)</p>
+            <C2AButton icon="playstore" fullWidth>Get It On Google Play</C2AButton>
           </div>
         </div>
       </div>

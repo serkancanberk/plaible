@@ -1,31 +1,52 @@
 import React from 'react';
-import ModalWrapper from '../components/ModalWrapper';
+import BaseModal from '../components/ui/BaseModal';
+import GetTheAppModal from '../components/ui/GetTheAppModal';
 import C2AButton from '../components/C2AButton';
 
 export default function ModalVariantsPreview() {
-  const [open, setOpen] = React.useState(false);
+  const [openAccent, setOpenAccent] = React.useState(false);
+  const [openPlain, setOpenPlain] = React.useState(false);
+  const [openGetApp, setOpenGetApp] = React.useState(false);
 
   return (
     <div className="flex flex-col gap-4">
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center justify-center rounded-[10px] py-[12px] px-[24px] gap-[12px] bg-accent text-text-primary font-semibold text-body transition-colors hover:bg-accent/80"
-      >
-        Open: Start To Play Now
-      </button>
+      <div className="flex gap-spacing-md">
+        <button
+          type="button"
+          onClick={() => setOpenAccent(true)}
+          className="inline-flex items-center justify-center rounded-[10px] py-[12px] px-[24px] gap-[12px] bg-accent text-text-primary font-semibold text-body transition-colors hover:bg-accent/80"
+        >
+          Open: Accent (Start To Play Now)
+        </button>
 
-      <ModalWrapper
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Start To Play Now"
+        <button
+          type="button"
+          onClick={() => setOpenPlain(true)}
+          className="inline-flex items-center justify-center rounded-[10px] py-[12px] px-[24px] gap-[12px] bg-accent text-text-primary font-semibold text-body transition-colors hover:bg-accent/80"
+        >
+          Open: Plain Modal
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setOpenGetApp(true)}
+          className="inline-flex items-center justify-center rounded-[10px] py-[12px] px-[24px] gap-[12px] bg-accent text-text-primary font-semibold text-body transition-colors hover:bg-accent/80"
+        >
+          Open: Get The App Modal
+        </button>
+      </div>
+
+      <BaseModal
+        open={openAccent}
+        onClose={() => setOpenAccent(false)}
+        title="START TO PLAY NOW"
         subtitle="Get in the story"
+        variant="accent"
       >
         <div className="text-body mb-spacing-md">Your first chapter is free—your adventure begins now.</div>
 
         <div className="flex flex-col gap-spacing-lg mt-spacing-xs mb-spacing-md">
-          <button className="w-full bg-white text-primary font-semibold rounded-[8px] py-[12px] text-body inline-flex items-center justify-center">Continue with Google</button>
-          <C2AButton variant="secondary" context="onAccent" fullWidth>
+          <C2AButton icon="google" variant="secondary" context="onAccent" fullWidth>
             Continue with Google
           </C2AButton>
           {/* Hidden temporarily */}
@@ -41,7 +62,19 @@ export default function ModalVariantsPreview() {
             Find all details in the <a href="#" className="underline text-primary">Legal</a> page.
           </p>
         </div>
-      </ModalWrapper>
+      </BaseModal>
+
+      <BaseModal
+        open={openPlain}
+        onClose={() => setOpenPlain(false)}
+        title="Plain Variant Modal"
+        subtitle="Neutral container"
+        variant="plain"
+      >
+        <div className="text-body">This is a plain modal suitable for general content.</div>
+      </BaseModal>
+
+      <GetTheAppModal open={openGetApp} onClose={() => setOpenGetApp(false)} />
     </div>
   );
 }
