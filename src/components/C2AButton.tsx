@@ -6,7 +6,7 @@ import React from 'react';
  *
  * Props:
  * - variant: 'primary' | 'secondary' | 'ghost' (visual). Default: 'primary'
- * - typography: 'subheading' | 'body' | 'caption'. Default: 'subheading'
+ * - typography: 'body' | 'caption' | 'label'. Default: 'body'
  * - fullWidth: when true, applies w-full and flex. Default: false
  * - className: external class names appended (internal tokens remain authoritative)
  * - iconLeft: optional React node rendered before children
@@ -23,7 +23,7 @@ import React from 'react';
  */
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';
-type TypographyScale = 'subheading' | 'body' | 'caption';
+type TypographyScale = 'body' | 'caption' | 'label';
 type ButtonContext = 'onAccent' | undefined;
 
 export interface C2AButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -42,7 +42,7 @@ export interface C2AButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEle
 export default function C2AButton({
   children,
   variant = 'primary',
-  typography = 'subheading',
+  typography = 'body',
   fullWidth = false,
   className,
   type = 'button',
@@ -54,9 +54,9 @@ export default function C2AButton({
   ...rest
 }: C2AButtonProps) {
   const TYPOGRAPHY_STYLES: Record<TypographyScale, string> = {
-    subheading: 'text-subheading',
     body: 'text-body',
     caption: 'text-caption',
+    label: 'text-label',
   };
 
   const VARIANT_STYLES: Record<ButtonVariant, string> = {

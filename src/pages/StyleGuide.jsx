@@ -150,7 +150,7 @@ export default function StyleGuide() {
             <p className="text-label">Primary on Accent</p>
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-spacing-sm rounded-card py-spacing-md px-spacing-lg font-semibold text-subheading bg-primary text-text-tertiary transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-accent"
+              className="inline-flex items-center justify-center gap-spacing-sm rounded-card py-spacing-md px-spacing-lg font-semibold text-body bg-primary text-text-tertiary transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-accent"
             >
               Primary on Accent
             </button>
@@ -161,7 +161,7 @@ export default function StyleGuide() {
             <p className="text-label">Secondary on Accent</p>
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-spacing-sm rounded-card py-spacing-md px-spacing-lg font-semibold text-body bg-text-tertiary text-text-primary transition-colors duration-200 hover:bg-text-tertiary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-tertiary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-accent"
+              className="inline-flex items-center justify-center gap-spacing-sm rounded-card py-spacing-md px-spacing-lg font-semibold text-caption bg-text-tertiary text-text-primary transition-colors duration-200 hover:bg-text-tertiary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-tertiary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-accent"
             >
               Secondary on Accent
             </button>
@@ -172,7 +172,7 @@ export default function StyleGuide() {
             <p className="text-label">Ghost on Accent</p>
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-spacing-sm rounded-card py-spacing-md px-spacing-lg font-semibold text-body bg-transparent text-text-primary border border-text-primary transition-colors duration-200 hover:bg-text-tertiary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-accent"
+              className="inline-flex items-center justify-center gap-spacing-sm rounded-card py-spacing-md px-spacing-lg font-semibold text-caption bg-transparent text-text-primary border border-text-primary transition-colors duration-200 hover:bg-text-tertiary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-accent"
             >
               Ghost on Accent
             </button>
@@ -184,7 +184,7 @@ export default function StyleGuide() {
             <button
               type="button"
               disabled
-              className="inline-flex items-center justify-center gap-spacing-sm rounded-card py-spacing-md px-spacing-lg font-semibold text-body bg-text-tertiary text-text-primary transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-spacing-sm rounded-card py-spacing-md px-spacing-lg font-semibold text-caption bg-text-tertiary text-text-primary transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               Disabled on Accent
             </button>
@@ -198,9 +198,9 @@ export default function StyleGuide() {
         <div className="bg-accent p-spacing-md rounded-xl space-y-spacing-md">
           <div className="flex flex-wrap items-center gap-spacing-md">
             <C2AButton context="onAccent" variant="primary">Primary on Accent</C2AButton>
-            <C2AButton context="onAccent" variant="secondary" typography="body">Secondary on Accent</C2AButton>
-            <C2AButton context="onAccent" variant="ghost" typography="body">Ghost on Accent</C2AButton>
-            <C2AButton context="onAccent" variant="secondary" disabled typography="body">Disabled on Accent</C2AButton>
+            <C2AButton context="onAccent" variant="secondary" typography="caption">Secondary on Accent</C2AButton>
+            <C2AButton context="onAccent" variant="ghost" typography="caption">Ghost on Accent</C2AButton>
+            <C2AButton context="onAccent" variant="secondary" disabled typography="caption">Disabled on Accent</C2AButton>
           </div>
         </div>
       </section>

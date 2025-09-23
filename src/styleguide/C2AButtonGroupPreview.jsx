@@ -13,8 +13,8 @@ export default function C2AButtonGroupPreview() {
       <div className="bg-white/5 p-spacing-md rounded-card">
         <p className="text-label mb-spacing-sm">Two Buttons (Cancel / Continue)</p>
         <div className="flex flex-wrap items-center gap-spacing-md">
-          <C2AButton variant="secondary" typography="body">Cancel</C2AButton>
-          <C2AButton variant="primary" typography="body">Continue</C2AButton>
+          <C2AButton variant="secondary" typography="caption">Cancel</C2AButton>
+          <C2AButton variant="primary" typography="caption">Continue</C2AButton>
         </div>
       </div>
 
@@ -22,9 +22,9 @@ export default function C2AButtonGroupPreview() {
       <div className="bg-white/5 p-spacing-md rounded-card">
         <p className="text-label mb-spacing-sm">Three Buttons (Back / Skip / Next)</p>
         <div className="flex flex-wrap items-center gap-spacing-md">
-          <C2AButton variant="ghost" typography="body">Back</C2AButton>
-          <C2AButton variant="secondary" typography="body">Skip</C2AButton>
-          <C2AButton variant="primary" typography="body">Next</C2AButton>
+          <C2AButton variant="ghost" typography="caption">Back</C2AButton>
+          <C2AButton variant="secondary" typography="caption">Skip</C2AButton>
+          <C2AButton variant="primary" typography="caption">Next</C2AButton>
         </div>
       </div>
 

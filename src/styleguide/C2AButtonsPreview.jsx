@@ -22,16 +22,16 @@ export default function C2AButtonsPreview() {
         <p className="text-label mb-spacing-sm">Visual Variants</p>
         <div className="flex flex-wrap items-center gap-spacing-md">
           <div>
-            <p className="text-caption mb-spacing-xs">Primary + Subheading</p>
-            <C2AButton variant="primary" typography="subheading">Primary CTA</C2AButton>
+            <p className="text-caption mb-spacing-xs">Primary + Body</p>
+            <C2AButton variant="primary" typography="body">Primary CTA</C2AButton>
           </div>
           <div>
-            <p className="text-caption mb-spacing-xs">Secondary + Body</p>
-            <C2AButton variant="secondary" typography="body">Secondary CTA</C2AButton>
+            <p className="text-caption mb-spacing-xs">Secondary + Caption</p>
+            <C2AButton variant="secondary" typography="caption">Secondary CTA</C2AButton>
           </div>
           <div>
-            <p className="text-caption mb-spacing-xs">Ghost + Caption</p>
-            <C2AButton variant="ghost" typography="caption">Ghost CTA</C2AButton>
+            <p className="text-caption mb-spacing-xs">Ghost + Label</p>
+            <C2AButton variant="ghost" typography="label">Ghost CTA</C2AButton>
           </div>
         </div>
       </div>
@@ -40,9 +40,9 @@ export default function C2AButtonsPreview() {
       <div className="bg-white/5 p-spacing-md rounded-card">
         <p className="text-label mb-spacing-sm">Typography Variants</p>
         <div className="flex flex-wrap items-center gap-spacing-md">
-          <C2AButton typography="subheading">Subheading</C2AButton>
           <C2AButton typography="body">Body</C2AButton>
           <C2AButton typography="caption">Caption</C2AButton>
+          <C2AButton typography="label">Label</C2AButton>
         </div>
       </div>
 
