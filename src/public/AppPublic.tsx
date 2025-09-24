@@ -1,5 +1,6 @@
 import React from 'react';
 import { LandingGridLayout } from '../layouts/LandingGridLayout';
+import LandingFeed from '../components/LandingFeed';
 import { AppGridLayout } from '../layouts/AppGridLayout';
 import { PlayPage } from './PlayPage';
 const StyleGuide = React.lazy(() => import('../pages/StyleGuide.jsx'));
@@ -28,7 +29,7 @@ export const AppPublic: React.FC = () => {
     );
   }
 
-  return <LandingGridLayout />;
+  return <LandingGridLayout right={<LandingFeed />} />;
 };
 
 

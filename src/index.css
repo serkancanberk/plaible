@@ -20,4 +20,38 @@ body {
   @apply text-subheading font-mono;
 }
 
+.text-link-mono-accent {
+  @apply inline-flex items-center text-left w-full;
+  @apply font-mono font-normal text-body text-accent;
+  @apply underline underline-offset-4;
+  @apply transition duration-200 hover:brightness-110;
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent;
+}
+
+/* Landing tabs - tokenized styles */
+.tab-base {
+  @apply text-label pb-2 transition-colors duration-200;
+}
+
+.tab-inactive {
+  @apply text-text-secondary hover:text-text-primary;
+}
+
+.tab-active {
+  @apply text-accent border-b-2 border-accent;
+}
+
+.tab-focus {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent;
+}
+
+/* Cross-browser scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
 

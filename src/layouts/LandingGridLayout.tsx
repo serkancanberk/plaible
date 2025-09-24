@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import PlaibleLogo from '../components/PlaibleLogo';
+import LandingLeftColumn from '../components/LandingLeftColumn';
 
 type LandingGridLayoutProps = {
   left?: React.ReactNode;
@@ -84,61 +85,22 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
         </div>
       </header>
 
-      <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-0 min-h-screen w-full overflow-x-hidden overflow-y-auto md:overflow-y-visible font-sans bg-secondary text-text-primary ${className ?? ''}`}>
+      <div className={`grid grid-cols-1 md:grid-cols-[1fr_0.9fr_1.2fr] gap-4 md:gap-0 min-h-screen w-full overflow-x-hidden overflow-y-auto md:overflow-y-visible font-sans bg-secondary text-text-primary ${className ?? ''}`}>
         {/* Left */}
-        <aside className="md:h-screen p-6 md:p-8 bg-accent">
-          {left ?? (
-            <div className="flex flex-col md:h-full justify-between">
-              {/* Top (Logo) */}
-              <div className="hidden md:block">
-                <h1 className="text-subheading font-sans text-secondary text-left">
-                  <PlaibleLogo size="lg" />
-                </h1>
-              </div>
-
-              {/* Center (Heading + Paragraph) */}
-              <div className="flex-1 flex items-center">
-                <div className="space-y-4">
-                  <h2 className="text-hero font-serif text-secondary">Live your own epic stories.</h2>
-                  <p className="text-body font-sans text-secondary max-w-md">
-                    Every word you type shapes and grows the story into a living world by your imagination and Plaible’s storyrunner AI.
-                    Forge the tale only you can dream up.
-                  </p>
-                </div>
-              </div>
-
-              {/* Bottom (Nav links + Footer) */}
-              <div className="space-y-4 hidden md:block">
-                <nav>
-                  <ul className="space-y-2">
-                    <li>
-                      <button
-                        type="button"
-                        onClick={openStartModal}
-                        className="text-left text-label font-sans text-secondary hover:underline underline-offset-2 transition"
-                      >
-                        START TO PLAY NOW →
-                      </button>
-                    </li>
-                    <li><a href="#" className="text-label font-sans text-secondary hover:underline underline-offset-2 transition">Get the app (Soon) →</a></li>
-                    <li><a href="#" className="text-label font-sans text-secondary hover:underline underline-offset-2 transition">Pay as you go →</a></li>
-                    <li><a href="#" className="text-label font-sans text-secondary hover:underline underline-offset-2 transition">Keep in touch →</a></li>
-                    <li><a href="#" className="text-label font-sans text-secondary hover:underline underline-offset-2 transition">Check legal stuffs →</a></li>
-                  </ul>
-                </nav>
-                <div className="pt-2">
-                  <p className="text-caption text-secondary">© Plaible.com 2025</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </aside>
+        {left ?? <LandingLeftColumn openStartModal={openStartModal} />}
 
         {/* Center (primary) */}
         <section className="md:h-screen p-6 md:p-8 bg-secondary flex items-center justify-center">
           {center ?? (
-            <div className="w-[min(100%,400px)] p-2 shadow rounded-card bg-secondary/60">
-              <div className="aspect-[9/16] rounded-card bg-text-tertiary/30" />
+            <div className="w-full p-2 rounded-card bg-secondary/60">
+              <div className="aspect-[9/16] w-full max-w-[300px] md:max-w-[340px] lg:max-w-[380px] mx-auto my-spacing-md rounded-card overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=540&q=80"
+                  alt="Story preview"
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                />
+              </div>
             </div>
           )}
         </section>

@@ -40,6 +40,7 @@ export default {
         'spacing-lg': '1.5rem',   // 24px
         'spacing-xl': '2rem',     // 32px
         'spacing-2xl': '3rem',    // 48px
+        'spacing-3xl': '5rem',    // 80px
       },
       borderRadius: {
         card: '0.75rem',

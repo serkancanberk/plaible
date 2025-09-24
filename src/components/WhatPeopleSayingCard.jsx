@@ -1,4 +1,5 @@
 import React from 'react';
+import TextLink from './ui/TextLink';
 
 /**
  * WhatPeopleSayingCard
@@ -52,7 +53,7 @@ export default function WhatPeopleSayingCard({
             />
           )}
           <div className="flex-1 min-w-0 flex flex-col justify-center gap-[2px]">
-            <p className="font-mono text-body truncate">
+            <p className="font-mono text-caption truncate">
               <span className="truncate" title={username}>{username}</span>
               <span>{' '}played as{' '}</span>
             </p>
@@ -63,7 +64,7 @@ export default function WhatPeopleSayingCard({
         </div>
 
         {/* Info Row: rating / count / time */}
-        <div className="text-body text-text-tertiary/90 flex items-center flex-wrap gap-[8px]">
+        <div className="text-caption text-text-tertiary/90 flex items-center flex-wrap gap-[8px]">
           <span className="text-accent" aria-hidden="true">{stars}</span>
           <span>({safeRating})</span>
           {city ? <span>• {city}</span> : null}
@@ -71,16 +72,12 @@ export default function WhatPeopleSayingCard({
         </div>
 
         {/* Row 2: Description */}
-        <p className="font-mono text-body text-text-tertiary/90 line-clamp-2 leading-[1.6]">{testimonial}</p>
+        <p className="font-mono text-caption text-text-tertiary/90 line-clamp-2 leading-[1.6]">{testimonial}</p>
 
         {/* Row 3: CTA */}
-        <a
-          href={ctaHref}
-          className="inline-flex items-center font-mono font-semibold text-body text-accent underline underline-offset-4 transition duration-200 hover:brightness-110 text-left w-full"
-          aria-label={`Play as ${characterName} now`}
-        >
+        <TextLink href={ctaHref} aria-label={`Play as ${characterName} now`}>
           {`Read more →`}
-        </a>
+        </TextLink>
       </div>
     </article>
   );

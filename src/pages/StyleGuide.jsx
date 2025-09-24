@@ -1,4 +1,3 @@
-import React from 'react';
 import PlaibleLogo from '../components/PlaibleLogo';
 import C2AButton from '../components/C2AButton';
 import ColorCard from '../components/ColorCard';
@@ -9,6 +8,8 @@ import ModalVariantsPreview from '../styleguide/ModalVariantsPreview';
 import C2AButtonsPreview from '../styleguide/C2AButtonsPreview';
 import C2AButtonGroupPreview from '../styleguide/C2AButtonGroupPreview';
 import { UI_BG_TOKENS } from './tokens';
+import TextLink from '../components/ui/TextLink';
+import React from 'react';
 import CheckLegalStuffModal from '../components/ui/CheckLegalStuffModal';
 import KeepInTouchModal from '../components/ui/KeepInTouchModal';
 import PayAsYouGoModal from '../components/ui/PayAsYouGoModal';
@@ -213,6 +214,48 @@ export default function StyleGuide() {
         <C2AButtonGroupPreview />
       </section>
 
+      {/* Landing Tabs (Tokenized) */}
+      <section id="landing-tabs-tokenized" className="my-12">
+        <h2 className="text-heading text-text-secondary mb-4">Landing Tabs (Tokenized)</h2>
+        <LandingTabsPreview />
+      </section>
+
+      {/* TextLink preview */}
+      <section id="text-link-mono-accent" className="mt-10">
+        <h2 className="text-heading text-text-secondary mb-4">TextLink (mono-accent)</h2>
+        <p className="text-body text-text-secondary mb-spacing-sm">
+          This is a sample usage of the mono-accent text link:
+        </p>
+        <div className="space-y-spacing-sm">
+          <div>
+            <p className="text-label text-text-secondary mb-spacing-xs">Default</p>
+            <TextLink href="#">Explore the full character archive</TextLink>
+          </div>
+          <div>
+            <p className="text-label text-text-secondary mb-spacing-xs">With iconRight</p>
+            <TextLink href="#" iconRight={<span>→</span>}>Explore the full character archive</TextLink>
+          </div>
+          <div>
+            <p className="text-label text-text-secondary mb-spacing-xs">With iconLeft</p>
+            <TextLink href="#" iconLeft={<span>←</span>}>Explore the full character archive</TextLink>
+          </div>
+          <div>
+            <p className="text-label text-text-secondary mb-spacing-xs">context="onDark"</p>
+            <div className="bg-secondary p-spacing-md rounded-card">
+              <TextLink href="#" context="onDark" iconRight={<span>→</span>}>Explore the full character archive</TextLink>
+            </div>
+          </div>
+          <div>
+            <p className="text-label text-text-secondary mb-spacing-xs">muted</p>
+            <TextLink href="#" muted>Explore the full character archive</TextLink>
+          </div>
+          <div>
+            <p className="text-label text-text-secondary mb-spacing-xs">selected</p>
+            <TextLink href="#" selected iconRight={<span>→</span>}>Explore the full character archive</TextLink>
+          </div>
+        </div>
+      </section>
+
       <section id="what-people-playing-card" className="my-12">
         <h2 className="text-heading text-text-secondary mb-4">What People Are Playing Card</h2>
         <WhatPeoplePlayingCardPreview />
@@ -233,6 +276,49 @@ export default function StyleGuide() {
         <ModalVariantsPreview extraTriggers={<ExtraModalTriggers />} />
       </section>
 
+    </div>
+  );
+}
+
+function LandingTabsPreview() {
+  const [active, setActive] = React.useState('one');
+  return (
+    <div className="bg-secondary p-spacing-md rounded-card">
+      <div role="tablist" aria-label="Landing tabs preview" className="flex gap-4 border-b border-text-secondary/30">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={active === 'one'}
+          aria-controls="panel-one"
+          id="tab-one"
+          onClick={() => setActive('one')}
+          className={`tab-base ${active === 'one' ? 'tab-active' : 'tab-inactive'} tab-focus`}
+        >
+          Tab One
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={active === 'two'}
+          aria-controls="panel-two"
+          id="tab-two"
+          onClick={() => setActive('two')}
+          className={`tab-base ${active === 'two' ? 'tab-active' : 'tab-inactive'} tab-focus`}
+        >
+          Tab Two
+        </button>
+      </div>
+      <div className="pt-spacing-md">
+        {active === 'one' ? (
+          <div id="panel-one" role="tabpanel" aria-labelledby="tab-one" className="text-body text-text-primary">
+            Content for Tab One.
+          </div>
+        ) : (
+          <div id="panel-two" role="tabpanel" aria-labelledby="tab-two" className="text-body text-text-primary">
+            Content for Tab Two.
+          </div>
+        )}
+      </div>
     </div>
   );
 }

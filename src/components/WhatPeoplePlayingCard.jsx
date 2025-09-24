@@ -1,4 +1,5 @@
 import React from 'react';
+import TextLink from './ui/TextLink';
 
 /**
  * WhatPeoplePlayingCard
@@ -42,7 +43,7 @@ export default function WhatPeoplePlayingCard({
             />
           )}
           <div className="flex-1 min-w-0 flex flex-col justify-center gap-[2px]">
-            <p className="font-mono text-body truncate">
+            <p className="font-mono text-caption truncate">
               <span className="truncate" title={username}>{username}</span>
               <span>{' '}playing as{' '}</span>
             </p>
@@ -52,15 +53,11 @@ export default function WhatPeoplePlayingCard({
           </div>
         </div>
 
-        <p className="font-mono text-body text-text-tertiary/90 line-clamp-2 leading-[1.6]">{storyDescription}</p>
+        <p className="font-mono text-caption text-text-tertiary/90 line-clamp-2 leading-[1.6]">{storyDescription}</p>
 
-        <a
-          href={ctaHref}
-          className="inline-flex items-center font-mono font-semibold text-body text-accent underline underline-offset-4 transition duration-200 hover:brightness-110 text-left w-full"
-          aria-label={`Play as ${characterName} now`}
-        >
+        <TextLink href={ctaHref} aria-label={`Play as ${characterName} now`}>
           {ctaText || `Play as ${characterName} now →`}
-        </a>
+        </TextLink>
       </div>
     </article>
   );
