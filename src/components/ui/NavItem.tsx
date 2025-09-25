@@ -8,10 +8,11 @@ export type NavItemProps = {
   onClick?: () => void;
   active?: boolean;
   className?: string;
+  collapsed?: boolean;
 };
 
 const PlaceholderIcon: React.FC = () => (
-  <div className="w-5 h-5 rounded-full bg-text-primary" />
+  <div className="w-5 h-5 rounded-full bg-primary" />
 );
 
 export default function NavItem({
@@ -22,12 +23,13 @@ export default function NavItem({
   onClick,
   active = false,
   className,
+  collapsed = false,
 }: NavItemProps) {
   const baseClasses = [
     'font-mono',
     'text-label',
     'text-text-primary',
-    'hover:text-secondary',
+    'hover:text-text-primary',
     'hover:opacity-50',
     'rounded-md',
     'transition-colors',
@@ -66,7 +68,21 @@ export default function NavItem({
     return (
       <div className="flex items-center gap-spacing-sm">
         <span className="inline-flex items-center justify-center">{icon ?? <PlaceholderIcon />}</span>
-        {label ? <span className="truncate">{label}</span> : null}
+        {label ? (
+          <span
+            className={[
+              'truncate',
+              'transition-opacity',
+              'transition-transform',
+              'duration-300',
+              'ease-in-out',
+              collapsed ? 'opacity-0 scale-95' : 'opacity-100 scale-100',
+              'origin-left',
+            ].join(' ')}
+          >
+            {label}
+          </span>
+        ) : null}
       </div>
     );
   })();

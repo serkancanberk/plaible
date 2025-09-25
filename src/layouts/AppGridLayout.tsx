@@ -43,8 +43,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
         {/* Sidebar */}
         <aside
           className={[
-            'fixed left-0 top-0 h-full bg-accent transition-transform duration-200 ease-out transition-all lg:static lg:translate-x-0 lg:block',
-            sidebarCollapsed ? 'w-20' : 'w-64',
+            'fixed left-0 top-0 h-full bg-accent transition-all duration-300 ease-in-out lg:static lg:translate-x-0 lg:block',
+            sidebarCollapsed ? 'w-20 lg:w-20' : 'w-64 lg:w-64',
             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           ].join(' ')}
         >
@@ -58,7 +58,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                   <NavItem
                     variant="icon"
                     icon={
-                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-secondary hover:opacity-80">
+                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
                         <IconHome className="w-4 h-4 text-accent" />
                       </span>
                     }
@@ -66,7 +66,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                   <NavItem
                     variant="icon"
                     icon={
-                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-secondary hover:opacity-80">
+                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
                         <IconChevronRight className="w-4 h-4 text-accent" />
                       </span>
                     }
@@ -79,7 +79,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                   <NavItem
                     variant="icon"
                     icon={
-                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-secondary hover:opacity-80">
+                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
                         <IconUser className="w-4 h-4 text-accent" />
                       </span>
                     }
@@ -98,7 +98,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                     variant="icon"
                     onClick={() => setSidebarCollapsed(true)}
                     icon={
-                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-secondary hover:opacity-80">
+                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
                         <IconChevronLeft className="w-4 h-4 text-accent" />
                       </span>
                     }
@@ -110,8 +110,9 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                   <NavItem
                     variant="icon+text"
                     label="Play"
+                    collapsed={sidebarCollapsed}
                     icon={
-                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-secondary hover:opacity-80">
+                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
                         <IconHome className="w-4 h-4 text-accent" />
                       </span>
                     }
@@ -119,8 +120,9 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                   <NavItem
                     variant="icon+text"
                     label="Message (Soon)"
+                    collapsed={sidebarCollapsed}
                     icon={
-                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-secondary hover:opacity-80">
+                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
                         <IconMessage className="w-4 h-4 text-accent" />
                       </span>
                     }
@@ -128,8 +130,9 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                   <NavItem
                     variant="icon+text"
                     label="Add"
+                    collapsed={sidebarCollapsed}
                     icon={
-                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-secondary hover:opacity-80">
+                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
                         <IconPlus className="w-4 h-4 text-accent" />
                       </span>
                     }
@@ -164,7 +167,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                     label="FirstName LastName"
                     className="mt-spacing-xl"
                     icon={
-                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-secondary hover:opacity-80">
+                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
                         <IconUser className="w-4 h-4 text-accent" />
                       </span>
                     }
