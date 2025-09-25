@@ -1,6 +1,7 @@
 import React from 'react';
 import PlaibleLogo from './PlaibleLogo';
 import MenuItem from './MenuItem';
+import C2AButton from './C2AButton';
 import StartToPlayNowModal from './ui/StartToPlayNowModal';
 import GetTheAppModal from './ui/GetTheAppModal';
 import PayAsYouGoModal from './ui/PayAsYouGoModal';
@@ -30,9 +31,14 @@ const LandingLeftColumn: React.FC<Props> = ({ openStartModal }) => {
         {/* Center (Heading + Paragraph) */}
         <div className="flex-1 flex md:items-center">
           <div className="space-y-spacing-xl max-w-md md:max-w-sm">
-            <h2 className="text-heading text-primary font-semibold">Live your own epic stories.</h2>
-            <p className="text-body text-primary">Every word you type shapes and grows the story into a living world by your imagination and Plaible’s storyrunner AI. Forge the tale only you can dream up.</p>
-            <p className="text-body text-primary"> </p>
+            <h2 className="text-subheading text-primary font-semibold">Live your own epic stories.</h2>
+            <p className="text-body text-primary">Every word you type shapes and grows the story into a living world by your imagination and Plaible’s storyrunner AI. </p>
+            <p className="text-body text-primary"> Forge the tale only you can dream up.</p>
+            <div className="md:hidden mt-spacing-md">
+              <C2AButton variant="secondary" context="onAccent" fullWidth onClick={() => setOpenStart(true)}>
+                Start To Play Now
+              </C2AButton>
+            </div>
           </div>
         </div>
 
@@ -40,9 +46,9 @@ const LandingLeftColumn: React.FC<Props> = ({ openStartModal }) => {
         <div className="space-y-spacing-xl hidden md:block md:mt-spacing-xl">
           <nav>
             <div className="space-y-spacing-sm">
-              <MenuItem label="Start to play now" onClick={() => setOpenStart(true)} />
+              <MenuItem label="START TO PLAY NOW" onClick={() => setOpenStart(true)} />
               <MenuItem label="Get the app (Soon)" onClick={() => setOpenGetApp(true)} />
-              <MenuItem label="Pay as you go" onClick={() => setOpenPay(true)} />
+              <MenuItem label="Pay as you go" onClick={() => setOpenPay(true)} className="hidden"/>
               <MenuItem label="Keep in touch" onClick={() => setOpenKeep(true)} />
               <MenuItem label="Check legal stuffs" onClick={() => setOpenLegal(true)} />
             </div>

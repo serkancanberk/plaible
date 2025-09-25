@@ -13,10 +13,10 @@ const StartToPlayNowModal: React.FC<StartToPlayNowModalProps> = ({ open, onClose
       open={open}
       onClose={onClose}
       title="START TO PLAY NOW"
-      subtitle="Get in the story"
+      subtitle="Sign up for free and start your story."
       variant="accent"
     >
-      <div className="text-body mb-spacing-md">Your first chapter is free—your adventure begins now.</div>
+      <div className="text-body mb-spacing-md">Play as you go, pay only as you continue your journey.</div>
 
       <div className="flex flex-col gap-spacing-lg mt-spacing-xs mb-spacing-md">
         <C2AButton icon="google" variant="secondary" context="onAccent" fullWidth>

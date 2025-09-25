@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import PlaibleLogo from '../components/PlaibleLogo';
 import LandingLeftColumn from '../components/LandingLeftColumn';
+import MenuItem from '../components/MenuItem';
+import StartToPlayNowModal from '../components/ui/StartToPlayNowModal';
+import GetTheAppModal from '../components/ui/GetTheAppModal';
+import KeepInTouchModal from '../components/ui/KeepInTouchModal';
+import CheckLegalStuffModal from '../components/ui/CheckLegalStuffModal';
 
 type LandingGridLayoutProps = {
   left?: React.ReactNode;
@@ -20,6 +25,9 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'playing' | 'saying'>('playing');
+  const [openGetApp, setOpenGetApp] = useState(false);
+  const [openKeep, setOpenKeep] = useState(false);
+  const [openLegal, setOpenLegal] = useState(false);
 
   const openStartModal = () => setIsStartModalOpen(true);
   const closeStartModal = () => setIsStartModalOpen(false);
@@ -35,18 +43,21 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
   return (
     <>
       {/* Mobile top nav */}
-      <header className="md:hidden sticky top-0 z-30 border-b bg-secondary/80 backdrop-blur">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="text-subheading font-sans text-text-primary">🌚 Plaible</div>
+      <header className="md:hidden sticky top-0 z-30 border-b bg-primary backdrop-blur">
+        <div className="flex items-center justify-between px-spacing-md pt-spacing-md pb-spacing-md">
+          <div className="text-subheading font-sans">
+            <PlaibleLogo variant="light" size="sm" />
+          </div>
           <button
             type="button"
             aria-label="Toggle menu"
             aria-expanded={isMobileMenuOpen}
+            aria-controls="landing-mobile-menu"
             onClick={() => setIsMobileMenuOpen((v) => !v)}
-            className="inline-flex items-center justify-center rounded-md p-2 text-text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="inline-flex items-center justify-center rounded-md p-spacing-xs hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
             <svg
-              className={`h-6 w-6 transition-transform ${isMobileMenuOpen ? 'rotate-90' : ''}`}
+              className={`h-6 w-6 text-text-tertiary transition-transform ${isMobileMenuOpen ? 'rotate-90' : ''}`}
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -61,39 +72,65 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
             </svg>
           </button>
         </div>
-        <div className={`md:hidden overflow-hidden transition-[max-height] duration-300 ${isMobileMenuOpen ? 'max-h-96' : 'max-h-0'}`}>
-          <nav className="bg-secondary">
-            <ul className="space-y-2 px-4 pb-4">
+        <div
+          id="landing-mobile-menu"
+          className={`md:hidden overflow-hidden transition-[max-height] duration-300 ${isMobileMenuOpen ? 'max-h-96' : 'max-h-0'}`}
+        >
+          <nav className="bg-primary">
+            <ul className="mt-spacing-md space-y-spacing-xs px-spacing-md pb-spacing-md max-w-md mx-auto [&_a]:text-text-tertiary [&_button]:text-text-tertiary [&_a:hover]:text-accent [&_button:hover]:text-accent">
               <li>
-                <button
-                  type="button"
+                <MenuItem
+                  label="START TO PLAY NOW"
                   onClick={() => {
                     setIsMobileMenuOpen(false);
                     setIsStartModalOpen(true);
                   }}
-                  className="block w-full text-left text-body font-sans text-text-primary hover:text-accent transition"
-                >
-                  START TO PLAY NOW →
-                </button>
+                />
               </li>
-              <li><a href="#" className="text-body font-sans text-text-primary hover:text-accent transition">Get the app (Soon) →</a></li>
-              <li><a href="#" className="text-body font-sans text-text-primary hover:text-accent transition">Pay as you go →</a></li>
-              <li><a href="#" className="text-body font-sans text-text-primary hover:text-accent transition">Keep in touch →</a></li>
-              <li><a href="#" className="text-body font-sans text-text-primary hover:text-accent transition">Check legal stuffs →</a></li>
+              <li>
+                <MenuItem
+                  label="Get the app (Soon)"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setOpenGetApp(true);
+                  }}
+                />
+              </li>
+              <li className="hidden">
+                <MenuItem label="Pay as you go" href="#" />
+              </li>
+              <li>
+                <MenuItem
+                  label="Keep in touch"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setOpenKeep(true);
+                  }}
+                />
+              </li>
+              <li>
+                <MenuItem
+                  label="Check legal stuffs"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setOpenLegal(true);
+                  }}
+                />
+              </li>
             </ul>
           </nav>
         </div>
       </header>
 
-      <div className={`grid grid-cols-1 md:grid-cols-[1fr_0.9fr_1.2fr] gap-4 md:gap-0 min-h-screen w-full overflow-x-hidden overflow-y-auto md:overflow-y-visible font-sans bg-secondary text-text-primary ${className ?? ''}`}>
+      <div className={`grid grid-cols-1 md:grid-cols-[1fr_0.9fr_1.2fr] gap-spacing-md md:gap-0 min-h-screen w-full overflow-x-hidden overflow-y-auto md:overflow-y-visible font-sans bg-secondary text-text-primary ${className ?? ''}`}>
         {/* Left */}
         {left ?? <LandingLeftColumn openStartModal={openStartModal} />}
 
         {/* Center (primary) */}
-        <section className="md:h-screen p-6 md:p-8 bg-secondary flex items-center justify-center">
+        <section className="md:h-screen bg-secondary flex items-center justify-center md:items-start md:justify-start p-spacing-xl md:px-spacing-2xl md:pt-spacing-3xl md:pb-spacing-2xl">
           {center ?? (
-            <div className="w-full p-2 rounded-card bg-secondary/60">
-              <div className="aspect-[9/16] w-full max-w-[300px] md:max-w-[340px] lg:max-w-[380px] mx-auto my-spacing-md rounded-card overflow-hidden">
+            <div className="w-full p-spacing-sm rounded-card bg-secondary/60 md:h-full md:flex md:flex-col">
+              <div className="aspect-[9/16] w-full max-w-xs mx-auto my-spacing-md rounded-card overflow-hidden md:mx-0 md:h-full md:max-h-[calc(100vh_-_theme(space.spacing-3xl)*2)] md:w-auto md:max-w-none">
                 <img
                   src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=540&q=80"
                   alt="Story preview"
@@ -106,11 +143,11 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
         </section>
 
         {/* Right */}
-        <aside className="md:h-screen p-6 md:p-8 bg-secondary flex flex-col">
+        <aside className="md:h-screen bg-secondary flex flex-col p-spacing-xl md:px-spacing-2xl md:pt-spacing-3xl md:pb-spacing-2xl">
           {right ?? (
             <>
               {/* Tabs */}
-              <div className="flex gap-4 text-label font-sans border-b border-text-secondary/30">
+              <div className="flex gap-spacing-md text-label font-sans border-b border-text-secondary/30">
                 <button
                   type="button"
                   onClick={() => setActiveTab('playing')}
@@ -128,7 +165,7 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
               </div>
 
               {/* Cards Feed */}
-              <div className="md:flex-1 md:overflow-y-auto md:max-h-screen pt-4 space-y-4">
+              <div className="md:flex-1 md:overflow-y-auto md:max-h-screen pt-spacing-md space-y-spacing-md">
                 {activeTab === 'playing' ? (
                   <>
                     <div className="rounded-card bg-secondary p-card space-y-2">
@@ -196,40 +233,16 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
                 )}
               </div>
               {/* Footer */}
-              <div className="text-caption text-text-tertiary mt-6 text-center">🟡 404,852 stories played by 1000+ people.</div>
+              <div className="text-caption text-text-tertiary pt-spacing-md text-center">🟡 404,852 stories played by 1000+ people.</div>
             </>
           )}
         </aside>
       </div>
 
-      {/* Start To Play Modal */}
-      {isStartModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-sm rounded-card bg-secondary p-card shadow-lg">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-subheading font-sans text-text-primary">Start To Play</h3>
-              <button
-                aria-label="Close"
-                onClick={closeStartModal}
-                className="rounded px-2 py-1 text-text-secondary hover:bg-primary/10"
-              >
-                ×
-              </button>
-            </div>
-            <div className="flex items-center justify-center">
-              <button
-                type="button"
-                onClick={continueWithGoogle}
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-text-secondary/30 bg-secondary px-4 py-2 text-body font-sans text-text-primary hover:bg-primary/20"
-              >
-                Continue with Google
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <StartToPlayNowModal open={isStartModalOpen} onClose={() => setIsStartModalOpen(false)} />
+      <GetTheAppModal open={openGetApp} onClose={() => setOpenGetApp(false)} />
+      <KeepInTouchModal open={openKeep} onClose={() => setOpenKeep(false)} />
+      <CheckLegalStuffModal open={openLegal} onClose={() => setOpenLegal(false)} />
     </>
   );
 };
-
-

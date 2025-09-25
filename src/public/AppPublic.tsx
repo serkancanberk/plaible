@@ -3,7 +3,7 @@ import { LandingGridLayout } from '../layouts/LandingGridLayout';
 import LandingFeed from '../components/LandingFeed';
 import { AppGridLayout } from '../layouts/AppGridLayout';
 import { PlayPage } from './PlayPage';
-const StyleGuide = React.lazy(() => import('../pages/StyleGuide.jsx'));
+const StyleGuide = React.lazy(() => import('../pages/StyleGuide'));
 import { StyleGuideLayout } from '../layouts/StyleGuideLayout';
 import { UI_BG_TOKENS } from '../pages/tokens';
 

@@ -19,7 +19,7 @@ type MenuItemProps = ClickableProps | LinkProps;
 
 export default function MenuItem(props: MenuItemProps) {
   const { label, className = '' } = props;
-  const commonClasses = 'w-full flex items-center justify-between text-primary font-mono text-body pb-4';
+  const commonClasses = 'w-full flex items-center justify-between text-primary hover:text-secondary font-mono pb-4 hover:opacity-50 transition-colors';
 
   return (
     <div className={`w-full ${className}`}>
@@ -38,6 +38,3 @@ export default function MenuItem(props: MenuItemProps) {
     </div>
   );
 }
-
-
-

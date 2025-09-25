@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import WhatPeoplePlayingCard from './WhatPeoplePlayingCard.jsx';
-import WhatPeopleSayingCard from './WhatPeopleSayingCard.jsx';
+import WhatPeoplePlayingCard from './WhatPeoplePlayingCard';
+import WhatPeopleSayingCard from './WhatPeopleSayingCard';
 
 type TabKey = 'playing' | 'saying';
 
@@ -22,7 +22,7 @@ export const LandingFeed: React.FC = () => {
       characterName: 'Elizabeth Bennet',
       characterImageUrl: 'https://randomuser.me/api/portraits/men/23.jpg',
       storyDescription: "A brief highlight from Marco's choices and how the story evolved...",
-      ctaText: 'Navigate society with wit as Elizabeth →',
+      ctaText: 'Navigate society with Elizabeth →',
       ctaHref: '#',
     },
     {
@@ -83,7 +83,7 @@ export const LandingFeed: React.FC = () => {
           onClick={() => onSelectTab('playing')}
           className={`tab-base ${activeTab === 'playing' ? 'tab-active' : 'tab-inactive'} tab-focus font-mono basis-1/2 text-center py-spacing-sm`}
         >
-          What People Are Playing
+          Players
         </button>
         <button
           type="button"
@@ -94,7 +94,7 @@ export const LandingFeed: React.FC = () => {
           onClick={() => onSelectTab('saying')}
           className={`tab-base ${activeTab === 'saying' ? 'tab-active' : 'tab-inactive'} tab-focus font-mono basis-1/2 text-center py-spacing-sm`}
         >
-          What People Are Saying
+          Reactions
         </button>
       </div>
 

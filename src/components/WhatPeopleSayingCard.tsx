@@ -1,20 +1,18 @@
 import React from 'react';
 import TextLink from './ui/TextLink';
+import StartToPlayNowModal from './ui/StartToPlayNowModal';
 
-/**
- * WhatPeopleSayingCard
- * Testimonial-style card similar to WhatPeoplePlayingCard with an extra info row.
- *
- * Props:
- * - username: string
- * - city?: string
- * - characterName: string
- * - characterImageUrl?: string
- * - rating?: number (0-5)
- * - weeksAgo?: number
- * - testimonial: string
- * - ctaHref: string
- */
+type WhatPeopleSayingCardProps = {
+  username: string;
+  city?: string;
+  characterName: string;
+  characterImageUrl?: string;
+  rating?: number; // 0-5
+  weeksAgo?: number;
+  testimonial: string;
+  ctaHref: string;
+};
+
 export default function WhatPeopleSayingCard({
   username,
   city,
@@ -24,8 +22,9 @@ export default function WhatPeopleSayingCard({
   weeksAgo = 2,
   testimonial,
   ctaHref,
-}) {
+}: WhatPeopleSayingCardProps) {
   const [imgError, setImgError] = React.useState(false);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
   const showFallback = imgError || !characterImageUrl;
 
   const safeRating = Math.max(0, Math.min(5, Math.round(rating)));
@@ -33,8 +32,9 @@ export default function WhatPeopleSayingCard({
   const timeLabel = `${weeksAgo} week${weeksAgo === 1 ? '' : 's'} ago`;
 
   return (
-    <article className="bg-primary rounded-[24px] p-[24px] w-full max-w-sm sm:max-w-md lg:max-w-lg text-text-tertiary">
-      <div className="flex flex-col gap-[16px]">
+    <>
+      <article className="bg-primary rounded-[24px] p-[24px] w-full max-w-sm sm:max-w-md lg:max-w-lg text-text-tertiary">
+        <div className="flex flex-col gap-[16px]">
         {/* Row 1: Profile Section */}
         <div className="flex flex-row items-start gap-[16px]">
           {showFallback ? (
@@ -75,11 +75,20 @@ export default function WhatPeopleSayingCard({
         <p className="font-mono text-caption text-text-tertiary/90 line-clamp-2 leading-[1.6]">{testimonial}</p>
 
         {/* Row 3: CTA */}
-        <TextLink href={ctaHref} aria-label={`Play as ${characterName} now`}>
+        <TextLink
+          href={ctaHref}
+          aria-label={`Play as ${characterName} now`}
+          onClick={(e) => {
+            e.preventDefault();
+            setIsModalOpen(true);
+          }}
+        >
           {`Read more →`}
         </TextLink>
-      </div>
-    </article>
+        </div>
+      </article>
+      <StartToPlayNowModal open={isModalOpen} onClose={() => setIsModalOpen(false)} />
+    </>
   );
 }
 
