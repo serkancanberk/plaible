@@ -9,6 +9,7 @@ import { UI_BG_TOKENS } from '../pages/tokens';
 
 export const AppPublic: React.FC = () => {
   const isPlay = typeof window !== 'undefined' && window.location.pathname.startsWith('/play');
+  const isApp = typeof window !== 'undefined' && window.location.pathname.startsWith('/app');
   const isStyleGuide = typeof window !== 'undefined' && window.location.pathname === '/styleguide';
 
   if (isPlay) {
@@ -16,6 +17,12 @@ export const AppPublic: React.FC = () => {
       <AppGridLayout>
         <PlayPage />
       </AppGridLayout>
+    );
+  }
+
+  if (isApp) {
+    return (
+      <AppGridLayout />
     );
   }
 
