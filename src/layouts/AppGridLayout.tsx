@@ -409,9 +409,9 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                     <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-secondary" label="Sub Category 2" />
                     <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-secondary" label="Sub Category 3" />
                     <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-secondary" label="Sub Category 4" />
-                    <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-secondary" label="Sub Category 5" />
-                    <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-secondary" label="Sub Category 6" />
-                    <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-secondary" label="Sub Category 7" />
+                    <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-muted" label="Sub Category 5" />
+                    <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-muted" label="Sub Category 6" />
+                    <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-muted" label="Sub Category 7" />
                   </div>
                 </div>
 
@@ -450,17 +450,31 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                         </div>
                       ))
                     : stories && stories.length > 0
-                      ? stories.map((s) => (
+                      ? (
+                        <>
+                          {stories.map((s) => (
+                            <StoryCard
+                              key={s.slug}
+                              title={s.title}
+                              authorName={s.authorName}
+                              slug={s.slug}
+                              headline={s.headline}
+                              assets={s.assets}
+                              stats={s.stats}
+                            />
+                          ))}
+                          {/* Temporary duplicate for visual testing */}
                           <StoryCard
-                            key={s.slug}
-                            title={s.title}
-                            authorName={s.authorName}
-                            slug={s.slug}
-                            headline={s.headline}
-                            assets={s.assets}
-                            stats={s.stats}
+                            key="mock-duplicate"
+                            title="Frankenstein"
+                            authorName="Mary Shelley"
+                            slug="frankenstein"
+                            headline="A gothic story about ambition and its consequences."
+                            assets={{ images: ['/placeholder.png'] }}
+                            stats={{ totalPlayed: 1234, avgRating: 4.6 }}
                           />
-                        ))
+                        </>
+                      )
                       : (
                         <div className="col-span-full text-center font-mono text-text-secondary">No stories found.</div>
                       )}

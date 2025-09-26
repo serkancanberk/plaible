@@ -11,6 +11,7 @@ export type NavItemProps = {
     | 'icon-secondary'
     | 'icon+text-secondary'
     | 'text-secondary'
+    | 'text-muted'
     | 'text+icon'
     | 'text+icon-tertiary'
     | 'text+icon-secondary';
@@ -37,9 +38,10 @@ export default function NavItem({
   className,
   collapsed = false,
 }: NavItemProps) {
+  const isMuted = variant === 'text-muted';
   const isTertiary = variant === 'icon-tertiary' || variant === 'icon+text-tertiary' || variant === 'text-tertiary' || variant === 'text+icon-tertiary';
   const isSecondary = variant === 'icon-secondary' || variant === 'icon+text-secondary' || variant === 'text-secondary' || variant === 'text+icon-secondary';
-  const isTextOnly = variant === 'text' || variant === 'text-tertiary' || variant === 'text-secondary';
+  const isTextOnly = variant === 'text' || variant === 'text-tertiary' || variant === 'text-secondary' || variant === 'text-muted';
   const isIconOnly = variant === 'icon' || variant === 'icon-tertiary' || variant === 'icon-secondary';
   const isIconText = variant === 'icon+text' || variant === 'icon+text-tertiary' || variant === 'icon+text-secondary';
   const isTextIcon = variant === 'text+icon' || variant === 'text+icon-tertiary' || variant === 'text+icon-secondary';
@@ -47,24 +49,49 @@ export default function NavItem({
   const baseClasses = [
     'font-mono',
     'text-label',
-    isTertiary ? 'text-text-tertiary' : isSecondary ? 'text-text-secondary' : 'text-text-primary',
-    'hover:text-text-secondary',
-    'hover:opacity-50',
+    // color by family
+    isMuted
+      ? 'text-ui-muted'
+      : isTertiary
+        ? 'text-text-tertiary'
+        : isSecondary
+          ? 'text-text-secondary'
+          : 'text-text-primary',
     'rounded-md',
     'transition-colors',
-    'cursor-pointer',
+    // cursor by family
+    isMuted ? 'cursor-default' : 'cursor-pointer',
   ];
+
+  // Apply hover visuals ONLY for interactive variants
+  if (!isMuted) {
+    baseClasses.push('hover:text-text-secondary', 'hover:opacity-50');
+  }
 
   // Apply vertical padding only to icon and icon+text variants
   if (!isTextOnly) {
     baseClasses.push('py-spacing-xs');
   }
 
-  if (active) {
+  if (active && !isMuted) {
     baseClasses.push('text-accent', 'font-bold');
   }
 
+  // Ensure muted variant is non-interactive
+  if (isMuted) {
+    baseClasses.push('pointer-events-none', 'opacity-25');
+  }
+
   if (className) baseClasses.push(className);
+
+  // For 'text-muted', render a non-interactive element regardless of href/onClick
+  if (isMuted) {
+    return (
+      <span className={baseClasses.join(' ')} aria-disabled="true" tabIndex={-1}>
+        {label}
+      </span>
+    );
+  }
 
   const iconWrapperClasses = [
     'w-8', 'h-8', 'flex', 'items-center', 'justify-center', 'rounded-full', 'bg-primary',
