@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import PlaibleLogo from '../components/PlaibleLogo';
 import NavItem from '../components/ui/NavItem';
 import StoryCard from '../components/ui/StoryCard';
+import { useStories } from '../hooks/useStories';
 import IconHome from 'virtual:icons/tabler/home';
 import IconMessage from 'virtual:icons/tabler/message';
 import IconPlus from 'virtual:icons/tabler/plus';
@@ -32,6 +33,12 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const [canScroll, setCanScroll] = useState(false);
 
   const typeOptions: Array<'Books' | 'Story' | 'Biography'> = ['Books', 'Story', 'Biography'];
+
+  // Stories list state
+  const [page, setPage] = useState(1);
+  const pageSize = 9;
+  const { data: stories, total, loading, error } = useStories({ page, pageSize });
+  const pageCount = Math.max(1, Math.ceil((total || 0) / pageSize));
 
   const scrollCategoriesRight = () => {
     const el = carouselRef.current;
@@ -428,24 +435,39 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
             <section className="px-spacing-md py-spacing-lg">
               <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl mt-spacing-lg">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-spacing-xl justify-items-center">
-                  <StoryCard
-                    title="Frankenstein"
-                    author="Mary Shelley"
-                    slug="frankenstein"
-                    description="A gothic story about ambition and its consequences."
-                    playCount={1234}
-                    rating={4.6}
-                    media={[{ type: 'image', src: '/placeholder.png', alt: 'Frankenstein cover' }]}
-                  />
-                  <div className="rounded-card bg-ui-muted aspect-[3/4] w-full max-w-[260px] md:max-w-[280px] lg:max-w-[300px]" />
-                  <div className="rounded-card bg-ui-muted aspect-[3/4] w-full max-w-[260px] md:max-w-[280px] lg:max-w-[300px]" />
-                  <div className="rounded-card bg-ui-muted aspect-[3/4] w-full max-w-[260px] md:max-w-[280px] lg:max-w-[300px]" />
-                  <div className="rounded-card bg-ui-muted aspect-[3/4] w-full max-w-[260px] md:max-w-[280px] lg:max-w-[300px]" />
-                  <div className="rounded-card bg-ui-muted aspect-[3/4] w-full max-w-[260px] md:max-w-[280px] lg:max-w-[300px]" />
-                  <div className="rounded-card bg-ui-muted aspect-[3/4] w-full max-w-[260px] md:max-w-[280px] lg:max-w-[300px]" />
-                  <div className="rounded-card bg-ui-muted aspect-[3/4] w-full max-w-[260px] md:max-w-[280px] lg:max-w-[300px]" />
-                  <div className="rounded-card bg-ui-muted aspect-[3/4] w-full max-w-[260px] md:max-w-[280px] lg:max-w-[300px]" />
+                  {loading
+                    ? Array.from({ length: pageSize }).map((_, i) => (
+                        <div key={i} className="w-full max-w-[300px] rounded-card bg-primary shadow-card overflow-hidden animate-pulse">
+                          <div className="px-spacing-md pt-spacing-md">
+                            <div className="aspect-[16/9] w-full rounded-md bg-ui-muted" />
+                          </div>
+                          <div className="px-spacing-md pt-spacing-md pb-spacing-md space-y-spacing-sm">
+                            <div className="h-6 w-3/4 bg-ui-muted rounded" />
+                            <div className="h-4 w-1/2 bg-ui-muted rounded" />
+                            <div className="h-4 w-full bg-ui-muted rounded" />
+                            <div className="h-10 w-full bg-ui-muted rounded-card" />
+                          </div>
+                        </div>
+                      ))
+                    : stories && stories.length > 0
+                      ? stories.map((s) => (
+                          <StoryCard
+                            key={s.slug}
+                            title={s.title}
+                            authorName={s.authorName}
+                            slug={s.slug}
+                            headline={s.headline}
+                            assets={s.assets}
+                            stats={s.stats}
+                          />
+                        ))
+                      : (
+                        <div className="col-span-full text-center font-mono text-text-secondary">No stories found.</div>
+                      )}
                 </div>
+                {error ? (
+                  <div className="mt-spacing-md col-span-full text-center text-alert font-mono">Failed to load stories.</div>
+                ) : null}
               </div>
             </section>
             {/* Pagination + Info */}
@@ -455,20 +477,28 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                   variant="icon+text-secondary"
                   label="Previous"
                   icon={<IconChevronLeft className="w-4 h-4" />}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
                 />
-                <NavItem variant="text-secondary" label="1" />
-                <NavItem variant="text-secondary" label="2" />
-                <NavItem variant="text-secondary" label="3" />
-                <NavItem variant="text-secondary" label="4" />
-                <NavItem variant="text-secondary" label="5" />
+                {Array.from({ length: Math.min(pageCount, 5) }).map((_, idx) => {
+                  const num = idx + 1;
+                  return (
+                    <NavItem
+                      key={num}
+                      variant="text-secondary"
+                      label={String(num)}
+                      onClick={() => setPage(num)}
+                    />
+                  );
+                })}
                 <NavItem
                   variant="text+icon-secondary"
                   label="Next"
                   icon={<IconChevronRight className="w-4 h-4" />}
+                  onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
                 />
               </div>
               <div className="font-mono text-text-secondary text-center mt-spacing-lg">
-                📚 All books have loaded. Try Stories and Biographies.
+                Page {page} of {pageCount}
               </div>
             </div>
           </div>

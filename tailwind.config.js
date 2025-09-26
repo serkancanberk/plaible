@@ -47,6 +47,9 @@ export default {
       borderRadius: {
         card: '0.75rem',
       },
+      minHeight: {
+        card: '420px',
+      },
       boxShadow: {
         // Subtle, reusable card elevation consistent with our surfaces
         card: '0 8px 24px rgba(0, 0, 0, 0.25)',
