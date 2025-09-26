@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+import aspectRatio from '@tailwindcss/aspect-ratio'
+
 export default {
   content: [
     './index.html',
@@ -45,9 +47,15 @@ export default {
       borderRadius: {
         card: '0.75rem',
       },
+      boxShadow: {
+        // Subtle, reusable card elevation consistent with our surfaces
+        card: '0 8px 24px rgba(0, 0, 0, 0.25)',
+      },
     },
   },
-  plugins: [],
+  plugins: [
+    aspectRatio,
+  ],
 };
 
 

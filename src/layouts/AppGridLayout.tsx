@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PlaibleLogo from '../components/PlaibleLogo';
 import NavItem from '../components/ui/NavItem';
+import StoryCard from '../components/ui/StoryCard';
 import IconHome from 'virtual:icons/tabler/home';
 import IconMessage from 'virtual:icons/tabler/message';
 import IconPlus from 'virtual:icons/tabler/plus';
@@ -427,7 +428,15 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
             <section className="px-spacing-md py-spacing-lg">
               <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl mt-spacing-lg">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-spacing-xl justify-items-center">
-                  <div className="rounded-card bg-ui-muted aspect-[3/4] w-full max-w-[260px] md:max-w-[280px] lg:max-w-[300px]" />
+                  <StoryCard
+                    title="Frankenstein"
+                    author="Mary Shelley"
+                    slug="frankenstein"
+                    description="A gothic story about ambition and its consequences."
+                    playCount={1234}
+                    rating={4.6}
+                    media={[{ type: 'image', src: '/placeholder.png', alt: 'Frankenstein cover' }]}
+                  />
                   <div className="rounded-card bg-ui-muted aspect-[3/4] w-full max-w-[260px] md:max-w-[280px] lg:max-w-[300px]" />
                   <div className="rounded-card bg-ui-muted aspect-[3/4] w-full max-w-[260px] md:max-w-[280px] lg:max-w-[300px]" />
                   <div className="rounded-card bg-ui-muted aspect-[3/4] w-full max-w-[260px] md:max-w-[280px] lg:max-w-[300px]" />
