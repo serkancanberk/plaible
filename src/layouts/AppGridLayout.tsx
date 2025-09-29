@@ -3,6 +3,7 @@ import PlaibleLogo from '../components/PlaibleLogo';
 import NavItem from '../components/ui/NavItem';
 import StoryCard from '../components/ui/StoryCard';
 import { useStories } from '../hooks/useStories';
+import { categoryConfig } from '../config/categoryConfig';
 import IconHome from 'virtual:icons/tabler/home';
 import IconMessage from 'virtual:icons/tabler/message';
 import IconPlus from 'virtual:icons/tabler/plus';
@@ -20,7 +21,8 @@ type AppGridLayoutProps = {
 export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [selectedType, setSelectedType] = useState<'Books' | 'Story' | 'Biography'>('Books');
+  const [selectedMain, setSelectedMain] = useState<'books' | 'stories' | 'biographies'>('books');
+  const [selectedSub, setSelectedSub] = useState<string | null>(null);
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -31,13 +33,27 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [canScroll, setCanScroll] = useState(false);
+  const [categoriesAgg, setCategoriesAgg] = useState<Array<{ id: string; count: number; subCategories: Array<{ id: string; count: number }> }>>([]);
+  const countsByMain = React.useMemo(() => {
+    const map: Record<string, Record<string, number>> = {};
+    for (const cat of categoriesAgg) {
+      const subMap: Record<string, number> = {};
+      for (const s of cat?.subCategories || []) subMap[s.id] = s.count || 0;
+      map[cat.id] = subMap;
+    }
+    return map;
+  }, [categoriesAgg]);
 
-  const typeOptions: Array<'Books' | 'Story' | 'Biography'> = ['Books', 'Story', 'Biography'];
+  const typeOptions: Array<{ id: 'books' | 'stories' | 'biographies'; label: 'Books' | 'Stories' | 'Biographies' }> = [
+    { id: 'books', label: 'Books' },
+    { id: 'stories', label: 'Stories' },
+    { id: 'biographies', label: 'Biographies' },
+  ];
 
   // Stories list state
   const [page, setPage] = useState(1);
   const pageSize = 9;
-  const { data: stories, total, loading, error } = useStories({ page, pageSize });
+  const { data: stories, total, loading, error } = useStories({ page, pageSize, category: selectedMain, subcategory: selectedSub ?? undefined });
   const pageCount = Math.max(1, Math.ceil((total || 0) / pageSize));
 
   const scrollCategoriesRight = () => {
@@ -73,6 +89,43 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
       window.removeEventListener('resize', onResize);
     };
   }, []);
+
+  // Fetch categories aggregation for dropdown + subcategory carousel
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    fetch('/api/stories/categories', { signal: controller.signal })
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        const list = Array.isArray(json?.items) ? json.items : Array.isArray(json) ? json : [];
+        setCategoriesAgg(list);
+      })
+      .catch(() => {})
+      .finally(() => {});
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, []);
+
+  // Quick verification log to ensure slug-based mapping works as expected
+  useEffect(() => {
+    const val = countsByMain['books']?.['classic-novels'];
+    if (val !== undefined) {
+      // Example expected in some environments: 2
+      // This confirms lookup by value/id (slug) rather than label
+      console.log('[SubNav] count books/classic-novels =', val);
+    }
+  }, [countsByMain]);
+
+  // Helpers to map counts from aggregation by id
+  const getCategoryCount = (mainId: string) => categoriesAgg.find((c) => c.id === mainId)?.count || 0;
+  const getSubcategoryCount = (mainId: string, subId: string) => countsByMain[mainId]?.[subId] ?? 0;
+
+  // Subcategories for selected main from config (ensures full set including zeros)
+  const selectedConfig = categoryConfig.find((c) => c.value === selectedMain);
+  const subCategoriesForSelected = selectedConfig?.subCategories || [];
 
   const onCarouselMouseDown: React.MouseEventHandler<HTMLDivElement> = (e) => {
     const el = carouselRef.current;
@@ -349,7 +402,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                       onClick={() => setIsTypeMenuOpen((v) => !v)}
                       className="inline-flex items-center gap-spacing-xs rounded-md border border-text-secondary/30 bg-secondary text-mono text-label text-accent px-spacing-md py-spacing-xs hover:bg-accent/10"
                     >
-                      <span className="text-mono text-label">{selectedType}</span>
+                      <span className="text-mono text-label">{typeOptions.find(t => t.id === selectedMain)?.label || 'Book'}</span>
                       <span className="inline-flex items-center justify-center text-accent">
                         <IconChevronRight className="w-4 h-4 rotate-90" />
                       </span>
@@ -359,17 +412,19 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                         <div className="py-spacing-xs">
                           {typeOptions.map((opt) => (
                             <button
-                              key={opt}
+                              key={opt.id}
                               type="button"
                               role="option"
-                              aria-selected={selectedType === opt}
+                              aria-selected={selectedMain === opt.id}
                               onClick={() => {
-                                setSelectedType(opt);
+                                setSelectedMain(opt.id);
+                                setSelectedSub(null);
+                                setPage(1);
                                 setIsTypeMenuOpen(false);
                               }}
                               className="block w-full text-left px-spacing-md py-spacing-xs text-mono text-label text-accent hover:bg-accent/10"
                             >
-                              <span className="text-mono text-label">{opt}</span>
+                              <span className="text-mono text-label">{opt.label}</span>
                             </button>
                           ))}
                         </div>
@@ -404,14 +459,37 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                       isDragging ? 'cursor-grabbing' : 'cursor-grab',
                     ].join(' ')}
                   >
-                    <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-secondary" label="All" />
-                    <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-secondary" label="Sub Category 1" />
-                    <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-secondary" label="Sub Category 2" />
-                    <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-secondary" label="Sub Category 3" />
-                    <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-secondary" label="Sub Category 4" />
-                    <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-muted" label="Sub Category 5" />
-                    <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-muted" label="Sub Category 6" />
-                    <NavItem className="shrink-0 snap-start whitespace-nowrap" variant="text-muted" label="Sub Category 7" />
+                    {subCategoriesForSelected.map((sub) => {
+                      const count = getSubcategoryCount(selectedMain, sub.value);
+                      // DIAGNOSTIC: Verify subcategory rendering logic and counts
+                      console.log('[SubNav] count check', selectedMain, sub.value, count);
+                      const isActiveSub = count > 0;
+                      const isSelected = selectedSub === sub.value;
+                      const label = sub.label?.en || sub.value;
+                      if (!isActiveSub) {
+                        return (
+                          <NavItem
+                            key={sub.value}
+                            className="shrink-0 snap-start whitespace-nowrap"
+                            variant="text-muted"
+                            label={label}
+                          />
+                        );
+                      }
+                      return (
+                        <NavItem
+                          key={sub.value}
+                          className="shrink-0 snap-start whitespace-nowrap"
+                          variant="text"
+                          active={isSelected}
+                          label={label}
+                          onClick={() => {
+                            setSelectedSub(sub.value);
+                            setPage(1);
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -476,7 +554,11 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                         </>
                       )
                       : (
-                        <div className="col-span-full text-center font-mono text-text-secondary">No stories found.</div>
+                        <div role="status" aria-live="polite" className="col-span-full text-center font-mono text-label text-ui-muted">
+                          {selectedMain === 'stories' ? 'There are no Plaible stories yet.'
+                            : selectedMain === 'biographies' ? 'There are no Plaible biographies yet.'
+                            : 'There are no Plaible books yet.'}
+                        </div>
                       )}
                 </div>
                 {error ? (

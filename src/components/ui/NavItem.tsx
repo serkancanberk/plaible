@@ -42,6 +42,7 @@ export default function NavItem({
   const isTertiary = variant === 'icon-tertiary' || variant === 'icon+text-tertiary' || variant === 'text-tertiary' || variant === 'text+icon-tertiary';
   const isSecondary = variant === 'icon-secondary' || variant === 'icon+text-secondary' || variant === 'text-secondary' || variant === 'text+icon-secondary';
   const isTextOnly = variant === 'text' || variant === 'text-tertiary' || variant === 'text-secondary' || variant === 'text-muted';
+  const isPlainText = variant === 'text';
   const isIconOnly = variant === 'icon' || variant === 'icon-tertiary' || variant === 'icon-secondary';
   const isIconText = variant === 'icon+text' || variant === 'icon+text-tertiary' || variant === 'icon+text-secondary';
   const isTextIcon = variant === 'text+icon' || variant === 'text+icon-tertiary' || variant === 'text+icon-secondary';
@@ -50,13 +51,17 @@ export default function NavItem({
     'font-mono',
     'text-label',
     // color by family
-    isMuted
-      ? 'text-ui-muted'
-      : isTertiary
-        ? 'text-text-tertiary'
-        : isSecondary
-          ? 'text-text-secondary'
-          : 'text-text-primary',
+    (
+      isMuted
+        ? 'text-ui-muted'
+        : isPlainText
+          ? (active ? 'text-text-primary' : 'text-text-secondary')
+          : isTertiary
+            ? 'text-text-tertiary'
+            : isSecondary
+              ? 'text-text-secondary'
+              : 'text-text-primary'
+    ),
     'rounded-md',
     'transition-colors',
     // cursor by family
@@ -74,7 +79,10 @@ export default function NavItem({
   }
 
   if (active && !isMuted) {
-    baseClasses.push('text-accent', 'font-bold');
+    // For plain text variant, rely on primary text color via base color above; no accent/bold
+    if (!isPlainText) {
+      baseClasses.push('text-accent', 'font-bold');
+    }
   }
 
   // Ensure muted variant is non-interactive

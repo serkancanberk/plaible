@@ -22,6 +22,8 @@ export function useStories(params: UseStoriesParams = {}) {
   React.useEffect(() => {
     const controller = new AbortController();
     const url = buildStoriesUrl('/api/stories', fetchParams);
+    // DIAGNOSTIC: verify frontend -> backend request URL and params
+    console.log('[useStories] requesting', url, fetchParams);
     setLoading(true);
     setError(undefined);
 
