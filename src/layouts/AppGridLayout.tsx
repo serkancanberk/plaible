@@ -4,6 +4,7 @@ import NavItem from '../components/ui/NavItem';
 import StoryCard from '../components/ui/StoryCard';
 import { useStories } from '../hooks/useStories';
 import { categoryConfig } from '../config/categoryConfig';
+import { MobileHeader } from '../components/ui/MobileHeader';
 import IconHome from 'virtual:icons/tabler/home';
 import IconMessage from 'virtual:icons/tabler/message';
 import IconPlus from 'virtual:icons/tabler/plus';
@@ -183,14 +184,28 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
     <div className="min-h-screen w-full bg-secondary">
       {/* Mobile branch */}
       <div className="block lg:hidden">
+        {/* Mobile top nav */}
+        <MobileHeader
+          items={[
+            { label: 'Play' },
+            { label: 'Message' },
+            { label: 'Search' },
+            { label: 'Download' },
+            { label: 'Add' },
+            { label: 'Recent Stories' },
+            { label: 'Saved Stories' },
+            { label: 'Your Profile' },
+          ]}
+          logoVariant="light"
+          bgClassName="bg-primary"
+        />
+
         {/* Mobile content only - no sidebar */}
         <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl flex flex-col">
-          {/* Header */}
-          <header className="border-b border-text-secondary/30 bg-secondary">
-            <div className="flex items-center justify-between px-spacing-md pt-spacing-2xl pb-spacing-sm">
-              <div className="text-heading font-serif text-accent">Choose A Story</div>
-            </div>
-          </header>
+          {/* Section heading */}
+          <div className="px-spacing-md pt-spacing-2xl pb-spacing-sm">
+            <div className="text-heading font-serif text-accent">Choose A Story</div>
+          </div>
 
           {/* SubNavigation */}
           <section className="px-spacing-md py-spacing-sm mt-spacing-lg">
