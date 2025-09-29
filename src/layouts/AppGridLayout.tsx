@@ -26,7 +26,9 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const [selectedSub, setSelectedSub] = useState<string | null>(null);
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const carouselRef = useRef<HTMLDivElement | null>(null);
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const mobileCarouselRef = useRef<HTMLDivElement | null>(null);
+  const mobileDropdownRef = useRef<HTMLDivElement | null>(null);
+  const desktopDropdownRef = useRef<HTMLDivElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);
   const dragStartXRef = useRef(0);
@@ -34,6 +36,9 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [canScroll, setCanScroll] = useState(false);
+  const [canMobileScrollLeft, setCanMobileScrollLeft] = useState(false);
+  const [canMobileScrollRight, setCanMobileScrollRight] = useState(false);
+  const [canMobileScroll, setCanMobileScroll] = useState(false);
   const [categoriesAgg, setCategoriesAgg] = useState<Array<{ id: string; count: number; subCategories: Array<{ id: string; count: number }> }>>([]);
   const countsByMain = React.useMemo(() => {
     const map: Record<string, Record<string, number>> = {};
@@ -55,6 +60,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const [page, setPage] = useState(1);
   const pageSize = 9;
   const { data: stories, total, loading, error } = useStories({ page, pageSize, category: selectedMain, subcategory: selectedSub ?? undefined });
+  console.log('[Mobile useStories params]', { page, pageSize, category: selectedMain, subcategory: selectedSub ?? undefined });
   const pageCount = Math.max(1, Math.ceil((total || 0) / pageSize));
 
   const scrollCategoriesRight = () => {
@@ -71,6 +77,20 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
     el.scrollBy({ left: -amount, behavior: 'smooth' });
   };
 
+  const scrollMobileCategoriesRight = () => {
+    const el = mobileCarouselRef.current;
+    if (!el) return;
+    const amount = el.clientWidth / 2;
+    el.scrollBy({ left: amount, behavior: 'smooth' });
+  };
+
+  const scrollMobileCategoriesLeft = () => {
+    const el = mobileCarouselRef.current;
+    if (!el) return;
+    const amount = el.clientWidth / 2;
+    el.scrollBy({ left: -amount, behavior: 'smooth' });
+  };
+
   const updateCarouselScrollState = () => {
     const el = carouselRef.current;
     if (!el) return;
@@ -82,9 +102,24 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
     setCanScrollRight(scrollable && !atEnd);
   };
 
+  const updateMobileCarouselScrollState = () => {
+    const el = mobileCarouselRef.current;
+    if (!el) return;
+    const scrollable = el.scrollWidth > el.clientWidth;
+    const atStart = el.scrollLeft <= 0;
+    const atEnd = el.scrollLeft >= el.scrollWidth - el.clientWidth - 1;
+    setCanMobileScroll(scrollable);
+    setCanMobileScrollLeft(scrollable && !atStart);
+    setCanMobileScrollRight(scrollable && !atEnd);
+  };
+
   useEffect(() => {
     updateCarouselScrollState();
-    const onResize = () => updateCarouselScrollState();
+    updateMobileCarouselScrollState();
+    const onResize = () => {
+      updateCarouselScrollState();
+      updateMobileCarouselScrollState();
+    };
     window.addEventListener('resize', onResize);
     return () => {
       window.removeEventListener('resize', onResize);
@@ -151,6 +186,29 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
     setIsDragging(false);
   };
 
+  const onMobileCarouselMouseDown: React.MouseEventHandler<HTMLDivElement> = (e) => {
+    const el = mobileCarouselRef.current;
+    if (!el) return;
+    isDraggingRef.current = true;
+    setIsDragging(true);
+    dragStartXRef.current = e.clientX;
+    dragStartScrollLeftRef.current = el.scrollLeft;
+  };
+
+  const onMobileCarouselMouseMove: React.MouseEventHandler<HTMLDivElement> = (e) => {
+    const el = mobileCarouselRef.current;
+    if (!el) return;
+    if (!isDraggingRef.current) return;
+    const delta = e.clientX - dragStartXRef.current;
+    el.scrollLeft = dragStartScrollLeftRef.current - delta;
+    updateMobileCarouselScrollState();
+  };
+
+  const endMobileCarouselDrag = () => {
+    isDraggingRef.current = false;
+    setIsDragging(false);
+  };
+
   const toggleSidebar = () => setSidebarOpen((v) => !v);
   const closeSidebar = () => setSidebarOpen(false);
 
@@ -169,8 +227,10 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   // Close type dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      const el = dropdownRef.current;
-      if (el && !el.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const inMobile = mobileDropdownRef.current?.contains(target) ?? false;
+      const inDesktop = desktopDropdownRef.current?.contains(target) ?? false;
+      if (!inMobile && !inDesktop) {
         setIsTypeMenuOpen(false);
       }
     }
@@ -180,8 +240,17 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
     };
   }, []);
 
+  // Debug: Log selectedMain state changes
+  useEffect(() => {
+    console.log('[useEffect:selectedMain changed]', selectedMain);
+  }, [selectedMain]);
+
   return (
     <div className="min-h-screen w-full bg-secondary">
+      {(() => {
+        console.log('[Render] selectedMain =', selectedMain);
+        return null;
+      })()}
       {/* Mobile branch */}
       <div className="block lg:hidden">
         {/* Mobile top nav */}
@@ -213,7 +282,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
               {/* Left: Dropdown + Scrollable categories */}
               <div className="flex items-center gap-spacing-lg flex-1 min-w-0">
                 {/* Dropdown */}
-                <div ref={dropdownRef} className="relative shrink-0 overflow-visible z-20">
+                <div ref={mobileDropdownRef} className="relative shrink-0 overflow-visible z-20">
                   <button
                     type="button"
                     aria-haspopup="listbox"
@@ -227,37 +296,58 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                     </span>
                   </button>
                   {isTypeMenuOpen ? (
-                    <div className="absolute left-0 z-20 mt-spacing-xs w-max min-w-full rounded-md border border-text-secondary/30 bg-secondary">
-                      <div className="py-spacing-xs">
-                        {typeOptions.map((opt) => (
-                          <button
-                            key={opt.id}
-                            type="button"
-                            role="option"
-                            aria-selected={selectedMain === opt.id}
-                            onClick={() => {
-                              setSelectedMain(opt.id);
-                              setSelectedSub(null);
-                              setPage(1);
-                              setIsTypeMenuOpen(false);
-                            }}
-                            className="block w-full text-left px-spacing-md py-spacing-xs text-mono text-label text-accent hover:bg-accent/10"
-                          >
-                            <span className="text-mono text-label">{opt.label}</span>
-                          </button>
-                        ))}
+                    <>
+                      {(() => {
+                        console.log('[Mobile Dropdown Container Rendered]');
+                        return null;
+                      })()}
+                      <div
+                        className="absolute left-0 z-20 mt-spacing-xs w-max min-w-full rounded-md border border-text-secondary/30 bg-secondary"
+                        style={{ zIndex: 9999 }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        {(() => {
+                          console.log('[Mobile Dropdown -> Applied high z-index]');
+                          return null;
+                        })()}
+                        <div className="py-spacing-xs">
+                        {typeOptions.map((opt) => {
+                          console.log('[Mobile Dropdown -> opt]', opt);
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              role="option"
+                              aria-selected={selectedMain === opt.id}
+                              onClick={() => {
+                                console.log('[Mobile Dropdown -> Button Clicked]', { optId: opt.id, label: opt.label });
+                                console.log('[Mobile Dropdown -> onClick]', { optId: opt.id });
+                                console.log('[Mobile Dropdown]', { selectedMain: opt.id, selectedSub: null });
+                                console.log('[Mobile Dropdown -> State Reset]', { selectedMain: opt.id, resetSub: true, resetPage: 1 });
+                                setSelectedMain(opt.id);
+                                setSelectedSub(null);
+                                setPage(1);
+                                setIsTypeMenuOpen(false);
+                              }}
+                              className="block w-full text-left px-spacing-md py-spacing-xs text-mono text-label text-accent hover:bg-accent/10"
+                            >
+                              <span className="text-mono text-label">{opt.label}</span>
+                            </button>
+                          );
+                        })}
+                        </div>
                       </div>
-                    </div>
+                    </>
                   ) : null}
                 </div>
 
                 {/* Left arrow (scroll left) */}
-                {canScroll ? (
+                {canMobileScroll ? (
                   <button
                     type="button"
-                    onClick={scrollCategoriesLeft}
+                    onClick={scrollMobileCategoriesLeft}
                     aria-label="Scroll categories left"
-                    disabled={!canScrollLeft}
+                    disabled={!canMobileScrollLeft}
                     className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-text-secondary/30 bg-secondary text-text-secondary hover:bg-primary/10 disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
                   >
                     <IconChevronLeft className="w-4 h-4" />
@@ -266,12 +356,12 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
 
                 {/* Scrollable Category Carousel */}
                 <div
-                  ref={carouselRef}
-                  onScroll={updateCarouselScrollState}
-                  onMouseDown={onCarouselMouseDown}
-                  onMouseMove={onCarouselMouseMove}
-                  onMouseUp={endCarouselDrag}
-                  onMouseLeave={endCarouselDrag}
+                  ref={mobileCarouselRef}
+                  onScroll={updateMobileCarouselScrollState}
+                  onMouseDown={onMobileCarouselMouseDown}
+                  onMouseMove={onMobileCarouselMouseMove}
+                  onMouseUp={endMobileCarouselDrag}
+                  onMouseLeave={endMobileCarouselDrag}
                   className={[
                     'inline-flex', 'whitespace-nowrap', 'items-center', 'gap-spacing-lg', 'overflow-x-auto',
                     'snap-x', 'snap-mandatory', 'scroll-smooth', '[scrollbar-width:none]', '[&::-webkit-scrollbar]:hidden',
@@ -301,6 +391,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                         active={isSelected}
                         label={label}
                         onClick={() => {
+                          console.log('[Mobile Dropdown]', { selectedMain, selectedSub: sub.value });
+                          console.log('[Mobile Subcategory Click]', { selectedMain, selectedSub: sub.value });
                           setSelectedSub(sub.value);
                           setPage(1);
                         }}
@@ -311,12 +403,12 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
               </div>
 
               {/* Right arrow indicator */}
-              {canScroll ? (
+              {canMobileScroll ? (
                 <button
                   type="button"
-                  onClick={scrollCategoriesRight}
+                  onClick={scrollMobileCategoriesRight}
                   aria-label="Scroll categories right"
-                  disabled={!canScrollRight}
+                  disabled={!canMobileScrollRight}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-text-secondary/30 bg-secondary text-text-secondary hover:bg-primary/10 disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
                 >
                   <IconChevronRight className="w-4 h-4" />
@@ -328,7 +420,15 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
           {/* Story grid */}
           <section className="px-spacing-md py-spacing-lg">
             <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl mt-spacing-lg">
+              {(() => {
+                console.log('[Mobile Stories]', { selectedMain, selectedSub, stories });
+                return null;
+              })()}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-spacing-xl justify-items-center">
+                {(() => {
+                  console.log('[Mobile Stories State]', { selectedMain, selectedSub, stories });
+                  return null;
+                })()}
                 {loading
                   ? Array.from({ length: pageSize }).map((_, i) => (
                       <div key={i} className="w-full max-w-[300px] rounded-card bg-primary shadow-card overflow-hidden animate-pulse">
@@ -360,11 +460,17 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                       </>
                     )
                     : (
-                      <div role="status" aria-live="polite" className="col-span-full text-center font-mono text-label text-ui-muted">
-                        {selectedMain === 'stories' ? 'There are no Plaible stories yet.'
-                          : selectedMain === 'biographies' ? 'There are no Plaible biographies yet.'
-                          : 'There are no Plaible books yet.'}
-                      </div>
+                      <>
+                        {(() => {
+                          console.log('[Mobile Empty State]', selectedMain);
+                          return null;
+                        })()}
+                        <div role="status" aria-live="polite" className="col-span-full text-center font-mono text-label text-ui-muted">
+                          {selectedMain === 'stories' ? 'There are no Plaible stories yet.'
+                            : selectedMain === 'biographies' ? 'There are no Plaible biographies yet.'
+                            : 'There are no Plaible books yet.'}
+                        </div>
+                      </>
                     )}
               </div>
               {error ? (
@@ -622,7 +728,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                 {/* Left: Dropdown + Scrollable categories */}
                 <div className="flex items-center gap-spacing-lg flex-1 min-w-0">
                   {/* Dropdown */}
-                  <div ref={dropdownRef} className="relative shrink-0 overflow-visible z-20">
+                  <div ref={desktopDropdownRef} className="relative shrink-0 overflow-visible z-20">
                     <button
                       type="button"
                       aria-haspopup="listbox"
