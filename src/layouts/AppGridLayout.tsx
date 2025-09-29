@@ -180,18 +180,231 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   }, []);
 
   return (
-    <div className="h-screen w-full bg-secondary overflow-hidden">
-      {/* Overlay & sliding sidebar for tablet/mobile */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden" onClick={closeSidebar} />
-      )}
+    <div className="min-h-screen w-full bg-secondary">
+      {/* Mobile branch */}
+      <div className="block lg:hidden">
+        {/* Mobile content only - no sidebar */}
+        <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl flex flex-col">
+          {/* Header */}
+          <header className="border-b border-text-secondary/30 bg-secondary">
+            <div className="flex items-center justify-between px-spacing-md pt-spacing-2xl pb-spacing-sm">
+              <div className="text-heading font-serif text-accent">Choose A Story</div>
+            </div>
+          </header>
 
-      {/* App shell: sidebar + content area */}
-      <div className="relative flex h-full w-full">
+          {/* SubNavigation */}
+          <section className="px-spacing-md py-spacing-sm mt-spacing-lg">
+            <div className="flex items-center justify-between gap-spacing-md">
+              {/* Left: Dropdown + Scrollable categories */}
+              <div className="flex items-center gap-spacing-lg flex-1 min-w-0">
+                {/* Dropdown */}
+                <div ref={dropdownRef} className="relative shrink-0 overflow-visible z-20">
+                  <button
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded={isTypeMenuOpen}
+                    onClick={() => setIsTypeMenuOpen((v) => !v)}
+                    className="inline-flex items-center gap-spacing-xs rounded-md border border-text-secondary/30 bg-secondary text-mono text-label text-accent px-spacing-md py-spacing-xs hover:bg-accent/10"
+                  >
+                    <span className="text-mono text-label">{typeOptions.find(t => t.id === selectedMain)?.label || 'Book'}</span>
+                    <span className="inline-flex items-center justify-center text-accent">
+                      <IconChevronRight className="w-4 h-4 rotate-90" />
+                    </span>
+                  </button>
+                  {isTypeMenuOpen ? (
+                    <div className="absolute left-0 z-20 mt-spacing-xs w-max min-w-full rounded-md border border-text-secondary/30 bg-secondary">
+                      <div className="py-spacing-xs">
+                        {typeOptions.map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            role="option"
+                            aria-selected={selectedMain === opt.id}
+                            onClick={() => {
+                              setSelectedMain(opt.id);
+                              setSelectedSub(null);
+                              setPage(1);
+                              setIsTypeMenuOpen(false);
+                            }}
+                            className="block w-full text-left px-spacing-md py-spacing-xs text-mono text-label text-accent hover:bg-accent/10"
+                          >
+                            <span className="text-mono text-label">{opt.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Left arrow (scroll left) */}
+                {canScroll ? (
+                  <button
+                    type="button"
+                    onClick={scrollCategoriesLeft}
+                    aria-label="Scroll categories left"
+                    disabled={!canScrollLeft}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-text-secondary/30 bg-secondary text-text-secondary hover:bg-primary/10 disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
+                  >
+                    <IconChevronLeft className="w-4 h-4" />
+                  </button>
+                ) : null}
+
+                {/* Scrollable Category Carousel */}
+                <div
+                  ref={carouselRef}
+                  onScroll={updateCarouselScrollState}
+                  onMouseDown={onCarouselMouseDown}
+                  onMouseMove={onCarouselMouseMove}
+                  onMouseUp={endCarouselDrag}
+                  onMouseLeave={endCarouselDrag}
+                  className={[
+                    'inline-flex', 'whitespace-nowrap', 'items-center', 'gap-spacing-lg', 'overflow-x-auto',
+                    'snap-x', 'snap-mandatory', 'scroll-smooth', '[scrollbar-width:none]', '[&::-webkit-scrollbar]:hidden',
+                    isDragging ? 'cursor-grabbing' : 'cursor-grab',
+                  ].join(' ')}
+                >
+                  {subCategoriesForSelected.map((sub) => {
+                    const count = getSubcategoryCount(selectedMain, sub.value);
+                    const isActiveSub = count > 0;
+                    const isSelected = selectedSub === sub.value;
+                    const label = sub.label?.en || sub.value;
+                    if (!isActiveSub) {
+                      return (
+                        <NavItem
+                          key={sub.value}
+                          className="shrink-0 snap-start whitespace-nowrap"
+                          variant="text-muted"
+                          label={label}
+                        />
+                      );
+                    }
+                    return (
+                      <NavItem
+                        key={sub.value}
+                        className="shrink-0 snap-start whitespace-nowrap"
+                        variant="text"
+                        active={isSelected}
+                        label={label}
+                        onClick={() => {
+                          setSelectedSub(sub.value);
+                          setPage(1);
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Right arrow indicator */}
+              {canScroll ? (
+                <button
+                  type="button"
+                  onClick={scrollCategoriesRight}
+                  aria-label="Scroll categories right"
+                  disabled={!canScrollRight}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-text-secondary/30 bg-secondary text-text-secondary hover:bg-primary/10 disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
+                >
+                  <IconChevronRight className="w-4 h-4" />
+                </button>
+              ) : null}
+            </div>
+          </section>
+
+          {/* Story grid */}
+          <section className="px-spacing-md py-spacing-lg">
+            <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl mt-spacing-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-spacing-xl justify-items-center">
+                {loading
+                  ? Array.from({ length: pageSize }).map((_, i) => (
+                      <div key={i} className="w-full max-w-[300px] rounded-card bg-primary shadow-card overflow-hidden animate-pulse">
+                        <div className="px-spacing-md pt-spacing-md">
+                          <div className="aspect-[16/9] w-full rounded-md bg-ui-muted" />
+                        </div>
+                        <div className="px-spacing-md pt-spacing-md pb-spacing-md space-y-spacing-sm">
+                          <div className="h-6 w-3/4 bg-ui-muted rounded" />
+                          <div className="h-4 w-1/2 bg-ui-muted rounded" />
+                          <div className="h-4 w-full bg-ui-muted rounded" />
+                          <div className="h-10 w-full bg-ui-muted rounded-card" />
+                        </div>
+                      </div>
+                    ))
+                  : stories && stories.length > 0
+                    ? (
+                      <>
+                        {stories.map((s) => (
+                          <StoryCard
+                            key={s.slug}
+                            title={s.title}
+                            authorName={s.authorName}
+                            slug={s.slug}
+                            headline={s.headline}
+                            assets={s.assets}
+                            stats={s.stats}
+                          />
+                        ))}
+                      </>
+                    )
+                    : (
+                      <div role="status" aria-live="polite" className="col-span-full text-center font-mono text-label text-ui-muted">
+                        {selectedMain === 'stories' ? 'There are no Plaible stories yet.'
+                          : selectedMain === 'biographies' ? 'There are no Plaible biographies yet.'
+                          : 'There are no Plaible books yet.'}
+                      </div>
+                    )}
+              </div>
+              {error ? (
+                <div className="mt-spacing-md col-span-full text-center text-alert font-mono">Failed to load stories.</div>
+              ) : null}
+            </div>
+          </section>
+
+          {/* Pagination */}
+          <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl mt-spacing-lg mb-spacing-2xl">
+            <div className="flex items-center justify-center gap-spacing-md">
+              <NavItem
+                variant="icon+text-secondary"
+                label="Previous"
+                icon={<IconChevronLeft className="w-4 h-4" />}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              />
+              {Array.from({ length: Math.min(pageCount, 5) }).map((_, idx) => {
+                const num = idx + 1;
+                return (
+                  <NavItem
+                    key={num}
+                    variant="text-secondary"
+                    label={String(num)}
+                    onClick={() => setPage(num)}
+                  />
+                );
+              })}
+              <NavItem
+                variant="text+icon-secondary"
+                label="Next"
+                icon={<IconChevronRight className="w-4 h-4" />}
+                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+              />
+            </div>
+            <div className="font-mono text-text-secondary text-center mt-spacing-lg">
+              Page {page} of {pageCount}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop branch */}
+      <div className="hidden lg:flex h-screen w-full">
+        {/* Overlay & sliding sidebar for tablet/mobile */}
+        {sidebarOpen && (
+          <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden" onClick={closeSidebar} />
+        )}
+
+        {/* App shell: sidebar + content area */}
+        <div className="relative flex h-full w-full">
         {/* Sidebar */}
         <aside
           className={[
-            'fixed left-0 top-0 h-full bg-accent transition-all duration-300 ease-in-out lg:static lg:translate-x-0 lg:block',
+            'fixed left-0 top-0 h-screen bg-accent transition-all duration-300 ease-in-out lg:static lg:translate-x-0 lg:block',
             sidebarCollapsed ? 'w-20 lg:w-20' : 'w-64 lg:w-64',
             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           ].join(' ')}
@@ -599,6 +812,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
