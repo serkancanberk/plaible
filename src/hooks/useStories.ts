@@ -31,6 +31,14 @@ export function useStories(params: UseStoriesParams = {}) {
       .then((json) => {
         setData(json.items || []);
         setTotal(json.total || (json.items ? json.items.length : 0));
+        
+        // Debug: Log API response for media items
+        console.log('[API Response -> stories]', (json.items || []).map(s => ({
+          id: s._id,
+          title: s.title,
+          images: s.assets?.images,
+          videos: s.assets?.videos,
+        })));
       })
       .catch((err) => {
         if ((err as any)?.name === 'AbortError') return;

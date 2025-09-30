@@ -26,7 +26,7 @@ router.post("/", async (req, res) => {
     // Load a lightweight projection from Story
     const story = await Story.findOne(
       { slug: storySlug },
-      { _id: 1, slug: 1, title: 1, "assets.images": { $slice: 1 } }
+      { _id: 1, slug: 1, title: 1, "assets.images": 1 }
     ).lean();
 
     if (!story) return err(res, "NOT_FOUND", 404, { field: "storySlug" });

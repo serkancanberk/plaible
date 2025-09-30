@@ -39,12 +39,48 @@ router.get("/", async (req, res) => {
         headline: 1,
         "stats.avgRating": 1,
         "stats.totalPlayed": 1,
-        "assets.images": { $slice: 1 },
+        "assets.images": 1,
+        "assets.videos": 1,
       }
     )
       .sort({ "stats.totalPlayed": -1, title: 1 })
       .limit(50)
       .lean();
+
+    // Debug: Log raw DB assets for each story
+    docs.forEach(story => {
+      console.log('[API -> DB Raw Assets]', story._id, {
+        images: story.assets?.images,
+        videos: story.assets?.videos,
+        typeOfImages: typeof story.assets?.images,
+        isArray: Array.isArray(story.assets?.images),
+      });
+    });
+
+    // Safeguards: Ensure assets.images and assets.videos are always arrays
+    docs.forEach(story => {
+      if (story.assets) {
+        story.assets.images = Array.isArray(story.assets.images)
+          ? story.assets.images
+          : story.assets.images
+          ? [story.assets.images]
+          : [];
+        
+        story.assets.videos = Array.isArray(story.assets.videos)
+          ? story.assets.videos
+          : story.assets.videos
+          ? [story.assets.videos]
+          : [];
+      }
+    });
+
+    // Debug: Log API response before sending
+    console.log('[API Response -> story.assets]', docs.map(s => ({
+      id: s._id,
+      title: s.title,
+      images: s.assets?.images,
+      videos: s.assets?.videos,
+    })));
 
     return ok(res, { items: docs });
   } catch (err) {
