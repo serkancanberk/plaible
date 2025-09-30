@@ -3,6 +3,8 @@ import React from 'react';
 type BaseProps = {
   label: string;
   className?: string;
+  showArrow?: boolean;
+  variant?: 'default' | 'mobileHeader';
 };
 
 type ClickableProps = BaseProps & {
@@ -18,23 +20,34 @@ type LinkProps = BaseProps & {
 type MenuItemProps = ClickableProps | LinkProps;
 
 export default function MenuItem(props: MenuItemProps) {
-  const { label, className = '' } = props;
-  const commonClasses = 'w-full flex items-center justify-between text-primary hover:text-secondary font-mono pb-4 hover:opacity-50 transition-colors';
+  const { label, className = '', showArrow, variant = 'default' } = props;
+  
+  // Default variant classes (landing page style)
+  const defaultClasses = 'w-full flex items-center justify-between text-primary hover:text-secondary font-mono pb-4 hover:opacity-50 transition-colors';
+  
+  // Mobile header variant classes
+  const mobileHeaderClasses = 'w-full flex items-center justify-between text-text-tertiary hover:text-accent font-mono text-caption pt-spacing-md pb-spacing-xs transition-colors';
+  
+  const commonClasses = variant === 'mobileHeader' ? mobileHeaderClasses : defaultClasses;
 
   return (
     <div className={`w-full ${className}`}>
       {'onClick' in props ? (
         <button type="button" onClick={props.onClick} className={`${commonClasses} bg-transparent border-0 text-left cursor-pointer`}>
           <span className="truncate">{label}</span>
-          <span aria-hidden="true">→</span>
+          {showArrow !== false && <span aria-hidden="true">→</span>}
         </button>
       ) : (
         <a href={props.href} className={commonClasses}>
           <span className="truncate">{label}</span>
-          <span aria-hidden="true">→</span>
+          {showArrow !== false && <span aria-hidden="true">→</span>}
         </a>
       )}
-      <div className="h-px w-full bg-primary" />
+      {variant === 'mobileHeader' ? (
+        <div className="h-px w-full bg-text-secondary/25" />
+      ) : (
+        <div className="h-px w-full bg-primary" />
+      )}
     </div>
   );
 }

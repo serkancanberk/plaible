@@ -261,8 +261,13 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
             { label: 'Search' },
             { label: 'Download' },
             { label: 'Add' },
-            { label: 'Recent Stories' },
-            { label: 'Saved Stories' },
+            { 
+              label: 'Your Stories',
+              children: [
+                { label: 'Recent' },
+                { label: 'Saved' },
+              ]
+            },
             { label: 'Your Profile' },
           ]}
           logoVariant="light"
@@ -431,7 +436,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                 })()}
                 {loading
                   ? Array.from({ length: pageSize }).map((_, i) => (
-                      <div key={i} className="w-full max-w-[300px] rounded-card bg-primary shadow-card overflow-hidden animate-pulse">
+                      <div key={i} className="w-[90%] md:w-full md:max-w-[300px] rounded-card bg-primary shadow-card overflow-hidden animate-pulse">
                         <div className="px-spacing-md pt-spacing-md">
                           <div className="aspect-[16/9] w-full rounded-md bg-ui-muted" />
                         </div>
@@ -447,15 +452,16 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                     ? (
                       <>
                         {stories.map((s) => (
-                          <StoryCard
-                            key={s.slug}
-                            title={s.title}
-                            authorName={s.authorName}
-                            slug={s.slug}
-                            headline={s.headline}
-                            assets={s.assets}
-                            stats={s.stats}
-                          />
+                          <div key={s.slug} className="w-[90%] md:w-full md:max-w-[300px]">
+                            <StoryCard
+                              title={s.title}
+                              authorName={s.authorName}
+                              slug={s.slug}
+                              headline={s.headline}
+                              assets={s.assets}
+                              stats={s.stats}
+                            />
+                          </div>
                         ))}
                       </>
                     )
@@ -486,7 +492,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                 variant="icon+text-secondary"
                 label="Previous"
                 icon={<IconChevronLeft className="w-4 h-4" />}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={page === 1 ? undefined : () => setPage((p) => Math.max(1, p - 1))}
+                className={page === 1 ? "opacity-60 cursor-not-allowed" : ""}
               />
               {Array.from({ length: Math.min(pageCount, 5) }).map((_, idx) => {
                 const num = idx + 1;
@@ -503,11 +510,9 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                 variant="text+icon-secondary"
                 label="Next"
                 icon={<IconChevronRight className="w-4 h-4" />}
-                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                onClick={page === pageCount ? undefined : () => setPage((p) => Math.min(pageCount, p + 1))}
+                className={page === pageCount ? "opacity-60 cursor-not-allowed" : ""}
               />
-            </div>
-            <div className="font-mono text-text-secondary text-center mt-spacing-lg">
-              Page {page} of {pageCount}
             </div>
           </div>
         </div>
@@ -900,14 +905,15 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                 ) : null}
               </div>
             </section>
-            {/* Pagination + Info */}
+            {/* Pagination */}
             <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl mt-spacing-lg mb-spacing-2xl">
               <div className="flex items-center justify-center gap-spacing-md">
                 <NavItem
                   variant="icon+text-secondary"
                   label="Previous"
                   icon={<IconChevronLeft className="w-4 h-4" />}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  onClick={page === 1 ? undefined : () => setPage((p) => Math.max(1, p - 1))}
+                  className={page === 1 ? "opacity-60 cursor-not-allowed" : ""}
                 />
                 {Array.from({ length: Math.min(pageCount, 5) }).map((_, idx) => {
                   const num = idx + 1;
@@ -924,11 +930,9 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                   variant="text+icon-secondary"
                   label="Next"
                   icon={<IconChevronRight className="w-4 h-4" />}
-                  onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                  onClick={page === pageCount ? undefined : () => setPage((p) => Math.min(pageCount, p + 1))}
+                  className={page === pageCount ? "opacity-60 cursor-not-allowed" : ""}
                 />
-              </div>
-              <div className="font-mono text-text-secondary text-center mt-spacing-lg">
-                Page {page} of {pageCount}
               </div>
             </div>
           </div>

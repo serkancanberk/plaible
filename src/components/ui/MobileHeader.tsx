@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import PlaibleLogo from '../PlaibleLogo';
-import NavItem from './NavItem';
+import PlaibleLogo, { PlaibleLogoProps } from '../PlaibleLogo';
+import MenuItem from '../MenuItem';
 
 type MobileHeaderItem = {
   label: string;
   onClick?: () => void;
+  children?: MobileHeaderItem[];
 };
 
 type MobileHeaderProps = {
   items: MobileHeaderItem[];
-  logoVariant?: 'light' | 'dark';
+  logoVariant?: PlaibleLogoProps['variant'];
   bgClassName?: string;
 };
 
@@ -19,6 +20,19 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   bgClassName = 'bg-primary',
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [expandedParents, setExpandedParents] = useState<Set<number>>(new Set());
+
+  const toggleParent = (index: number) => {
+    setExpandedParents((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
 
   return (
     <header className={`border-b border-text-secondary/30 ${bgClassName}`}>
@@ -52,22 +66,26 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
       </div>
       <div
         id="mobile-menu"
-        className={`overflow-hidden transition-[max-height] duration-300 ${isMenuOpen ? 'max-h-96' : 'max-h-0'}`}
+        className={`overflow-hidden transition-[max-height] duration-300 ${isMenuOpen ? 'max-h-[600px]' : 'max-h-0'}`}
       >
         <nav className={bgClassName}>
-          <ul className="mt-spacing-md space-y-spacing-xs px-spacing-md pb-spacing-md max-w-md mx-auto [&_a]:text-text-tertiary [&_button]:text-text-tertiary [&_a:hover]:text-accent [&_button:hover]:text-accent">
-            {items.map((item, index) => (
-              <li key={index}>
-                <NavItem
-                  variant="text"
-                  label={item.label}
-                  onClick={() => {
-                    item.onClick?.();
-                    setIsMenuOpen(false);
-                  }}
-                />
-              </li>
-            ))}
+          <ul className="mt-spacing-md space-y-spacing-xs px-spacing-md pb-spacing-2xl max-w-md mx-auto">
+            {items.map((item, index) => {
+              // Render MenuItem directly for all items (including those with children)
+              return (
+                <li key={index}>
+                  <MenuItem
+                    label={item.label}
+                    onClick={() => {
+                      item.onClick?.();
+                      setIsMenuOpen(false);
+                    }}
+                    showArrow={false}
+                    variant="mobileHeader"
+                  />
+                </li>
+              );
+            })}
           </ul>
         </nav>
       </div>
