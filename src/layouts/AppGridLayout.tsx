@@ -14,6 +14,8 @@ import IconUser from 'virtual:icons/tabler/user';
 import IconSearch from 'virtual:icons/tabler/search';
 import IconDownload from 'virtual:icons/tabler/download';
 import IconDots from 'virtual:icons/tabler/dots';
+import GetTheAppModal from '../components/ui/GetTheAppModal';
+import SearchModal from '../components/ui/SearchModal';
 
 type AppGridLayoutProps = {
   children?: React.ReactNode;
@@ -25,6 +27,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const [selectedMain, setSelectedMain] = useState<'books' | 'stories' | 'biographies'>('books');
   const [selectedSub, setSelectedSub] = useState<string | null>(null);
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
+  const [isGetAppModalOpen, setIsGetAppModalOpen] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const mobileCarouselRef = useRef<HTMLDivElement | null>(null);
   const mobileDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -62,6 +66,12 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const { data: stories, total, loading, error } = useStories({ page, pageSize, category: selectedMain, subcategory: selectedSub ?? undefined });
   console.log('[Mobile useStories params]', { page, pageSize, category: selectedMain, subcategory: selectedSub ?? undefined });
   const pageCount = Math.max(1, Math.ceil((total || 0) / pageSize));
+
+  const openGetAppModal = () => setIsGetAppModalOpen(true);
+  const closeGetAppModal = () => setIsGetAppModalOpen(false);
+
+  const openSearchModal = () => setIsSearchModalOpen(true);
+  const closeSearchModal = () => setIsSearchModalOpen(false);
 
   const scrollCategoriesRight = () => {
     const el = carouselRef.current;
@@ -693,6 +703,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                           <IconSearch className="w-4 h-4" />
                         </span>
                       }
+                      onClick={openSearchModal}
                     />
                     <NavItem
                       variant="icon+text-secondary"
@@ -702,6 +713,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                           <IconDownload className="w-4 h-4" />
                         </span>
                       }
+                      onClick={openGetAppModal}
                     />
                     <NavItem
                       variant="icon+text-secondary"
@@ -939,6 +951,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
         </div>
       </div>
       </div>
+      <GetTheAppModal open={isGetAppModalOpen} onClose={closeGetAppModal} />
+      <SearchModal open={isSearchModalOpen} onClose={closeSearchModal} />
     </div>
   );
 };

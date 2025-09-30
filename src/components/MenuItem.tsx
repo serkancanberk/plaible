@@ -4,7 +4,7 @@ type BaseProps = {
   label: string;
   className?: string;
   showArrow?: boolean;
-  variant?: 'default' | 'mobileHeader';
+  variant?: 'default' | 'mobileHeader' | 'SearchRecents';
 };
 
 type ClickableProps = BaseProps & {
@@ -28,7 +28,12 @@ export default function MenuItem(props: MenuItemProps) {
   // Mobile header variant classes
   const mobileHeaderClasses = 'w-full flex items-center justify-between text-text-tertiary hover:text-accent font-mono text-caption pt-spacing-md pb-spacing-xs transition-colors';
   
-  const commonClasses = variant === 'mobileHeader' ? mobileHeaderClasses : defaultClasses;
+  // SearchRecents variant classes (same layout as mobileHeader but different colors)
+  const searchRecentsClasses = 'w-full flex items-center justify-between text-text-primary hover:text-text-secondary active:text-text-tertiary font-mono text-caption pt-spacing-md pb-spacing-xs transition-colors';
+  
+  const commonClasses = variant === 'mobileHeader' ? mobileHeaderClasses : 
+                       variant === 'SearchRecents' ? searchRecentsClasses : 
+                       defaultClasses;
 
   return (
     <div className={`w-full ${className}`}>
@@ -43,7 +48,7 @@ export default function MenuItem(props: MenuItemProps) {
           {showArrow !== false && <span aria-hidden="true">→</span>}
         </a>
       )}
-      {variant === 'mobileHeader' ? (
+      {variant === 'mobileHeader' || variant === 'SearchRecents' ? (
         <div className="h-px w-full bg-text-secondary/25" />
       ) : (
         <div className="h-px w-full bg-primary" />

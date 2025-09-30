@@ -13,39 +13,57 @@ const err = (res, code = "BAD_REQUEST", http = 400, extra = {}) =>
  */
 router.get("/", async (req, res) => {
   try {
-    // Apply category and subcategory filters
-    const { page, pageSize, sort, category, subcategory, mainCategory, subCategory } = req.query || {};
+    // Apply category, subcategory, and search filters
+    const { page, pageSize, sort, category, subcategory, mainCategory, subCategory, search } = req.query || {};
     const normalizedMain = (category || mainCategory || "").toString().trim();
     const normalizedSub = (subcategory || subCategory || "").toString().trim();
+    const searchQuery = (search || "").toString().trim();
     const filter = { isActive: true };
     if (normalizedMain) filter.mainCategory = normalizedMain;
     if (normalizedSub) filter.subCategory = normalizedSub;
+    if (searchQuery) {
+      const regex = new RegExp(searchQuery, "i");
+      filter.$or = [
+        { title: regex },
+        { authorName: regex },
+        { tags: regex },
+        { genres: regex },
+      ];
+    }
     console.log('[GET /api/stories] query', {
       raw: req.query,
-      normalized: { mainCategory: normalizedMain, subCategory: normalizedSub },
+      normalized: { mainCategory: normalizedMain, subCategory: normalizedSub, search: searchQuery },
       filter
     });
 
-    const docs = await Story.find(
-      filter,
-      {
-        _id: 1,
-        slug: 1,
-        title: 1,
-        authorName: 1,
-        mainCategory: 1,
-        subCategory: 1,
-        genres: 1,
-        headline: 1,
-        "stats.avgRating": 1,
-        "stats.totalPlayed": 1,
-        "assets.images": 1,
-        "assets.videos": 1,
-      }
-    )
-      .sort({ "stats.totalPlayed": -1, title: 1 })
+    // Build projection (no text score needed for regex search)
+    const projection = {
+      _id: 1,
+      slug: 1,
+      title: 1,
+      authorName: 1,
+      mainCategory: 1,
+      subCategory: 1,
+      genres: 1,
+      headline: 1,
+      "stats.avgRating": 1,
+      "stats.totalPlayed": 1,
+      "assets.images": 1,
+      "assets.videos": 1,
+    };
+
+    // Use consistent sorting for all queries
+    const sortOptions = { "stats.totalPlayed": -1, title: 1 };
+
+    const docs = await Story.find(filter, projection)
+      .sort(sortOptions)
       .limit(50)
       .lean();
+
+    // Debug: Log regex search functionality
+    if (searchQuery) {
+      console.log('[API -> stories] Regex search applied:', searchQuery, 'Result count:', docs.length);
+    }
 
     // Debug: Log raw DB assets for each story
     docs.forEach(story => {
@@ -74,6 +92,9 @@ router.get("/", async (req, res) => {
       }
     });
 
+    // Get total count for pagination (without limit)
+    const totalCount = await Story.countDocuments(filter);
+
     // Debug: Log API response before sending
     console.log('[API Response -> story.assets]', docs.map(s => ({
       id: s._id,
@@ -82,7 +103,7 @@ router.get("/", async (req, res) => {
       videos: s.assets?.videos,
     })));
 
-    return ok(res, { items: docs });
+    return ok(res, { items: docs, total: totalCount });
   } catch (err) {
     console.error("GET /api/stories error:", err);
     return err(res, "SERVER_ERROR", 500);
