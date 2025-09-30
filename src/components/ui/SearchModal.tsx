@@ -21,7 +21,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose }) => {
       open={open}
       onClose={onClose}
       title="SEARCH STORIES"
-      subtitle="Find stories by title, author, or theme"
+      subtitle="Find stories by title, author, or theme."
       variant="accent"
     >
       <div className="text-body mb-spacing-md">

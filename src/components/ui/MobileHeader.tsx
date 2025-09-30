@@ -12,12 +12,16 @@ type MobileHeaderProps = {
   items: MobileHeaderItem[];
   logoVariant?: PlaibleLogoProps['variant'];
   bgClassName?: string;
+  onOpenSearch?: () => void;
+  onOpenDownload?: () => void;
 };
 
 export const MobileHeader: React.FC<MobileHeaderProps> = ({
   items,
   logoVariant = 'light',
   bgClassName = 'bg-primary',
+  onOpenSearch = () => {},
+  onOpenDownload = () => {},
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [expandedParents, setExpandedParents] = useState<Set<number>>(new Set());
@@ -77,7 +81,14 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                   <MenuItem
                     label={item.label}
                     onClick={() => {
-                      item.onClick?.();
+                      // Special handling for Search and Download items
+                      if (item.label === 'Search') {
+                        onOpenSearch();
+                      } else if (item.label === 'Download') {
+                        onOpenDownload();
+                      } else {
+                        item.onClick?.();
+                      }
                       setIsMenuOpen(false);
                     }}
                     showArrow={false}

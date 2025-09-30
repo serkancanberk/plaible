@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PlaibleLogo from '../components/PlaibleLogo';
 import NavItem from '../components/ui/NavItem';
+import MenuItem from '../components/MenuItem';
 import StoryCard from '../components/ui/StoryCard';
 import { useStories } from '../hooks/useStories';
 import { categoryConfig } from '../config/categoryConfig';
@@ -14,6 +15,8 @@ import IconUser from 'virtual:icons/tabler/user';
 import IconSearch from 'virtual:icons/tabler/search';
 import IconDownload from 'virtual:icons/tabler/download';
 import IconDots from 'virtual:icons/tabler/dots';
+import IconSettings from 'virtual:icons/tabler/settings';
+import IconFlag from 'virtual:icons/tabler/flag';
 import GetTheAppModal from '../components/ui/GetTheAppModal';
 import SearchModal from '../components/ui/SearchModal';
 
@@ -29,6 +32,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [isGetAppModalOpen, setIsGetAppModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isKebabOpen, setIsKebabOpen] = useState(false);
+  const kebabRef = useRef<HTMLDivElement | null>(null);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const mobileCarouselRef = useRef<HTMLDivElement | null>(null);
   const mobileDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -255,6 +260,31 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
     console.log('[useEffect:selectedMain changed]', selectedMain);
   }, [selectedMain]);
 
+  // Handle kebab dropdown click outside and escape key
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (kebabRef.current && !kebabRef.current.contains(event.target as Node)) {
+        setIsKebabOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsKebabOpen(false);
+      }
+    };
+
+    if (isKebabOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isKebabOpen]);
+
   return (
     <div className="min-h-screen w-full bg-secondary">
       {(() => {
@@ -282,6 +312,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
           ]}
           logoVariant="light"
           bgClassName="bg-primary"
+          onOpenSearch={openSearchModal}
+          onOpenDownload={openGetAppModal}
         />
 
         {/* Mobile content only - no sidebar */}
@@ -724,14 +756,41 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                         </span>
                       }
                     />
-                    <NavItem
-                      variant="icon+text-secondary"
-                      icon={
-                        <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
-                          <IconDots className="w-4 h-4" />
-                        </span>
-                      }
-                    />
+                    <div ref={kebabRef} className="relative">
+                      <NavItem
+                        variant="icon+text-secondary"
+                        icon={
+                          <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
+                            <IconDots className="w-4 h-4" />
+                          </span>
+                        }
+                        onClick={() => setIsKebabOpen(!isKebabOpen)}
+                      />
+                      {isKebabOpen && (
+                        <div className="absolute right-0 mt-spacing-xs z-50 bg-primary rounded-card shadow-card w-48 py-spacing-lg px-spacing-sm">
+                          <div className="flex flex-col space-y-spacing-lg">
+                            <NavItem
+                              variant="text-secondary"
+                              label="Play Settings"
+                              className="w-full px-spacing-lg"
+                              onClick={() => {
+                                console.log('[kebab] Play Settings');
+                                setIsKebabOpen(false);
+                              }}
+                            />
+                            <NavItem
+                              variant="text-secondary"
+                              label="Report"
+                              className="w-full px-spacing-lg"
+                              onClick={() => {
+                                console.log('[kebab] Report');
+                                setIsKebabOpen(false);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
