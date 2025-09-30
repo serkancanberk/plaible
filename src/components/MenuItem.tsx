@@ -23,7 +23,7 @@ export default function MenuItem(props: MenuItemProps) {
   const { label, className = '', showArrow, variant = 'default' } = props;
   
   // Default variant classes (landing page style)
-  const defaultClasses = 'w-full flex items-center justify-between text-primary hover:text-secondary font-mono pb-4 hover:opacity-50 transition-colors';
+  const defaultClasses = 'w-full flex items-center justify-between text-primary hover:text-secondary font-mono pt-spacing-md pb-spacing-xs hover:opacity-50 transition-colors';
   
   // Mobile header variant classes
   const mobileHeaderClasses = 'w-full flex items-center justify-between text-text-tertiary hover:text-accent font-mono text-caption pt-spacing-md pb-spacing-xs transition-colors';
