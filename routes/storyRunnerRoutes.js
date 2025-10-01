@@ -5,11 +5,217 @@ import express from 'express';
 import { UserStorySession } from '../models/UserStorySession.js';
 import { Story } from '../models/Story.js';
 import { StorySettings } from '../models/StorySettings.js';
+import { User } from '../models/User.js';
 import { StoryPrompt } from '../src/models/storyPromptModel.js';
 import { generateStoryPrompt } from '../src/utils/generateStoryPrompt.js';
 import { generateFirstChapter } from '../utils/storyEngine.js';
 
 const router = express.Router();
+
+/**
+ * GET /api/story-settings
+ * Get public story settings (tone styles and time flavors)
+ */
+router.get('/settings', async (req, res) => {
+  try {
+    const settings = await StorySettings.getDefaultSettings();
+    if (!settings) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Story settings not found'
+      });
+    }
+
+    // Return only public-facing data (no admin metadata)
+    res.json({
+      ok: true,
+      settings: {
+        tone_styles: settings.tone_styles || [],
+        time_flavors: settings.time_flavors || []
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching story settings:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * GET /api/story-settings/user
+ * Get user's saved story settings preferences
+ */
+router.get('/user', async (req, res) => {
+  try {
+    // Check for authentication - this endpoint requires auth
+    const token = req.cookies?.plaible_jwt;
+    let userId = null;
+    
+    if (token) {
+      try {
+        const { verifyJwt } = await import('../auth/config.js');
+        const decoded = verifyJwt(token);
+        userId = decoded?.sub || decoded?.uid || decoded?._id;
+      } catch (err) {
+        console.log("JWT verification failed", err.message);
+      }
+    }
+    
+    // Development fallback
+    if (!userId && (process.env.NODE_ENV === "development" || !process.env.NODE_ENV)) {
+      const mongoose = (await import('mongoose')).default;
+      userId = new mongoose.Types.ObjectId("64b7cafe1234567890cafe12");
+    }
+    
+    if (!userId) {
+      return res.status(401).json({
+        ok: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        ok: false,
+        error: 'User not found'
+      });
+    }
+
+    // Check if user has saved preferences
+    const hasPreferences = user.storySettings && 
+      (user.storySettings.preferredToneStyle || user.storySettings.preferredTimeFlavor);
+
+    if (!hasPreferences) {
+      return res.json({
+        ok: true,
+        preferences: null
+      });
+    }
+
+    res.json({
+      ok: true,
+      preferences: {
+        preferredToneStyle: user.storySettings.preferredToneStyle,
+        preferredTimeFlavor: user.storySettings.preferredTimeFlavor
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user story settings:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * PATCH /api/story-settings/user
+ * Update user's story settings preferences
+ */
+router.patch('/user', async (req, res) => {
+  try {
+    // Check for authentication - this endpoint requires auth
+    const token = req.cookies?.plaible_jwt;
+    let userId = null;
+    
+    if (token) {
+      try {
+        const { verifyJwt } = await import('../auth/config.js');
+        const decoded = verifyJwt(token);
+        userId = decoded?.sub || decoded?.uid || decoded?._id;
+      } catch (err) {
+        console.log("JWT verification failed", err.message);
+      }
+    }
+    
+    // Development fallback
+    if (!userId && (process.env.NODE_ENV === "development" || !process.env.NODE_ENV)) {
+      const mongoose = (await import('mongoose')).default;
+      userId = new mongoose.Types.ObjectId("64b7cafe1234567890cafe12");
+    }
+    
+    if (!userId) {
+      return res.status(401).json({
+        ok: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const { preferredToneStyle, preferredTimeFlavor } = req.body;
+
+    // Validate required fields
+    if (!preferredToneStyle || !preferredTimeFlavor) {
+      return res.status(400).json({
+        ok: false,
+        error: 'preferredToneStyle and preferredTimeFlavor are required'
+      });
+    }
+
+    // Get current story settings to validate against
+    const storySettings = await StorySettings.getDefaultSettings();
+    if (!storySettings) {
+      return res.status(500).json({
+        ok: false,
+        error: 'Story settings not available'
+      });
+    }
+
+    // Validate tone style exists
+    const validToneStyle = storySettings.tone_styles.find(style => style.id === preferredToneStyle);
+    if (!validToneStyle) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Invalid tone style'
+      });
+    }
+
+    // Validate time flavor exists
+    const validTimeFlavor = storySettings.time_flavors.find(flavor => flavor.id === preferredTimeFlavor);
+    if (!validTimeFlavor) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Invalid time flavor'
+      });
+    }
+
+    // Update user preferences
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          'storySettings.preferredToneStyle': preferredToneStyle,
+          'storySettings.preferredTimeFlavor': preferredTimeFlavor,
+          'storySettings.lastUpdated': new Date()
+        }
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        ok: false,
+        error: 'User not found'
+      });
+    }
+
+    res.json({
+      ok: true,
+      preferences: {
+        preferredToneStyle: user.storySettings.preferredToneStyle,
+        preferredTimeFlavor: user.storySettings.preferredTimeFlavor
+      }
+    });
+  } catch (error) {
+    console.error('Error updating user story settings:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Internal server error'
+    });
+  }
+});
 
 /**
  * POST /api/story/start

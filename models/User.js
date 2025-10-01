@@ -41,6 +41,11 @@ const userSchema = new Schema(
     roles: { type: [String], default: ["user"], index: true },
     status: { type: String, enum: ["active", "disabled", "deleted"], default: "active", index: true },
     deletedAt: { type: Date },
+    storySettings: {
+      preferredToneStyle: { type: String, default: null },
+      preferredTimeFlavor: { type: String, default: null },
+      lastUpdated: { type: Date, default: Date.now }
+    },
   },
   { timestamps: true }
 );

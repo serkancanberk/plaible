@@ -19,6 +19,8 @@ import IconSettings from 'virtual:icons/tabler/settings';
 import IconFlag from 'virtual:icons/tabler/flag';
 import GetTheAppModal from '../components/ui/GetTheAppModal';
 import SearchModal from '../components/ui/SearchModal';
+import StorySettingsModal from '../components/ui/StorySettingsModal';
+import { StorySettingsProvider } from '../components/ui/storySettings/StorySettingsProvider';
 
 type AppGridLayoutProps = {
   children?: React.ReactNode;
@@ -32,6 +34,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [isGetAppModalOpen, setIsGetAppModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isStorySettingsModalOpen, setIsStorySettingsModalOpen] = useState(false);
   const [isKebabOpen, setIsKebabOpen] = useState(false);
   const kebabRef = useRef<HTMLDivElement | null>(null);
   const carouselRef = useRef<HTMLDivElement | null>(null);
@@ -286,7 +289,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   }, [isKebabOpen]);
 
   return (
-    <div className="min-h-screen w-full bg-secondary">
+    <StorySettingsProvider>
+      <div className="min-h-screen w-full bg-secondary">
       {(() => {
         console.log('[Render] selectedMain =', selectedMain);
         return null;
@@ -771,10 +775,11 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                           <div className="flex flex-col space-y-spacing-lg">
                             <NavItem
                               variant="text-secondary"
-                              label="Play Settings"
+                              label="Story Settings"
                               className="w-full px-spacing-lg"
                               onClick={() => {
-                                console.log('[kebab] Play Settings');
+                                console.log('[kebab] Story Settings');
+                                setIsStorySettingsModalOpen(true);
                                 setIsKebabOpen(false);
                               }}
                             />
@@ -1012,6 +1017,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
       </div>
       <GetTheAppModal open={isGetAppModalOpen} onClose={closeGetAppModal} />
       <SearchModal open={isSearchModalOpen} onClose={closeSearchModal} />
-    </div>
+      <StorySettingsModal open={isStorySettingsModalOpen} onClose={() => setIsStorySettingsModalOpen(false)} />
+      </div>
+    </StorySettingsProvider>
   );
 };

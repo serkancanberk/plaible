@@ -12,6 +12,7 @@ const menuItems = [
   { path: '/feedbacks', label: 'Feedbacks', icon: '💬' },
   { path: '/wallet-analytics', label: 'Wallet Analytics', icon: '💰' },
   { path: '/category-manager', label: 'Category Manager', icon: '🏷️' },
+  { path: '/story-settings', label: 'Story Settings', icon: '⚙️' },
   { path: '/storyrunner', label: 'StoryRunner AI', icon: '🎭' },
 ];
 

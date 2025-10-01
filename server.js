@@ -163,6 +163,9 @@ app.use("/api/auth", authRouter);
 // Public browsing per Blueprint
 app.use("/api/stories", storiesRouter);
 
+// Story settings router (public)
+app.use("/api/story-settings", storyRunnerRoutes);
+
 // Sessions router
 app.use("/api/sessions", authGuard, sessionsRouter);
 

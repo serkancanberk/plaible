@@ -14,6 +14,7 @@ import { CategoryManagerPage } from './pages/CategoryManagerPage';
 import { StoryRunnerPage } from './pages/StoryRunnerPage';
 import { StoryPromptEditPage } from './pages/StoryPromptEditPage';
 import { NewStoryWizardPage } from './pages/NewStoryWizardPage';
+import { StorySettingsPage } from './pages/StorySettingsPage';
 
 export const AppAdmin: React.FC = () => {
   return (
@@ -38,6 +39,7 @@ export const AppAdmin: React.FC = () => {
                   <Route path="/storyrunner" element={<StoryRunnerPage />} />
                   <Route path="/storyrunner/prompts/edit/:storyId" element={<StoryPromptEditPage />} />
                   <Route path="/storyrunner/stories/new" element={<NewStoryWizardPage />} />
+                  <Route path="/story-settings" element={<StorySettingsPage />} />
                   <Route path="*" element={<Navigate to="/users" replace />} />
                 </Routes>
               </main>
