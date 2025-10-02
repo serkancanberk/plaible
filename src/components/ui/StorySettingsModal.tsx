@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import BaseModal from './BaseModal';
 import { useStorySettingsContext } from './storySettings/StorySettingsProvider';
-import { StorySettingsDropdown } from './storySettings/StorySettingsDropdown';
+import { Dropdown } from './Dropdown';
 import C2AButton from '../C2AButton';
 
 type StorySettingsModalProps = {
@@ -39,12 +39,12 @@ const StorySettingsModal: React.FC<StorySettingsModalProps> = ({ open, onClose }
     }
   }, [open, selectedToneStyle, selectedTimeFlavor]);
 
-  // Auto-close modal after 3 seconds when success state is active
+  // Auto-close modal after 5 seconds when success state is active
   useEffect(() => {
     if (showSuccess) {
       const timeout = setTimeout(() => {
         onClose();
-      }, 3000);
+      }, 5000);
       setAutoCloseTimeout(timeout);
       
       return () => {
@@ -120,7 +120,7 @@ const StorySettingsModal: React.FC<StorySettingsModalProps> = ({ open, onClose }
       open={open}
       onClose={onClose}
       title="STORY SETTINGS"
-      subtitle="Pick your default style for every story."
+      subtitle={showSuccess ? "Your story settings preferences saved successfully!" : "Pick your default style for every story."}
       variant="accent"
     >
       {isLoading ? (
@@ -132,17 +132,13 @@ const StorySettingsModal: React.FC<StorySettingsModalProps> = ({ open, onClose }
           Error loading settings: {error}
         </div>
       ) : showSuccess ? (
-        <div className="space-y-spacing-md">
-          <div className="p-spacing-md text-body text-success bg-success/10 rounded-card">
-            Preferences saved successfully!
-          </div>
-          
+        <div className="space-y-spacing-lg">
           {/* Show selected values */}
           <div className="space-y-spacing-sm">
-            <p className="text-body text-text-primary mt-spacing-sm">
+            <p className="text-body text-primary">
               Time: {selectedTimeFlavor?.displayLabel}
             </p>
-            <p className="text-body text-text-primary mt-spacing-sm">
+            <p className="text-body text-primary">
               Theme: {selectedToneStyle?.displayLabel}
             </p>
           </div>
@@ -150,26 +146,44 @@ const StorySettingsModal: React.FC<StorySettingsModalProps> = ({ open, onClose }
       ) : (
         <div className="space-y-spacing-xl">
           {/* Time Dropdown */}
-          <StorySettingsDropdown
-            label="Time"
-            options={availableTimeFlavors}
-            selectedValue={localTimeFlavor}
-            onSelect={setLocalTimeFlavor}
-            placeholder="Select time period"
-            disabled={isSaving}
-            ariaLabel="Select Time Flavor"
-          />
+          <div className="space-y-spacing-sm">
+            <label className="text-caption font-bold text-primary">
+              Time
+            </label>
+            <Dropdown
+              options={availableTimeFlavors.map(flavor => ({
+                id: flavor.id,
+                label: flavor.displayLabel,
+                description: flavor.description
+              }))}
+              selectedId={localTimeFlavor || undefined}
+              onSelect={setLocalTimeFlavor}
+              placeholder="Select time period"
+              disabled={isSaving}
+              variant="onAccentWithDescription"
+              ariaLabel="Select Time Flavor"
+            />
+          </div>
 
           {/* Theme Dropdown */}
-          <StorySettingsDropdown
-            label="Theme"
-            options={availableToneStyles}
-            selectedValue={localToneStyle}
-            onSelect={setLocalToneStyle}
-            placeholder="Select tone style"
-            disabled={isSaving}
-            ariaLabel="Select Tone Style"
-          />
+          <div className="space-y-spacing-sm">
+            <label className="text-caption font-bold text-primary">
+              Theme
+            </label>
+            <Dropdown
+              options={availableToneStyles.map(style => ({
+                id: style.id,
+                label: style.displayLabel,
+                description: style.description
+              }))}
+              selectedId={localToneStyle || undefined}
+              onSelect={setLocalToneStyle}
+              placeholder="Select tone style"
+              disabled={isSaving}
+              variant="onAccentWithDescription"
+              ariaLabel="Select Tone Style"
+            />
+          </div>
         </div>
       )}
 
@@ -180,6 +194,7 @@ const StorySettingsModal: React.FC<StorySettingsModalProps> = ({ open, onClose }
             variant="secondary"
             context="onAccent"
             onClick={handleBackToOptions}
+            fullWidth
             aria-label="Back to Time and Theme Options"
           >
             Back to Time and Theme Options

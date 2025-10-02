@@ -13,6 +13,7 @@ import React from 'react';
 import CheckLegalStuffModal from '../components/ui/CheckLegalStuffModal';
 import KeepInTouchModal from '../components/ui/KeepInTouchModal';
 import PayAsYouGoModal from '../components/ui/PayAsYouGoModal';
+import { Dropdown } from '../components/ui/Dropdown';
 
 // Strict token lists (only configured/used tokens)
 const textTokenStyles = {
@@ -276,6 +277,11 @@ export default function StyleGuide() {
         <ModalVariantsPreview extraTriggers={<ExtraModalTriggers />} />
       </section>
 
+      <section id="dropdown-variants" className="my-12">
+        <h2 className="text-heading text-text-secondary mb-4">Dropdown Variants</h2>
+        <DropdownVariantsPreview />
+      </section>
+
     </div>
   );
 }
@@ -318,6 +324,119 @@ function LandingTabsPreview() {
             Content for Tab Two.
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function DropdownVariantsPreview() {
+  const [selectedDefault, setSelectedDefault] = React.useState('original');
+  const [selectedWithDescription, setSelectedWithDescription] = React.useState('classic');
+  const [selectedCompact, setSelectedCompact] = React.useState('modern');
+  const [selectedOnAccentDefault, setSelectedOnAccentDefault] = React.useState('original');
+  const [selectedOnAccentWithDescription, setSelectedOnAccentWithDescription] = React.useState('classic');
+  const [selectedOnAccentCompact, setSelectedOnAccentCompact] = React.useState('modern');
+
+  const demoOptions = [
+    { id: 'original', label: 'Original' },
+    { id: 'classic', label: 'Classic', description: 'A timeless choice' },
+    { id: 'modern', label: 'Modern', description: 'Clean and minimal style' },
+  ];
+
+  return (
+    <div className="space-y-spacing-lg">
+      <div className="space-y-spacing-md">
+        <h3 className="text-subheading text-text-secondary">Default</h3>
+        <div className="w-64 h-32 bg-secondary flex items-center justify-center rounded-card">
+          <div className="w-48">
+            <Dropdown
+              options={demoOptions}
+              selectedId={selectedDefault}
+              onSelect={setSelectedDefault}
+              variant="default"
+              ariaLabel="Select style variant"
+              placeholder="Choose a style"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-spacing-md">
+        <h3 className="text-subheading text-text-secondary">With Description</h3>
+        <div className="w-64">
+          <Dropdown
+            options={demoOptions}
+            selectedId={selectedWithDescription}
+            onSelect={setSelectedWithDescription}
+            variant="withDescription"
+            ariaLabel="Select style variant with description"
+            placeholder="Choose a style"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-spacing-md">
+        <h3 className="text-subheading text-text-secondary">Compact</h3>
+        <div className="w-64 h-32 bg-secondary flex items-center justify-center rounded-card">
+          <div className="w-48">
+            <Dropdown
+              options={demoOptions}
+              selectedId={selectedCompact}
+              onSelect={setSelectedCompact}
+              variant="compact"
+              ariaLabel="Select style variant compact"
+              placeholder="Choose a style"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-spacing-md">
+        <h3 className="text-subheading text-text-secondary">On Accent - Default</h3>
+        <div className="bg-accent p-spacing-lg rounded-card">
+          <div className="max-w-xs">
+            <Dropdown
+              options={demoOptions}
+              selectedId={selectedOnAccentDefault}
+              onSelect={setSelectedOnAccentDefault}
+              variant="onAccent"
+              ariaLabel="Select style variant on accent default"
+              placeholder="Choose a style"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-spacing-md">
+        <h3 className="text-subheading text-text-secondary">On Accent - With Description</h3>
+        <div className="bg-accent p-spacing-lg rounded-card">
+          <div className="max-w-xs">
+            <Dropdown
+              options={demoOptions}
+              selectedId={selectedOnAccentWithDescription}
+              onSelect={setSelectedOnAccentWithDescription}
+              variant="onAccentWithDescription"
+              ariaLabel="Select style variant on accent with description"
+              placeholder="Choose a style"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-spacing-md">
+        <h3 className="text-subheading text-text-secondary">On Accent - Compact</h3>
+        <div className="bg-accent p-spacing-lg rounded-card">
+          <div className="max-w-xs">
+            <Dropdown
+              options={demoOptions}
+              selectedId={selectedOnAccentCompact}
+              onSelect={setSelectedOnAccentCompact}
+              variant="onAccentCompact"
+              ariaLabel="Select style variant on accent compact"
+              placeholder="Choose a style"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
