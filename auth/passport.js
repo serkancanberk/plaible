@@ -82,6 +82,26 @@ passport.use(
   )
 );
 
+// Serialize user for session (if using sessions)
+passport.serializeUser((user, done) => {
+  console.log("DEBUG serializeUser called with user:", user ? { id: user._id, email: user.email } : null);
+  done(null, user._id);
+});
+
+// Deserialize user from session (if using sessions)
+passport.deserializeUser((id, done) => {
+  console.log("DEBUG deserializeUser called with id:", id);
+  User.findById(id)
+    .then(user => {
+      console.log("DEBUG deserializeUser resolved user:", user ? { id: user._id, email: user.email, role: user.role } : null);
+      done(null, user);
+    })
+    .catch(err => {
+      console.error("DEBUG deserializeUser error:", err);
+      done(err);
+    });
+});
+
 export default passport;
 
 

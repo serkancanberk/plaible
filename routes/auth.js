@@ -46,23 +46,6 @@ router.get("/google", (req, res, next) => {
   const opts = {
     scope: ["profile", "email"],
   };
-  // Capture optional redirect target and persist briefly in a secure cookie
-  const redirectParam = req.query?.redirect;
-  if (typeof redirectParam === "string" && redirectParam.length > 0) {
-    const looksLikeUrl = /^https?:\/\//i.test(redirectParam);
-    if (looksLikeUrl) {
-      const cookieOpts = {
-        httpOnly: true,
-        sameSite: isProduction ? "lax" : "lax",
-        secure: isProduction || FORCE_SECURE_COOKIE,
-        maxAge: 10 * 60 * 1000, // 10 minutes
-        path: "/",
-      };
-      try {
-        res.cookie("redirect_to", redirectParam, cookieOpts);
-      } catch (_) {}
-    }
-  }
   if (forceConsent) {
     // Force Google’s consent screen every time
     opts.prompt = "consent";
@@ -79,6 +62,11 @@ router.get(
   passport.authenticate("google", { session: false, failureRedirect: "/api/auth/failure" }),
   async (req, res) => {
     try {
+      console.log("DEBUG ENV:", {
+        PUBLIC_FRONTEND_URL: process.env.PUBLIC_FRONTEND_URL,
+        ADMIN_FRONTEND_URL: process.env.ADMIN_FRONTEND_URL,
+      });
+      
       const user = req.user;
       const userEmail = user.email?.toLowerCase();
       const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
@@ -86,19 +74,12 @@ router.get(
       // Check if this is an admin user
       const isAdmin = adminEmail && userEmail === adminEmail;
       
-      // Determine dynamic redirect target from cookie if present
-      const redirectCookie = req.cookies?.redirect_to;
-      const redirectTo = (typeof redirectCookie === "string" && /^https?:\/\//i.test(redirectCookie))
-        ? redirectCookie
-        : FE_ORIGIN;
-      // Clear redirect cookie
-      try {
-        res.clearCookie("redirect_to", {
-          path: "/",
-          sameSite: isProduction ? "lax" : "lax",
-          secure: isProduction || FORCE_SECURE_COOKIE,
-        });
-      } catch (_) {}
+      // Determine redirect target with proper priority order
+      const redirectUrl =
+        req.query.redirect ||
+        process.env.ADMIN_FRONTEND_URL ||
+        process.env.PUBLIC_FRONTEND_URL ||
+        "/";
 
       if (isAdmin) {
         // Issue admin JWT cookie for admin dashboard
@@ -139,7 +120,7 @@ router.get(
         res.cookie("admin_refresh_token", refreshTokenDoc.token, refreshCookieOpts);
         
         console.log("Admin login successful:", user.email);
-        return res.redirect(redirectTo);
+        return res.redirect(redirectUrl);
       } else {
         // Regular user - issue regular JWT cookie
         const token = signJwt({ sub: user._id.toString() });
@@ -151,7 +132,7 @@ router.get(
           path: "/",
         };
         res.cookie("plaible_jwt", token, cookieOpts);
-        return res.redirect(redirectTo);
+        return res.redirect(redirectUrl);
       }
     } catch (e) {
       console.error("JWT issue in callback", e);

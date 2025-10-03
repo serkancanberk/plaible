@@ -20,6 +20,7 @@ import IconFlag from 'virtual:icons/tabler/flag';
 import GetTheAppModal from '../components/ui/GetTheAppModal';
 import SearchModal from '../components/ui/SearchModal';
 import StorySettingsModal from '../components/ui/StorySettingsModal';
+import ReportIssueModal from '../components/ui/ReportIssueModal';
 import { StorySettingsProvider } from '../components/ui/storySettings/StorySettingsProvider';
 
 type AppGridLayoutProps = {
@@ -35,6 +36,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const [isGetAppModalOpen, setIsGetAppModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isStorySettingsModalOpen, setIsStorySettingsModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isKebabOpen, setIsKebabOpen] = useState(false);
   const kebabRef = useRef<HTMLDivElement | null>(null);
   const carouselRef = useRef<HTMLDivElement | null>(null);
@@ -80,6 +82,9 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
 
   const openSearchModal = () => setIsSearchModalOpen(true);
   const closeSearchModal = () => setIsSearchModalOpen(false);
+
+  const openReportModal = () => setIsReportModalOpen(true);
+  const closeReportModal = () => setIsReportModalOpen(false);
 
   const scrollCategoriesRight = () => {
     const el = carouselRef.current;
@@ -789,6 +794,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                               className="w-full px-spacing-lg"
                               onClick={() => {
                                 console.log('[kebab] Report');
+                                openReportModal();
                                 setIsKebabOpen(false);
                               }}
                             />
@@ -1018,6 +1024,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
       <GetTheAppModal open={isGetAppModalOpen} onClose={closeGetAppModal} />
       <SearchModal open={isSearchModalOpen} onClose={closeSearchModal} />
       <StorySettingsModal open={isStorySettingsModalOpen} onClose={() => setIsStorySettingsModalOpen(false)} />
+      <ReportIssueModal open={isReportModalOpen} onClose={closeReportModal} />
       </div>
     </StorySettingsProvider>
   );

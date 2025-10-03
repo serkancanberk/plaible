@@ -40,6 +40,8 @@ import adminStoryRunnerRouter from "./routes/admin/storyRunner.js";
 import adminBriefRouter from "./routes/admin/brief.js";
 import uploadRouter from "./routes/upload.js";
 import storyRunnerRoutes from "./routes/storyRunnerRoutes.js";
+import { publicRouter as reportsPublicRouter, adminRouter as reportsAdminRouter } from "./routes/reports.js";
+import reportCategoryRoutes from "./routes/reportCategories.js";
 
 const { ObjectId } = mongoose.Types;
 
@@ -127,25 +129,25 @@ app.get("/api/health", (req, res) => {
 // Auth guard: prefer cookie JWT; fallback to dev fixed user
 const devFallbackUserId = new mongoose.Types.ObjectId("64b7cafe1234567890cafe12");
 export function authGuard(req, res, next) {
-  const token = req.cookies?.plaible_jwt;
+  console.log("DEBUG authGuard -> cookies:", req.cookies);
+  const token = req.cookies?.admin_token || req.cookies?.plaible_jwt;
+  console.log("DEBUG authGuard -> raw token:", token);
+  
   if (token) {
     try {
       const decoded = verifyJwt(token);
+      console.log("DEBUG authGuard -> decoded payload:", decoded);
       req.userId = decoded?.sub || decoded?.uid || decoded?._id;
+      console.log("DEBUG authGuard -> req.userId set to:", req.userId);
       return next();
     } catch (err) {
+      console.error("DEBUG authGuard -> jwt.verify error:", err);
       console.log("JWT verification failed", err.message);
-      // fall through to dev fallback below
+      return res.status(401).json({ error: "UNAUTHENTICATED" });
     }
   }
   
-  // In development, use dev fallback user if no valid token
-  if ((NODE_ENV === "development" || !NODE_ENV) && !req.userId) {
-    console.log("Using dev fallback user for development");
-    req.userId = devFallbackUserId;
-    return next();
-  }
-  
+  console.error("No JWT token found in cookies");
   return res.status(401).json({ error: "UNAUTHENTICATED" });
 }
 
@@ -293,6 +295,12 @@ app.use("/api/admin/storyrunner", authenticateAdmin, adminStoryRunnerRouter);
 app.use("/api/admin/brief", authenticateAdmin, adminBriefRouter);
 app.use("/api/category-config", categoryConfigRouter);
 app.use("/api/upload", authGuard, uploadRouter);
+// Public routes
+app.use("/api/reports", reportsPublicRouter);
+
+// Admin routes
+app.use("/api/admin/reports", authGuard, adminGuard, reportsAdminRouter);
+app.use("/api/admin/report-categories", authGuard, adminGuard, reportCategoryRoutes);
 
 // Serve uploaded media files
 app.use("/uploads", express.static("uploads"));

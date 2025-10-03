@@ -14,6 +14,7 @@ const menuItems = [
   { path: '/category-manager', label: 'Category Manager', icon: '🏷️' },
   { path: '/story-settings', label: 'Story Settings', icon: '⚙️' },
   { path: '/storyrunner', label: 'StoryRunner AI', icon: '🎭' },
+  { path: '/reportmanager', label: 'Report Manager', icon: '📋' },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {
