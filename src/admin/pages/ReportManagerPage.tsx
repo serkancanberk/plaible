@@ -22,6 +22,7 @@ interface ReportCategory {
   label: string;
   description: string;
   isActive: boolean;
+  order: number;
   createdAt: string;
 }
 
@@ -57,6 +58,11 @@ export const ReportManagerPage: React.FC = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [reportStatus, setReportStatus] = useState<string>('');
+
+  // Order editing state
+  const [editingOrders, setEditingOrders] = useState<{[key: string]: number}>({});
+  const [savingOrder, setSavingOrder] = useState<string | null>(null);
+  const [orderMessage, setOrderMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
   // Fetch reports
   const fetchReports = async () => {
@@ -214,6 +220,54 @@ export const ReportManagerPage: React.FC = () => {
     }
   };
 
+  // Order editing handlers
+  const handleOrderChange = (categoryId: string, newOrder: number) => {
+    setEditingOrders(prev => ({
+      ...prev,
+      [categoryId]: newOrder
+    }));
+  };
+
+  const handleSaveOrder = async (categoryId: string) => {
+    const newOrder = editingOrders[categoryId];
+    if (newOrder === undefined) return;
+
+    setSavingOrder(categoryId);
+    setOrderMessage(null);
+
+    try {
+      const response = await fetch(`/api/admin/report-categories/${categoryId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ order: newOrder })
+      });
+
+      if (!response.ok) throw new Error('Failed to update order');
+      
+      setOrderMessage({ type: 'success', text: 'Order updated successfully' });
+      
+      // Clear the editing state for this category
+      setEditingOrders(prev => {
+        const updated = { ...prev };
+        delete updated[categoryId];
+        return updated;
+      });
+      
+      // Refresh categories to show new order
+      fetchCategories();
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setOrderMessage(null), 3000);
+      
+    } catch (error) {
+      console.error('Error updating order:', error);
+      setOrderMessage({ type: 'error', text: 'Failed to update order' });
+    } finally {
+      setSavingOrder(null);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -342,6 +396,16 @@ export const ReportManagerPage: React.FC = () => {
               </div>
             )}
 
+            {orderMessage && (
+              <div className={`mb-4 p-4 rounded ${
+                orderMessage.type === 'success' 
+                  ? 'bg-green-100 border border-green-400 text-green-700' 
+                  : 'bg-red-100 border border-red-400 text-red-700'
+              }`}>
+                {orderMessage.text}
+              </div>
+            )}
+
             {categoriesLoading ? (
               <div className="text-center py-8">Loading categories...</div>
             ) : (
@@ -351,6 +415,8 @@ export const ReportManagerPage: React.FC = () => {
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Label</th>
+                      {/* DEBUG: temporary order column */}
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -365,6 +431,16 @@ export const ReportManagerPage: React.FC = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {category.label}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <input
+                            type="number"
+                            value={editingOrders[category._id] ?? category.order}
+                            onChange={(e) => handleOrderChange(category._id, parseInt(e.target.value) || 0)}
+                            className="w-16 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            min="0"
+                            step="1"
+                          />
+                        </td>
                         <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
                           {category.description || 'No description'}
                         </td>
@@ -378,18 +454,29 @@ export const ReportManagerPage: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button
-                            onClick={() => openCategoryModal(category)}
-                            className="text-blue-600 hover:text-blue-900 mr-2"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCategory(category._id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Delete
-                          </button>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => openCategoryModal(category)}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCategory(category._id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Delete
+                            </button>
+                            {editingOrders[category._id] !== undefined && (
+                              <button
+                                onClick={() => handleSaveOrder(category._id)}
+                                disabled={savingOrder === category._id}
+                                className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {savingOrder === category._id ? 'Saving...' : 'Save'}
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}

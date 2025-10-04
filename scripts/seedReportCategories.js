@@ -6,11 +6,11 @@ const MONGO_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/plaible"
 
 // Seed data for report categories
 const seedData = [
-  { label: "Content Error", description: "Wrong info, broken text, scene issue", isActive: true },
-  { label: "Inappropriate Content", description: "Offensive, harmful, NSFW", isActive: true },
-  { label: "Technical Bug", description: "Buttons, navigation, loading errors", isActive: true },
-  { label: "Account Problems", description: "Issues with login, registration, accounts", isActive: true },
-  { label: "Other", description: "Anything that doesn't fit other categories", isActive: true }
+  { label: "Content Error", description: "Wrong info, broken text, scene issue", isActive: true, order: 1 },
+  { label: "Inappropriate Content", description: "Offensive, harmful, NSFW", isActive: true, order: 2 },
+  { label: "Technical Bug", description: "Buttons, navigation, loading errors", isActive: true, order: 3 },
+  { label: "Account Problems", description: "Issues with login, registration, accounts", isActive: true, order: 4 },
+  { label: "Other", description: "Anything that doesn't fit other categories", isActive: true, order: 5 }
 ];
 
 async function seedReportCategories() {

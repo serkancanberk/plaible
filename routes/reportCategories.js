@@ -7,7 +7,7 @@ const router = express.Router();
 // GET all categories
 router.get("/", adminGuard, async (req, res) => {
   try {
-    const categories = await ReportCategory.find().sort({ createdAt: -1 });
+    const categories = await ReportCategory.find().sort({ order: 1 });
     res.json({ ok: true, data: categories });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
