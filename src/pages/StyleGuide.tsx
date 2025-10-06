@@ -477,5 +477,3 @@ function ExtraModalTriggers() {
     </>
   );
 }
-
-

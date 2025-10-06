@@ -300,7 +300,7 @@ export default function StoryCard({
     }
   };
 
-  const to = `/stories/${slug}`;
+  const to = `/app/stories/${slug}`;
 
   const showPlayCount = typeof stats?.totalPlayed === 'number';
   const showRating = typeof stats?.avgRating === 'number';

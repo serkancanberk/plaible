@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import PlaibleLogo from '../components/PlaibleLogo';
 import NavItem from '../components/ui/NavItem';
 import MenuItem from '../components/MenuItem';
@@ -28,6 +29,8 @@ type AppGridLayoutProps = {
 };
 
 export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedMain, setSelectedMain] = useState<'books' | 'stories' | 'biographies'>('books');
@@ -63,6 +66,9 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
     }
     return map;
   }, [categoriesAgg]);
+
+  // Check if we're on a story details page to hide SubNavigation
+  const isStoryDetailsPage = location.pathname.includes('/stories/') && location.pathname !== '/app';
 
   const typeOptions: Array<{ id: 'books' | 'stories' | 'biographies'; label: 'Books' | 'Stories' | 'Biographies' }> = [
     { id: 'books', label: 'Books' },
@@ -332,8 +338,9 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
             <div className="text-heading font-serif text-accent">Choose A Story</div>
           </div>
 
-          {/* SubNavigation */}
-          <section className="px-spacing-md py-spacing-sm mt-spacing-lg">
+          {/* SubNavigation - only show on main feed page */}
+          {!isStoryDetailsPage && (
+            <section className="px-spacing-md py-spacing-sm mt-spacing-lg">
             <div className="flex items-center justify-between gap-spacing-md">
               {/* Left: Dropdown + Scrollable categories */}
               <div className="flex items-center gap-spacing-lg flex-1 min-w-0">
@@ -472,100 +479,10 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
               ) : null}
             </div>
           </section>
+          )}
 
-          {/* Story grid */}
-          <section className="px-spacing-md py-spacing-lg">
-            <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl mt-spacing-lg">
-              {(() => {
-                console.log('[Mobile Stories]', { selectedMain, selectedSub, stories });
-                return null;
-              })()}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-spacing-xl justify-items-center">
-                {(() => {
-                  console.log('[Mobile Stories State]', { selectedMain, selectedSub, stories });
-                  return null;
-                })()}
-                {loading
-                  ? Array.from({ length: pageSize }).map((_, i) => (
-                      <div key={i} className="w-[90%] md:w-full md:max-w-[300px] rounded-card bg-primary shadow-card overflow-hidden animate-pulse">
-                        <div className="px-spacing-md pt-spacing-md">
-                          <div className="aspect-[16/9] w-full rounded-md bg-ui-muted" />
-                        </div>
-                        <div className="px-spacing-md pt-spacing-md pb-spacing-md space-y-spacing-sm">
-                          <div className="h-6 w-3/4 bg-ui-muted rounded" />
-                          <div className="h-4 w-1/2 bg-ui-muted rounded" />
-                          <div className="h-4 w-full bg-ui-muted rounded" />
-                          <div className="h-10 w-full bg-ui-muted rounded-card" />
-                        </div>
-                      </div>
-                    ))
-                  : stories && stories.length > 0
-                    ? (
-                      <>
-                        {stories.map((s) => (
-                          <div key={s.slug} className="w-[90%] md:w-full md:max-w-[300px]">
-                            <StoryCard
-                              title={s.title}
-                              authorName={s.authorName}
-                              slug={s.slug}
-                              headline={s.headline}
-                              assets={s.assets}
-                              stats={s.stats}
-                            />
-                          </div>
-                        ))}
-                      </>
-                    )
-                    : (
-                      <>
-                        {(() => {
-                          console.log('[Mobile Empty State]', selectedMain);
-                          return null;
-                        })()}
-                        <div role="status" aria-live="polite" className="col-span-full text-center font-mono text-label text-ui-muted">
-                          {selectedMain === 'stories' ? 'There are no Plaible stories yet.'
-                            : selectedMain === 'biographies' ? 'There are no Plaible biographies yet.'
-                            : 'There are no Plaible books yet.'}
-                        </div>
-                      </>
-                    )}
-              </div>
-              {error ? (
-                <div className="mt-spacing-md col-span-full text-center text-alert font-mono">Failed to load stories.</div>
-              ) : null}
-            </div>
-          </section>
-
-          {/* Pagination */}
-          <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl mt-spacing-lg mb-spacing-2xl">
-            <div className="flex items-center justify-center gap-spacing-md">
-              <NavItem
-                variant="icon+text-secondary"
-                label="Previous"
-                icon={<IconChevronLeft className="w-4 h-4" />}
-                onClick={page === 1 ? undefined : () => setPage((p) => Math.max(1, p - 1))}
-                className={page === 1 ? "opacity-60 cursor-not-allowed" : ""}
-              />
-              {Array.from({ length: Math.min(pageCount, 5) }).map((_, idx) => {
-                const num = idx + 1;
-                return (
-                  <NavItem
-                    key={num}
-                    variant="text-secondary"
-                    label={String(num)}
-                    onClick={() => setPage(num)}
-                  />
-                );
-              })}
-              <NavItem
-                variant="text+icon-secondary"
-                label="Next"
-                icon={<IconChevronRight className="w-4 h-4" />}
-                onClick={page === pageCount ? undefined : () => setPage((p) => Math.min(pageCount, p + 1))}
-                className={page === pageCount ? "opacity-60 cursor-not-allowed" : ""}
-              />
-            </div>
-          </div>
+          {/* Content area - replaced with Outlet for routing */}
+          <Outlet />
         </div>
       </div>
 
@@ -654,6 +571,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                         <IconHome className="w-4 h-4" />
                       </span>
                     }
+                    onClick={() => navigate('/app')}
                   />
                   <NavItem
                     variant="icon+text"
@@ -809,8 +727,9 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
 
             {/* Divider after header */}
 
-            {/* SubNavigation */}
-            <section className="px-spacing-md py-spacing-sm mt-spacing-lg">
+            {/* SubNavigation - only show on main feed page */}
+            {!isStoryDetailsPage && (
+              <section className="px-spacing-md py-spacing-sm mt-spacing-lg">
               <div className="flex items-center justify-between gap-spacing-md">
                 {/* Left: Dropdown + Scrollable categories */}
                 <div className="flex items-center gap-spacing-lg flex-1 min-w-0">
@@ -928,95 +847,11 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                 ) : null}
               </div>
             </section>
+            )}
 
 
-            {/* Story grid */}
-            <section className="px-spacing-md py-spacing-lg">
-              <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl mt-spacing-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-spacing-xl justify-items-center">
-                  {loading
-                    ? Array.from({ length: pageSize }).map((_, i) => (
-                        <div key={i} className="w-full max-w-[300px] rounded-card bg-primary shadow-card overflow-hidden animate-pulse">
-                          <div className="px-spacing-md pt-spacing-md">
-                            <div className="aspect-[16/9] w-full rounded-md bg-ui-muted" />
-                          </div>
-                          <div className="px-spacing-md pt-spacing-md pb-spacing-md space-y-spacing-sm">
-                            <div className="h-6 w-3/4 bg-ui-muted rounded" />
-                            <div className="h-4 w-1/2 bg-ui-muted rounded" />
-                            <div className="h-4 w-full bg-ui-muted rounded" />
-                            <div className="h-10 w-full bg-ui-muted rounded-card" />
-                          </div>
-                        </div>
-                      ))
-                    : stories && stories.length > 0
-                      ? (
-                        <>
-                          {stories.map((s) => (
-                            <StoryCard
-                              key={s.slug}
-                              title={s.title}
-                              authorName={s.authorName}
-                              slug={s.slug}
-                              headline={s.headline}
-                              assets={s.assets}
-                              stats={s.stats}
-                            />
-                          ))}
-                          {/* Temporary duplicate for visual testing */}
-                          <StoryCard
-                            key="mock-duplicate"
-                            title="Frankenstein"
-                            authorName="Mary Shelley"
-                            slug="frankenstein"
-                            headline="A gothic story about ambition and its consequences."
-                            assets={{ images: ['/placeholder.png'] }}
-                            stats={{ totalPlayed: 1234, avgRating: 4.6 }}
-                          />
-                        </>
-                      )
-                      : (
-                        <div role="status" aria-live="polite" className="col-span-full text-center font-mono text-label text-ui-muted">
-                          {selectedMain === 'stories' ? 'There are no Plaible stories yet.'
-                            : selectedMain === 'biographies' ? 'There are no Plaible biographies yet.'
-                            : 'There are no Plaible books yet.'}
-                        </div>
-                      )}
-                </div>
-                {error ? (
-                  <div className="mt-spacing-md col-span-full text-center text-alert font-mono">Failed to load stories.</div>
-                ) : null}
-              </div>
-            </section>
-            {/* Pagination */}
-            <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl mt-spacing-lg mb-spacing-2xl">
-              <div className="flex items-center justify-center gap-spacing-md">
-                <NavItem
-                  variant="icon+text-secondary"
-                  label="Previous"
-                  icon={<IconChevronLeft className="w-4 h-4" />}
-                  onClick={page === 1 ? undefined : () => setPage((p) => Math.max(1, p - 1))}
-                  className={page === 1 ? "opacity-60 cursor-not-allowed" : ""}
-                />
-                {Array.from({ length: Math.min(pageCount, 5) }).map((_, idx) => {
-                  const num = idx + 1;
-                  return (
-                    <NavItem
-                      key={num}
-                      variant="text-secondary"
-                      label={String(num)}
-                      onClick={() => setPage(num)}
-                    />
-                  );
-                })}
-                <NavItem
-                  variant="text+icon-secondary"
-                  label="Next"
-                  icon={<IconChevronRight className="w-4 h-4" />}
-                  onClick={page === pageCount ? undefined : () => setPage((p) => Math.min(pageCount, p + 1))}
-                  className={page === pageCount ? "opacity-60 cursor-not-allowed" : ""}
-                />
-              </div>
-            </div>
+            {/* Content area - replaced with Outlet for routing */}
+            <Outlet />
           </div>
         </div>
       </div>
