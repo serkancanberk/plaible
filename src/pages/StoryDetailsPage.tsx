@@ -1,15 +1,14 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
+import StoryHeader from '../components/StoryHeader';
 
 export const StoryDetailsPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
 
   return (
     <div className="flex flex-col space-y-12 overflow-y-auto no-scrollbar">
-      <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl px-12 py-8">
-        <div className="rounded-card bg-primary/5 text-accent text-lg text-center py-16">
-          StoryHeader — StoryTitle, AuthorName, Genres, Year, PlayCount, Rating, Headline, Description
-        </div>
+      <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl px-4 py-8">
+        <StoryHeader />
 
         <div className="rounded-card bg-primary/5 text-accent text-lg text-center py-16">
           CharacterCarousel — CharacterCard elements in carousel
