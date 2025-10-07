@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import StoryHeader from '../components/StoryHeader';
-import CharacterCard from '../components/ui/CharacterCard';
+import { CharacterCarousel } from '../components/ui/CharacterCarousel';
 import { useStoryBySlug } from '../hooks/useStoryBySlug';
 
 export const StoryDetailsPage: React.FC = () => {
@@ -17,21 +17,10 @@ export const StoryDetailsPage: React.FC = () => {
       <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl px-4 py-8">
         <StoryHeader />
 
-        {/* CharacterCarousel placeholder */}
-        <div className="mt-spacing-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-spacing-md">
-          {story?.characters?.map((character) => (
-            <CharacterCard
-              key={character.id}
-              id={character.id}
-              name={character.name}
-              role={character.roles?.join(' · ')}
-              summary={character.summary}
-              hooks={character.hooks}
-              assets={character.assets}
-              onPlay={(id) => console.log('Play as character:', id)}
-            />
-          ))}
-        </div>
+        <CharacterCarousel
+          characters={(story.characters || []) as any}
+          onPlay={(id) => console.log('Play as character:', id)}
+        />
 
         <div className="rounded-card bg-primary/5 text-accent text-lg text-center py-16">
           StoryHighlights — “What is the Story?” Original, Modern, etc. collapsible info
