@@ -1,17 +1,36 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import StoryHeader from '../components/StoryHeader';
+import CharacterCard from '../components/ui/CharacterCard';
+import { useStoryBySlug } from '../hooks/useStoryBySlug';
 
 export const StoryDetailsPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { data: story, loading, error } = useStoryBySlug(slug);
+
+  if (loading) return <p className="text-body text-text-tertiary">Loading story...</p>;
+  if (error) return <p className="text-body text-text-tertiary">Error loading story.</p>;
+  if (!story) return <p className="text-body text-text-tertiary">Story not found.</p>;
 
   return (
     <div className="flex flex-col space-y-12 overflow-y-auto no-scrollbar">
       <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl px-4 py-8">
         <StoryHeader />
 
-        <div className="rounded-card bg-primary/5 text-accent text-lg text-center py-16">
-          CharacterCarousel — CharacterCard elements in carousel
+        {/* CharacterCarousel placeholder */}
+        <div className="mt-spacing-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-spacing-md">
+          {story?.characters?.map((character) => (
+            <CharacterCard
+              key={character.id}
+              id={character.id}
+              name={character.name}
+              role={character.roles?.join(' · ')}
+              summary={character.summary}
+              hooks={character.hooks}
+              assets={character.assets}
+              onPlay={(id) => console.log('Play as character:', id)}
+            />
+          ))}
         </div>
 
         <div className="rounded-card bg-primary/5 text-accent text-lg text-center py-16">

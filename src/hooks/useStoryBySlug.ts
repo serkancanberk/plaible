@@ -14,6 +14,17 @@ export interface StoryData {
   };
   headline: string;
   description: string;
+  characters?: Array<{
+    id: string;
+    name: string;
+    summary: string;
+    hooks: string[];
+    assets: {
+      images: string[];
+      videos: string[];
+    };
+    roles?: string[];
+  }>;
 }
 
 export function useStoryBySlug(slug: string | undefined) {

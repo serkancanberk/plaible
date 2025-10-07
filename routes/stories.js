@@ -170,6 +170,27 @@ router.get("/:slug", async (req, res) => {
     const doc = await Story.findOne({ slug, isActive: true }).lean();
     if (!doc) return err(res, "NOT_FOUND", 404);
 
+    // Enrich characters with their roles from the cast array
+    if (doc.cast && doc.roles && doc.characters) {
+      const enrichedCharacters = doc.characters.map(character => {
+        const castEntry = doc.cast.find(c =>
+          c.characterId === character._id?.toString() || c.characterId === character.id
+        );
+        const roleLabels = castEntry
+          ? castEntry.roleIds
+              .map(roleId => doc.roles.find(r => r.id === roleId || r._id?.toString() === roleId)?.label)
+              .filter(Boolean)
+          : [];
+
+        return {
+          ...character,
+          roles: roleLabels.length ? roleLabels : undefined,
+        };
+      });
+
+      doc.characters = enrichedCharacters;
+    }
+
     return ok(res, doc);
   } catch (err) {
     console.error("GET /api/stories/:slug error:", err);
