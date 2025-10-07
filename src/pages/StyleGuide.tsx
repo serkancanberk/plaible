@@ -52,6 +52,7 @@ const textColors = [
   { token: 'text-accent', label: 'Accent', hex: '#FFCC00' },
   { token: 'text-success', label: 'Success', hex: '#D3FF34' },
   { token: 'text-alert', label: 'Alert', hex: '#D23001' },
+  { token: 'text-dark_mode_highlight', label: 'dark_mode_highlight', hex: '#F4F0EC' },
 ];
 
 const bgColors = [

@@ -24,7 +24,7 @@ export const StoryHowToPlay: React.FC = () => {
             image="/assets/howtoplay/HowToPlay_Female_01.png"
             title="Pick a Role"
             description="Choose who you want to be: hero, villain, or someone in between."
-            step={1}
+            step="Enter"
             className="h-full"
           />
 
@@ -32,7 +32,7 @@ export const StoryHowToPlay: React.FC = () => {
             image="/assets/howtoplay/HowToPlay_Female_02.png"
             title="Shape the World"
             description="Every word you type expands the story and changes what happens next."
-            step={2}
+            step="Respond"
             className="h-full"
           />
 
@@ -40,7 +40,7 @@ export const StoryHowToPlay: React.FC = () => {
             image="/assets/howtoplay/HowToPlay_Female_03.png"
             title="Live your Epilogue"
             description="The Storyrunner AI adapts, the world reacts, and no two journeys are ever the same."
-            step={3}
+            step="Evolve"
             className="h-full"
           />
         </div>

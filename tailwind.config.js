@@ -19,6 +19,7 @@ export default {
         success: '#D3FF34',
         alert: '#D23001',
         'ui-muted': '#9A9FBF',
+        'dark_mode_highlight': '#F4F0EC',
       },
       fontFamily: {
         sans: ['Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'],

@@ -4,7 +4,7 @@ export interface HowToPlayCardProps {
   image: string;
   title: string;
   description: string;
-  step: number;
+  step: string;
   className?: string;
 }
 
@@ -21,11 +21,11 @@ export const HowToPlayCard: React.FC<HowToPlayCardProps> = ({ image, title, desc
     >
       {/* Media section with inner padding */}
       <div className="px-spacing-md pt-spacing-md">
-        <div className="rounded-xl overflow-hidden bg-surface-muted aspect-[16/9]">
+        <div className="rounded-xl overflow-hidden bg-surface-muted aspect-[16/9] bg-dark_mode_highlight">
           <img
             src={image}
             alt={title}
-            className="object-cover w-full h-full"
+            className="object-contain w-full h-full p-spacing-xs"
             loading="lazy"
           />
         </div>
@@ -41,8 +41,8 @@ export const HowToPlayCard: React.FC<HowToPlayCardProps> = ({ image, title, desc
 
       {/* Step indicator */}
       <div className="mt-spacing-lg px-spacing-md pb-spacing-md">
-        <div className="border border-border-muted text-caption text-text-tertiary rounded-lg mt-spacing-sm text-center py-1">
-          {`Step ${step}`}
+        <div className="bg-primary border border-accent font-serif text-body text-accent rounded-lg mt-spacing-lg text-center py-2">
+          {step}
         </div>
       </div>
     </div>

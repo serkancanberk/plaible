@@ -48,7 +48,7 @@ export const StoryHighlights: React.FC<StoryHighlightsProps> = ({ summary, hooks
             {hooks.map((hook, index) => (
               <span
                 key={index}
-                className="px-6 py-2 rounded-full bg-secondary font-sans text-caption text-text-tertiary/50 border border-text-tertiary/50"
+                className="px-6 py-2 rounded-full bg-text-tertiary/10 font-sans text-label text-text-tertiary border border-text-tertiary/20"
               >
                 {hook}
               </span>
