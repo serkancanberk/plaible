@@ -14,6 +14,15 @@ export interface StoryData {
   };
   headline: string;
   description: string;
+  hooks?: string[];
+  summary: {
+    original: string;
+    modern: string;
+    highlights: Array<{
+      title: string;
+      description: string;
+    }>;
+  };
   characters?: Array<{
     id: string;
     name: string;

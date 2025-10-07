@@ -2,6 +2,8 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import StoryHeader from '../components/StoryHeader';
 import { CharacterCarousel } from '../components/ui/CharacterCarousel';
+import { StoryHighlights } from '../components/ui/StoryHighlights';
+import { StoryHowToPlay } from '../components/ui/StoryHowToPlay';
 import { useStoryBySlug } from '../hooks/useStoryBySlug';
 
 export const StoryDetailsPage: React.FC = () => {
@@ -22,13 +24,13 @@ export const StoryDetailsPage: React.FC = () => {
           onPlay={(id) => console.log('Play as character:', id)}
         />
 
-        <div className="rounded-card bg-primary/5 text-accent text-lg text-center py-16">
-          StoryHighlights — “What is the Story?” Original, Modern, etc. collapsible info
-        </div>
+        <StoryHighlights
+          summary={story.summary}
+          hooks={story.hooks}
+          publishedYear={story.publishedYear}
+        />
 
-        <div className="rounded-card bg-primary/5 text-accent text-lg text-center py-16">
-          StoryHowToPlay — thematic step-by-step HowToPlayCard components
-        </div>
+        <StoryHowToPlay />
 
         <div className="rounded-card bg-primary/5 text-accent text-lg text-center py-16">
           WantToPlay — character-based call-to-action section
