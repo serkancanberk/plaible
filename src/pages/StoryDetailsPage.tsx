@@ -12,6 +12,7 @@ import { useStoryBySlug } from '../hooks/useStoryBySlug';
 import { useFeedbacksByStorySlug } from '../hooks/useFeedbacksByStorySlug';
 import { useStoryStats } from '../hooks/useStoryStats';
 import { useReducedMotion } from '../hooks/useReducedMotion';
+import StoryFunFacts from '../components/ui/StoryFunFacts';
 
 export const StoryDetailsPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -311,9 +312,7 @@ export const StoryDetailsPage: React.FC = () => {
           </div>
         </section>
 
-        <div className="rounded-card bg-primary/5 text-accent text-lg text-center py-16">
-          StoryFunFacts — fun facts from database about the story
-        </div>
+        {story && <StoryFunFacts funFacts={story.funFacts} />}
 
         <div className="rounded-card bg-primary/5 text-accent text-lg text-center py-16">
           ReadyToPlay

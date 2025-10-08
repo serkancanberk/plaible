@@ -1,6 +1,15 @@
 import React from 'react';
 import { fetchJson } from '../lib/http';
 
+// Types for fun facts
+export type FactItem = { title: string; description: string };
+
+export type FunFacts = {
+  storyFacts: FactItem[];
+  authorInfo: FactItem[];
+  modernEcho: FactItem[];
+};
+
 export interface StoryData {
   _id: string;
   slug: string;
@@ -34,6 +43,7 @@ export interface StoryData {
     };
     roles?: string[];
   }>;
+  funFacts?: FunFacts;
 }
 
 export function useStoryBySlug(slug: string | undefined) {
