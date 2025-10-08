@@ -222,4 +222,43 @@ router.get("/:slug/stats", async (req, res) => {
   }
 });
 
+/** GET /api/stories/:slug/related
+ * Get related stories for a specific story by slug.
+ */
+router.get("/:slug/related", async (req, res) => {
+  try {
+    const slug = String(req.params.slug || "").toLowerCase().trim();
+    if (!slug) return err(res, "BAD_REQUEST", 400, { field: "slug" });
+
+    // Find the main story to get relatedStoryIds
+    const story = await Story.findOne({ slug, isActive: true }).lean();
+    if (!story) return err(res, "NOT_FOUND", 404);
+
+    // If no related stories, return empty array
+    const ids = story.relatedStoryIds || [];
+    if (!ids.length) {
+      return ok(res, { items: [] });
+    }
+
+    // Fetch related stories by IDs (support both _id and slug)
+    const related = await Story.find({
+      isActive: true,
+      $or: [{ _id: { $in: ids } }, { slug: { $in: ids } }],
+    }, {
+      _id: 1, slug: 1, title: 1, authorName: 1, headline: 1,
+      "assets.images": 1, "stats.avgRating": 1, "stats.totalPlayed": 1
+    }).lean();
+
+    // Preserve order from relatedStoryIds array
+    const order = new Map(ids.map((v, i) => [String(v), i]));
+    const normKey = d => order.has(String(d._id)) ? String(d._id) : String(d.slug);
+    related.sort((a, b) => (order.get(normKey(a)) ?? 9999) - (order.get(normKey(b)) ?? 9999));
+
+    return ok(res, { items: related });
+  } catch (err) {
+    console.error("GET /api/stories/:slug/related error:", err);
+    return err(res, "SERVER_ERROR", 500);
+  }
+});
+
 export default router; 

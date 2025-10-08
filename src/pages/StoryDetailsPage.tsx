@@ -13,6 +13,8 @@ import { useFeedbacksByStorySlug } from '../hooks/useFeedbacksByStorySlug';
 import { useStoryStats } from '../hooks/useStoryStats';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import StoryFunFacts from '../components/ui/StoryFunFacts';
+import { useRelatedStories } from '../hooks/useRelatedStories';
+import StoryExplorerCarousel from '../components/ui/StoryExplorerCarousel';
 
 export const StoryDetailsPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -28,6 +30,7 @@ export const StoryDetailsPage: React.FC = () => {
     fetchFeedbacks
   } = useFeedbacksByStorySlug(slug, selectedStarsFilter);
   const { stats, loading: statsLoading, error: statsError } = useStoryStats(slug);
+  const { stories: relatedStories, loading: relatedLoading, error: relatedError } = useRelatedStories(slug);
 
   // Animation variants
   const pageVariants = shouldReduceMotion ? undefined : {
@@ -340,9 +343,42 @@ export const StoryDetailsPage: React.FC = () => {
           </div>
         </section>
 
-        <div className="rounded-card bg-primary/5 text-accent text-lg text-center py-16">
-          StoryExploreMore — suggestions for similar stories by genre/category
-        </div>
+        {/* Explore More Section */}
+        {relatedStories?.length ? (
+          <section className="mt-spacing-xl">
+            <div className="mt-spacing-lg pb-spacing-md pt-spacing-lg">
+              <h2>
+                <span className="font-sans text-heading text-text-tertiary">Want to </span>
+                <span className="font-mono text-heading text-accent">explore more?</span>
+              </h2>
+            </div>
+
+            <div className="mt-spacing-lg pb-spacing-md">
+              <h3 className="font-sans text-body text-accent">
+                More tales to spark your imagination.
+              </h3>
+              <p className="font-sans text-body text-text-tertiary mt-2 border-b border-primary pb-spacing-sm">
+                The story does not end here. Explore more worlds where your decisions bring every page to life.
+              </p>
+            </div>
+
+            <div className="mt-spacing-lg pb-spacing-md">
+              <StoryExplorerCarousel stories={relatedStories} />
+            </div>
+          </section>
+        ) : relatedLoading ? (
+          <section className="mt-spacing-xl">
+            <div className="mt-spacing-lg pb-spacing-md pt-spacing-lg">
+              <h2>
+                <span className="font-sans text-heading text-text-tertiary">Want to </span>
+                <span className="font-mono text-heading text-accent">explore more?</span>
+              </h2>
+            </div>
+            <div className="mt-spacing-lg pb-spacing-md">
+              <p className="font-sans text-body text-text-tertiary">Loading related stories...</p>
+            </div>
+          </section>
+        ) : null}
       </motion.div>
     </motion.div>
   );
