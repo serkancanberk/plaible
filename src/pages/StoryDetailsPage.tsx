@@ -314,9 +314,31 @@ export const StoryDetailsPage: React.FC = () => {
 
         {story && <StoryFunFacts funFacts={story.funFacts} />}
 
-        <div className="rounded-card bg-primary/5 text-accent text-lg text-center py-16">
-          ReadyToPlay
-        </div>
+        {/* ReadyToPlay Section (Final Variant) */}
+        <section className="mt-spacing-xl">
+          <div className="mt-spacing-lg pb-spacing-md pt-spacing-lg">
+            <h2>
+              <span className="font-sans text-heading text-text-tertiary">Will you take the </span>
+              <span className="font-mono text-heading text-accent">story forward?</span>
+            </h2>
+          </div>
+
+          <div className="mt-spacing-lg pb-spacing-md">
+            <h3 className="font-sans text-body text-accent">
+              Every tale waits for someone to continue it.
+            </h3>
+            <p className="font-sans text-body text-text-tertiary mt-2 border-b border-primary pb-spacing-sm">
+              Step in, choose your role, and see how far one choice can change everything.
+            </p>
+          </div>
+
+          <div className="mt-spacing-lg pb-spacing-md">
+            <CharacterCarousel
+              characters={(story.characters || []) as any}
+              onPlay={(id) => console.log('Play as character:', id)}
+            />
+          </div>
+        </section>
 
         <div className="rounded-card bg-primary/5 text-accent text-lg text-center py-16">
           StoryExploreMore — suggestions for similar stories by genre/category
