@@ -7,6 +7,7 @@ import GetTheAppModal from '../components/ui/GetTheAppModal';
 import KeepInTouchModal from '../components/ui/KeepInTouchModal';
 import CheckLegalStuffModal from '../components/ui/CheckLegalStuffModal';
 import { MobileHeader } from '../components/ui/MobileHeader';
+import { FeedbackCard, FeedbackData } from '../components/ui/FeedbackCard';
 
 type LandingGridLayoutProps = {
   left?: React.ReactNode;
@@ -28,6 +29,40 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
   const [openGetApp, setOpenGetApp] = useState(false);
   const [openKeep, setOpenKeep] = useState(false);
   const [openLegal, setOpenLegal] = useState(false);
+
+  // Mock feedback data - will be replaced with real data later
+  const mockFeedbacks: FeedbackData[] = [
+    {
+      id: "1",
+      username: "Ayşe Korkmaz",
+      city: "Istanbul",
+      character: "Queen Arlena",
+      rating: 5,
+      weeksAgo: 2,
+      text: "An unforgettable experience. The branching felt meaningful and I truly cared about the consequences. Will definitely play again!",
+      characterImageUrl: "https://randomuser.me/api/portraits/women/12.jpg"
+    },
+    {
+      id: "2",
+      username: "Liam O'Connor",
+      city: "Dublin",
+      character: "The Count of Monte Cristo",
+      rating: 4,
+      weeksAgo: 3,
+      text: "Loved the writing and the moral choices. A few tougher decisions really stuck with me afterwards—great storytelling.",
+      characterImageUrl: "https://randomuser.me/api/portraits/men/54.jpg"
+    },
+    {
+      id: "3",
+      username: "Sofia Almeida",
+      city: "Lisbon",
+      character: "Jane Eyre",
+      rating: 5,
+      weeksAgo: 4,
+      text: "Beautifully paced and surprisingly emotional. The AI felt attentive to my previous choices throughout the whole run.",
+      characterImageUrl: "https://randomuser.me/api/portraits/women/36.jpg"
+    }
+  ];
 
   const openStartModal = () => setIsStartModalOpen(true);
   const closeStartModal = () => setIsStartModalOpen(false);
@@ -143,38 +178,9 @@ export const LandingGridLayout: React.FC<LandingGridLayoutProps> = ({
                   </>
                 ) : (
                   <>
-                    <div className="rounded-card bg-secondary p-card space-y-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary" />
-                        <div className="text-label text-text-tertiary">Ayşe Korkmaz from Istanbul,</div>
-                      </div>
-                      <div className="text-accent text-body font-semibold">played last as Queen Arlena</div>
-                      <div className="text-accent text-body">★★★★★ (5) – 2 weeks ago</div>
-                      <p className="text-body text-text-primary">An unforgettable experience. The branching felt meaningful and I truly cared about the consequences. Will definitely play again!</p>
-                      <button className="text-body text-accent font-semibold hover:underline">Read more →</button>
-                    </div>
-
-                    <div className="rounded-card bg-secondary p-card space-y-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary" />
-                        <div className="text-label text-text-tertiary">Liam O'Connor from Dublin,</div>
-                      </div>
-                      <div className="text-accent text-body font-semibold">played last as The Count of Monte Cristo</div>
-                      <div className="text-accent text-body">★★★★☆ (4) – 3 weeks ago</div>
-                      <p className="text-body text-text-primary">Loved the writing and the moral choices. A few tougher decisions really stuck with me afterwards—great storytelling.</p>
-                      <button className="text-body text-accent font-semibold hover:underline">Read more →</button>
-                    </div>
-
-                    <div className="rounded-card bg-secondary p-card space-y-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary" />
-                        <div className="text-label text-text-tertiary">Sofia Almeida from Lisbon,</div>
-                      </div>
-                      <div className="text-accent text-body font-semibold">played last as Jane Eyre</div>
-                      <div className="text-accent text-body">★★★★★ (5) – 1 month ago</div>
-                      <p className="text-body text-text-primary">Beautifully paced and surprisingly emotional. The AI felt attentive to my previous choices throughout the whole run.</p>
-                      <button className="text-body text-accent font-semibold hover:underline">Read more →</button>
-                    </div>
+                    {mockFeedbacks.map((feedback) => (
+                      <FeedbackCard key={feedback.id} data={feedback} />
+                    ))}
                   </>
                 )}
               </div>

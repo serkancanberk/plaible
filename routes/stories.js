@@ -198,4 +198,28 @@ router.get("/:slug", async (req, res) => {
   }
 });
 
+/** GET /api/stories/:slug/stats
+ * Get story statistics (totalPlays, totalReviews, averageRating)
+ */
+router.get("/:slug/stats", async (req, res) => {
+  try {
+    const slug = String(req.params.slug || "").toLowerCase().trim();
+    if (!slug) return err(res, "BAD_REQUEST", 400, { field: "slug" });
+
+    const story = await Story.findOne({ slug, isActive: true }).lean();
+    if (!story) return err(res, "NOT_FOUND", 404);
+
+    const stats = {
+      totalPlays: story.stats?.totalPlayed || 0,
+      totalReviews: story.stats?.totalReviews || 0,
+      averageRating: story.stats?.avgRating || 0,
+    };
+
+    return ok(res, stats);
+  } catch (err) {
+    console.error("GET /api/stories/:slug/stats error:", err);
+    return err(res, "SERVER_ERROR", 500);
+  }
+});
+
 export default router; 
