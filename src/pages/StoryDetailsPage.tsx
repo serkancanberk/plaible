@@ -287,9 +287,29 @@ export const StoryDetailsPage: React.FC = () => {
         </div>
       </section>
 
-        <div className="rounded-card bg-primary/5 text-accent text-lg text-center py-16">
-          ReadyToPlay — similar to WantToPlay section (variant)
-        </div>
+        {/* ReadyToPlay Section */}
+        <section className="mt-spacing-xl">
+          <div className="mt-spacing-lg pb-spacing-md pt-spacing-lg">
+            <h2>
+              <span className="font-sans text-heading text-text-tertiary">So, ready to </span>
+              <span className="font-mono text-heading text-accent">play?</span>
+            </h2>
+          </div>
+
+          <div className="mt-spacing-lg pb-spacing-md">
+            <h3 className="font-sans text-body text-accent">Your turn to take the story forward.</h3>
+            <p className="font-sans text-body text-text-tertiary mt-2 border-b border-primary pb-spacing-sm">
+              Heroes, villains, dreamers, rebels. Who will you become this time?
+            </p>
+          </div>
+
+          <div className="mt-spacing-lg pb-spacing-md">
+            <CharacterCarousel
+              characters={(story.characters || []) as any}
+              onPlay={(id) => console.log('Play as character:', id)}
+            />
+          </div>
+        </section>
 
         <div className="rounded-card bg-primary/5 text-accent text-lg text-center py-16">
           StoryFunFacts — fun facts from database about the story
