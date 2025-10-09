@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import StoryCard from '../components/ui/StoryCard';
+import CharacterCard from '../components/ui/CharacterCard';
 import { useStories } from '../hooks/useStories';
 import NavItem from '../components/ui/NavItem';
 import IconChevronRight from 'virtual:icons/tabler/chevron-right';
@@ -10,6 +11,9 @@ export const StoriesFeedPage: React.FC = () => {
   const pageSize = 9;
   const { data: stories, total, loading, error } = useStories({ page, pageSize });
   const pageCount = Math.max(1, Math.ceil((total || 0) / pageSize));
+  
+  // Feature flag for CharacterCard injection
+  const showCharacterCard = true; // temporary toggle for visual testing
 
   return (
     <>
@@ -34,17 +38,48 @@ export const StoriesFeedPage: React.FC = () => {
               : stories && stories.length > 0
                 ? (
                   <>
-                    {stories.map((s) => (
-                      <StoryCard
-                        key={s.slug}
-                        title={s.title}
-                        authorName={s.authorName}
-                        slug={s.slug}
-                        headline={s.headline}
-                        assets={s.assets}
-                        stats={s.stats}
-                      />
-                    ))}
+                    {stories.map((s, index) => {
+                      // Render the StoryCard first
+                      const storyCard = (
+                        <StoryCard
+                          key={s.slug}
+                          title={s.title}
+                          authorName={s.authorName}
+                          slug={s.slug}
+                          headline={s.headline}
+                          assets={s.assets}
+                          stats={s.stats}
+                        />
+                      );
+
+                      // Inject CharacterCard after the 2nd story (index === 1)
+                      if (showCharacterCard && index === 1) {
+                        console.log('[Injected CharacterCard] Elizabeth Lavenza successfully rendered after the 2nd StoryCard');
+                        return (
+                          <React.Fragment key={`slot-${index}-${s.slug}`}>
+                            {storyCard}
+                            <CharacterCard
+                              id="elizabeth-lavenza"
+                              name="Elizabeth Lavenza"
+                              role="Beloved of Victor Frankenstein"
+                              summary="Victor's gentle and devoted fiancée, tragically caught in the aftermath of his creation. Her compassion contrasts Victor's obsession, embodying the humanity he loses."
+                              assets={{
+                                images: ["/assets/characters/elizabeth-lavenza.jpg"],
+                              }}
+                              hooks={[
+                                "Loyalty",
+                                "Love",
+                                "Tragedy",
+                              ]}
+                              onPlay={(id) => console.log('[Injected CharacterCard]', id)}
+                            />
+                          </React.Fragment>
+                        );
+                      }
+
+                      // Default rendering - just the StoryCard
+                      return storyCard;
+                    })}
                   </>
                 )
                 : (

@@ -89,17 +89,22 @@ export const StoryDetailsPage: React.FC = () => {
       transition={pageTransition}
     >
       <motion.div 
-        className="mx-auto w-full md:max-w-3xl lg:max-w-5xl px-4 py-8"
+        className="mx-auto w-full md:max-w-3xl lg:max-w-5xl px-spacing-md py-8"
         variants={headerVariants}
         initial="hidden"
         animate="visible"
       >
         <StoryHeader />
 
-        <CharacterCarousel
-          characters={(story.characters || []) as any}
-          onPlay={(id) => console.log('Play as character:', id)}
-        />
+        {/* CharacterCarousel section with proper container */}
+        <section className="mt-spacing-lg">
+          <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl px-spacing-md">
+            <CharacterCarousel
+              characters={(story.characters || []) as any}
+              onPlay={(id) => console.log('Play as character:', id)}
+            />
+          </div>
+        </section>
 
         <StoryHighlights
           summary={story.summary}

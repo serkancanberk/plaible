@@ -446,7 +446,7 @@ export default function CharacterCard({
       <div className="mt-spacing-lg px-spacing-md pb-spacing-md">
         <C2AButton
           variant="primary"
-          typography="body"
+          typography="caption"
           fullWidth
           onClick={() => {
             onPlay?.(id);
@@ -490,11 +490,11 @@ export default function CharacterCard({
         <div className="mt-auto pt-spacing-md">
           <C2AButton
             variant="primary"
-            typography="body"
+            typography="caption"
             fullWidth
             onClick={() => onPlay?.(id)}
           >
-            Play As '{name}'
+            Play As 
           </C2AButton>
         </div>
       </div>

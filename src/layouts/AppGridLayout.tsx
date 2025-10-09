@@ -15,6 +15,8 @@ import IconChevronLeft from 'virtual:icons/tabler/chevron-left';
 import IconUser from 'virtual:icons/tabler/user';
 import IconSearch from 'virtual:icons/tabler/search';
 import IconDownload from 'virtual:icons/tabler/download';
+import IconShare from 'virtual:icons/tabler/share';
+import IconBookmark from 'virtual:icons/tabler/bookmark';
 import IconDots from 'virtual:icons/tabler/dots';
 import IconSettings from 'virtual:icons/tabler/settings';
 import IconFlag from 'virtual:icons/tabler/flag';
@@ -69,6 +71,72 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
 
   // Check if we're on a story details page to hide SubNavigation
   const isStoryDetailsPage = location.pathname.includes('/stories/') && location.pathname !== '/app';
+
+  // Header configuration based on route
+  const getHeaderConfig = () => {
+    if (isStoryDetailsPage) {
+      return {
+        title: "Step Into The Story",
+        actions: [
+          {
+            type: "search",
+            icon: IconSearch,
+            label: "Search",
+            onClick: openSearchModal,
+          },
+          {
+            type: "share",
+            icon: IconShare,
+            label: "Share",
+            onClick: () => console.log("Share clicked"),
+          },
+          {
+            type: "save",
+            icon: IconBookmark,
+            label: "Save",
+            onClick: () => console.log("Save clicked"),
+          },
+          {
+            type: "menu",
+            icon: IconDots,
+            label: "More",
+            onClick: () => setIsKebabOpen(!isKebabOpen),
+          },
+        ],
+      };
+    }
+
+    // Default feed header
+    return {
+      title: "Choose A Story",
+      actions: [
+        {
+          type: "search",
+          icon: IconSearch,
+          label: "Search",
+          onClick: openSearchModal,
+        },
+        {
+          type: "download",
+          icon: IconDownload,
+          label: "Download",
+          onClick: openGetAppModal,
+        },
+        {
+          type: "add",
+          icon: IconPlus,
+          label: "Add",
+          onClick: () => console.log("Add clicked"),
+        },
+        {
+          type: "menu",
+          icon: IconDots,
+          label: "Menu",
+          onClick: () => setIsKebabOpen(!isKebabOpen),
+        },
+      ],
+    };
+  };
 
   const typeOptions: Array<{ id: 'books' | 'stories' | 'biographies'; label: 'Books' | 'Stories' | 'Biographies' }> = [
     { id: 'books', label: 'Books' },
@@ -517,6 +585,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                         <IconHome className="w-4 h-4" />
                       </span>
                     }
+                    onClick={() => navigate('/app')}
                   />
                   <NavItem
                     variant="icon"
@@ -639,8 +708,13 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
           <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl flex flex-col">
             {/* Header */}
             <header className="sticky top-0 z-30 border-b border-text-secondary/30 bg-secondary">
-            <div className="flex items-center justify-between px-spacing-md pt-spacing-2xl pb-spacing-sm">
-                <div className="text-heading font-serif text-accent">Choose A Story</div>
+              <div className="flex items-center justify-between px-spacing-md pt-spacing-2xl pb-spacing-sm">
+                {/* Title */}
+                <div className="text-heading font-serif text-accent">
+                  {getHeaderConfig().title}
+                </div>
+
+                {/* Action Buttons */}
                 <div className="flex items-center gap-spacing-md">
                   {/* Sidebar toggle (only visible on <lg) */}
                   <button
@@ -652,74 +726,54 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                   </button>
-                  {/* Actions */}
+                  
+                  {/* Dynamic Actions */}
                   <div className="hidden lg:flex items-center gap-spacing-xl">
-                    <NavItem
-                      variant="icon+text-secondary"
-                      label="Search"
-                      icon={
-                        <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
-                          <IconSearch className="w-4 h-4" />
-                        </span>
-                      }
-                      onClick={openSearchModal}
-                    />
-                    <NavItem
-                      variant="icon+text-secondary"
-                      label="Download"
-                      icon={
-                        <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
-                          <IconDownload className="w-4 h-4" />
-                        </span>
-                      }
-                      onClick={openGetAppModal}
-                    />
-                    <NavItem
-                      variant="icon+text-secondary"
-                      label="Add"
-                      icon={
-                        <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
-                          <IconPlus className="w-4 h-4" />
-                        </span>
-                      }
-                    />
-                    <div ref={kebabRef} className="relative">
+                    {getHeaderConfig().actions.map((action) => (
                       <NavItem
+                        key={action.type}
                         variant="icon+text-secondary"
+                        label={action.label}
                         icon={
                           <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
-                            <IconDots className="w-4 h-4" />
+                            <action.icon className="w-4 h-4" />
                           </span>
                         }
-                        onClick={() => setIsKebabOpen(!isKebabOpen)}
+                        onClick={action.onClick}
                       />
-                      {isKebabOpen && (
-                        <div className="absolute right-0 mt-spacing-xs z-50 bg-primary rounded-card shadow-card w-48 py-spacing-lg px-spacing-sm">
-                          <div className="flex flex-col space-y-spacing-lg">
-                            <NavItem
-                              variant="text-secondary"
-                              label="Story Settings"
-                              className="w-full px-spacing-lg"
-                              onClick={() => {
-                                console.log('[kebab] Story Settings');
-                                setIsStorySettingsModalOpen(true);
-                                setIsKebabOpen(false);
-                              }}
-                            />
-                            <NavItem
-                              variant="text-secondary"
-                              label="Report"
-                              className="w-full px-spacing-lg"
-                              onClick={() => {
-                                console.log('[kebab] Report');
-                                openReportModal();
-                                setIsKebabOpen(false);
-                              }}
-                            />
+                    ))}
+                    
+                    {/* Kebab Menu (only for menu action) */}
+                    {getHeaderConfig().actions.find(action => action.type === 'menu') && (
+                      <div ref={kebabRef} className="relative">
+                        {isKebabOpen && (
+                          <div className="absolute right-0 mt-spacing-xs z-50 bg-primary rounded-card shadow-card w-48 py-spacing-lg px-spacing-sm">
+                            <div className="flex flex-col space-y-spacing-lg">
+                              <NavItem
+                                variant="text-secondary"
+                                label="Story Settings"
+                                className="w-full px-spacing-lg"
+                                onClick={() => {
+                                  console.log('[kebab] Story Settings');
+                                  setIsStorySettingsModalOpen(true);
+                                  setIsKebabOpen(false);
+                                }}
+                              />
+                              <NavItem
+                                variant="text-secondary"
+                                label="Report"
+                                className="w-full px-spacing-lg"
+                                onClick={() => {
+                                  console.log('[kebab] Report');
+                                  openReportModal();
+                                  setIsKebabOpen(false);
+                                }}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

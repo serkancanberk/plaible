@@ -1,5 +1,10 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import CharacterCard from './CharacterCard';
+
+// Constants for consistent sizing
+const CARD_W = 300;       // px
+const GAP = 32;           // px -> matches gap-spacing-xl
+const STEP = CARD_W + GAP; // 332px
 
 // Use the same Character type as defined in the StoryData interface
 export interface Character {
@@ -20,14 +25,29 @@ interface CharacterCarouselProps {
 }
 
 export const CharacterCarousel: React.FC<CharacterCarouselProps> = ({ characters, onPlay }) => {
-  const scrollerRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const [vpWidth, setVpWidth] = useState<number>(964); // 3*300 + 2*32
+
+  // Responsive viewport width calculation
+  useEffect(() => {
+    const compute = () => {
+      const w = window.innerWidth;
+      if (w < 640)      setVpWidth(300);         // 1 kart
+      else if (w < 1024) setVpWidth(632);        // 2*300 + 32
+      else               setVpWidth(964);        // 3*300 + 2*32
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
+  }, []);
 
   // Check scroll position and update button states
   const updateScrollButtons = useCallback(() => {
-    const el = scrollerRef.current;
+    const el = rowRef.current;
     if (!el) return;
 
     const { scrollLeft, scrollWidth, clientWidth } = el;
@@ -35,49 +55,18 @@ export const CharacterCarousel: React.FC<CharacterCarouselProps> = ({ characters
     setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
   }, []);
 
-  // Desktop full navigation scroll functions
-  const scrollLeft = useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
+  // Card-by-card navigation scroll functions
+  const scrollBy = (delta: number) => {
+    if (!rowRef.current) return;
+    rowRef.current.scrollBy({ left: delta, behavior: 'smooth' });
+  };
+  
+  const scrollNext = useCallback(() => scrollBy(STEP), []);
+  const scrollPrev = useCallback(() => scrollBy(-STEP), []);
 
-    el.scrollTo({
-      left: 0,
-      behavior: 'smooth'
-    });
-  }, []);
-
-  const scrollRight = useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-
-    el.scrollTo({
-      left: el.scrollWidth,
-      behavior: 'smooth'
-    });
-  }, []);
-
-  // Mobile incremental scroll functions
-  const scrollLeftMobile = useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-
-    const cardWidth = Math.min(el.clientWidth * 0.8, 320); // Responsive card width, max 320px
-    el.scrollBy({
-      left: -cardWidth,
-      behavior: 'smooth'
-    });
-  }, []);
-
-  const scrollRightMobile = useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-
-    const cardWidth = Math.min(el.clientWidth * 0.8, 320); // Responsive card width, max 320px
-    el.scrollBy({
-      left: cardWidth,
-      behavior: 'smooth'
-    });
-  }, []);
+  // Mobile scroll functions (same as desktop for consistency)
+  const scrollLeftMobile = useCallback(() => scrollBy(-STEP), []);
+  const scrollRightMobile = useCallback(() => scrollBy(STEP), []);
 
   // Handle scroll events to update button states
   const handleScroll = useCallback(() => {
@@ -97,15 +86,14 @@ export const CharacterCarousel: React.FC<CharacterCarouselProps> = ({ characters
   if (!characters?.length) return null;
 
   return (
-    <div className="px-spacing-lg sm:px-spacing-xl">
-      <div 
-        className="relative"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
+    <div 
+      className="relative w-full"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
         {/* Left Arrow Button */}
         <button
-          onClick={scrollLeft}
+          onClick={scrollPrev}
           disabled={!canScrollLeft}
           className={`
             absolute left-0 top-1/2 -translate-y-1/2 z-10
@@ -144,7 +132,7 @@ export const CharacterCarousel: React.FC<CharacterCarouselProps> = ({ characters
 
         {/* Right Arrow Button */}
         <button
-          onClick={scrollRight}
+          onClick={scrollNext}
           disabled={!canScrollRight}
           className={`
             absolute right-0 top-1/2 -translate-y-1/2 z-10
@@ -181,10 +169,10 @@ export const CharacterCarousel: React.FC<CharacterCarouselProps> = ({ characters
           </div>
         </button>
 
-        {/* Scroll Container */}
-        <div 
-          ref={scrollerRef}
-          className="overflow-x-auto no-scrollbar snap-x snap-mandatory scroll-smooth flex gap-spacing-md px-spacing-md pb-spacing-md -mx-spacing-md touch-pan-x overscroll-x-contain mt-spacing-lg"
+        {/* Scrollable row */}
+        <div
+          ref={rowRef}
+          className="flex gap-spacing-xl overflow-x-auto no-scrollbar snap-x snap-mandatory scroll-smooth justify-start"
           style={{ 
             WebkitOverflowScrolling: 'touch', 
             scrollbarWidth: 'none', 
@@ -195,7 +183,7 @@ export const CharacterCarousel: React.FC<CharacterCarouselProps> = ({ characters
           {characters.map((character) => (
             <div 
               key={character.id} 
-              className="snap-start min-w-[280px] sm:min-w-[320px] lg:min-w-[360px]"
+              className="snap-start flex-shrink-0 w-[300px]"
             >
               <CharacterCard
                 id={character.id}
@@ -282,7 +270,6 @@ export const CharacterCarousel: React.FC<CharacterCarouselProps> = ({ characters
             </div>
           </button>
         </div>
-      </div>
     </div>
   );
 };
