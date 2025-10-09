@@ -58,4 +58,17 @@ body {
   display: none; /* Chrome, Safari */
 }
 
+/* 3D Transform utilities for CharacterCard flip animation */
+.preserve-3d {
+  perspective: 1200px;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
 

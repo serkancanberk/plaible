@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import C2AButton from '../C2AButton';
 
 // YouTube utility functions (copied from admin components)
@@ -113,6 +114,7 @@ export default function CharacterCard({
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
   const hasMedia = mediaItems.length > 0;
   const hasMultipleMedia = mediaItems.length > 1;
   const currentMedia = mediaItems[currentMediaIndex];
@@ -306,16 +308,23 @@ export default function CharacterCard({
   });
 
   return (
-    <div
-      className={[
-        'block bg-primary text-text-tertiary rounded-card shadow-card overflow-hidden',
-        'border border-transparent',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent',
-        'flex flex-col justify-between h-full min-h-card',
-        className,
-      ].filter(Boolean).join(' ')}
-      aria-label={role ? `${name} - ${role}` : name}
+    <motion.div
+      className="relative preserve-3d transition-transform duration-500 ease-in-out"
+      animate={{ rotateY: isFlipped ? 180 : 0 }}
+      style={{ transformStyle: "preserve-3d" }}
     >
+      {/* Front Face */}
+      <div className="backface-hidden">
+        <div
+          className={[
+            'block bg-primary text-text-tertiary rounded-card shadow-card overflow-hidden',
+            'border border-transparent',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent',
+            'flex flex-col justify-between h-full min-h-card',
+            className,
+          ].filter(Boolean).join(' ')}
+          aria-label={role ? `${name} - ${role}` : name}
+        >
       {/* Media section with inner padding */}
       <div className="px-spacing-md pt-spacing-md">
         <div 
@@ -415,9 +424,13 @@ export default function CharacterCard({
         {summary ? (
           <div className="mt-spacing-md">
             <p className="font-mono text-caption text-text-tertiary/90 line-clamp-1">{summary}</p>
-            <span className="inline-block mt-spacing-xs text-accent text-caption underline underline-offset-4 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent">
+            <button
+              onClick={() => setIsFlipped(true)}
+              aria-expanded={isFlipped}
+              className="inline-block mt-spacing-xs text-accent text-caption underline underline-offset-4 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
+            >
               More
-            </span>
+            </button>
           </div>
         ) : null}
 
@@ -442,6 +455,49 @@ export default function CharacterCard({
           Play As
         </C2AButton>
       </div>
-    </div>
+        </div>
+      </div>
+
+      {/* Back Face */}
+      <div className="absolute inset-0 backface-hidden rotate-y-180 flex flex-col justify-between bg-primary text-text-tertiary rounded-card p-spacing-md">
+        <div className="flex flex-col gap-spacing-sm">
+          <h3 className="font-serif text-subheading text-accent">{name}</h3>
+          {role && <p className="font-sans text-caption text-text-tertiary">{role}</p>}
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="mt-spacing-md"
+          >
+            <p className="font-mono text-caption text-text-tertiary/90 whitespace-pre-wrap">{summary}</p>
+            <button
+              onClick={() => setIsFlipped(false)}
+              aria-expanded={!isFlipped}
+              className="inline-block mt-spacing-xs text-accent text-caption underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
+            >
+              Less
+            </button>
+          </motion.div>
+
+          {hooks && hooks.length > 0 && (
+            <div className="mt-spacing-md font-mono text-caption text-text-secondary">
+              {hooks.join(' · ')}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-auto pt-spacing-md">
+          <C2AButton
+            variant="primary"
+            typography="body"
+            fullWidth
+            onClick={() => onPlay?.(id)}
+          >
+            Play As '{name}'
+          </C2AButton>
+        </div>
+      </div>
+    </motion.div>
   );
 }
