@@ -199,6 +199,8 @@ const storySchema = new Schema(
 
     relatedStoryIds: { type: [String], default: [] },
 
+    featured: { type: Boolean, default: false },
+
     reengagementTemplates: { type: [reengagementTemplateSchema], default: [] },
 
     storyrunner: { type: storyrunnerSchema, required: true },
@@ -283,6 +285,105 @@ storySchema.pre("validate", function (next) {
     this._id = this.slug || toSlug(this.title || "");
   }
   next();
+});
+
+/** Pre-save middleware to store previous state for comparison */
+storySchema.pre('save', function (next) {
+  // Only store previous state for existing documents (not new ones)
+  if (!this.isNew && this.isModified('relatedStoryIds')) {
+    this.constructor.findById(this._id).then(prev => {
+      this._previousRelatedStoryIds = prev?.relatedStoryIds || [];
+      next();
+    }).catch(next);
+  } else {
+    this._previousRelatedStoryIds = [];
+    next();
+  }
+});
+
+/** Mutual Relation Sync Middleware - Phase 3: Reverse Cleanup */
+storySchema.post('save', async function (doc) {
+  try {
+    // Prevent infinite recursion by checking if this save was triggered by mutual sync
+    if (doc._mutualSyncInProgress) {
+      return;
+    }
+
+    if (!Array.isArray(doc.relatedStoryIds)) return;
+
+    // Normalize current story reference
+    const currentId = doc._id?.toString();
+    const currentSlug = doc.slug;
+
+    if (!currentId || !currentSlug) return;
+
+    console.log(`[Mutual Relation Sync] Processing ${doc.slug} with ${doc.relatedStoryIds.length} related stories`);
+
+    const currentIds = doc.relatedStoryIds || [];
+    const prevIds = doc._previousRelatedStoryIds || [];
+
+    // Identify removed relations
+    const removed = prevIds.filter(id => !currentIds.includes(id));
+    const added = currentIds.filter(id => !prevIds.includes(id));
+
+    console.log(`[Mutual Relation Sync] Added: ${added.length}, Removed: ${removed.length}`);
+
+    // Handle removals - Phase 3: Reverse Cleanup
+    for (const targetId of removed) {
+      const target = await doc.constructor.findOne({
+        $or: [{ _id: targetId }, { slug: targetId }],
+        isActive: true
+      });
+
+      if (target) {
+        // Check if target has current story in its relatedStoryIds
+        const hasCurrentStory = target.relatedStoryIds?.includes(currentId) || 
+                               target.relatedStoryIds?.includes(currentSlug);
+
+        if (hasCurrentStory) {
+          // Remove current story from target's relatedStoryIds
+          target.relatedStoryIds = target.relatedStoryIds.filter(r => 
+            r !== currentId && r !== currentSlug
+          );
+          
+          // Mark as mutual sync to prevent infinite recursion
+          target._mutualSyncInProgress = true;
+          await target.save();
+          console.log(`[Mutual Relation Sync] Removed reverse link: ${target.slug} no longer relates to ${doc.slug}`);
+        }
+      }
+    }
+
+    // Handle additions - Phase 2: Mutual Addition (existing logic)
+    for (const relatedId of added) {
+      const relatedStory = await mongoose.model('Story').findOne({
+        $or: [{ _id: relatedId }, { slug: relatedId }],
+        isActive: true
+      });
+
+      if (!relatedStory) {
+        console.log(`[Mutual Relation Sync] Related story not found: ${relatedId}`);
+        continue;
+      }
+
+      // Ensure mutual relationship exists
+      const alreadyRelated = relatedStory.relatedStoryIds?.includes(currentSlug) || 
+                           relatedStory.relatedStoryIds?.includes(currentId);
+
+      if (!alreadyRelated) {
+        relatedStory.relatedStoryIds.push(currentSlug);
+        // Mark as mutual sync to prevent infinite recursion
+        relatedStory._mutualSyncInProgress = true;
+        await relatedStory.save();
+        console.log(`[Mutual Relation Sync] Added mutual link: ${doc.slug} ↔ ${relatedStory.slug}`);
+      } else {
+        console.log(`[Mutual Relation Sync] Relationship already exists: ${doc.slug} ↔ ${relatedStory.slug}`);
+      }
+    }
+
+  } catch (err) {
+    console.error('[Mutual Relation Sync Error]', err);
+  }
 });
 
 /** Indexes */

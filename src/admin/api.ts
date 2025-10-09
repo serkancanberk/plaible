@@ -288,6 +288,12 @@ export const adminApi = {
   updateStory: (id: string, data: unknown) =>
     api.put<{ ok: boolean }>(`/admin/stories/${id}`, data),
 
+  updateStoryRelated: (id: string, data: { relatedStoryIds: string[]; featured?: boolean }) =>
+    api.patch<{ ok: boolean; message?: string; mutualSync?: { added: string[]; removed: string[]; affectedStories?: number }; invalidIds?: string[]; inactiveIds?: string[] }>(
+      `/admin/stories/${id}/related`,
+      data
+    ),
+
   createStoryWithGeneration: (data: { title: string; authorName: string; publishedYear: number; mainCategory: string }) =>
     api.post<{ ok: boolean; storyId: string; error?: string }>('/admin/stories', { ...data, autoGenerate: true }),
 
@@ -506,6 +512,7 @@ export interface Story {
   feedbacks: Feedback[];
   pricing: Pricing;
   relatedStoryIds: string[];
+  featured?: boolean;
   reengagementTemplates: ReengagementTemplate[];
   storyrunner: Storyrunner;
   createdAt: string;

@@ -44,18 +44,24 @@ const err = (res, code, field = null) => {
  */
 router.get("/", async (req, res) => {
   try {
-    const { query: searchQuery, isActive, limit = 20, cursor } = req.query;
+    const { query: searchQuery, isActive, limit = 20, cursor, sort = "updatedAt", order = "desc" } = req.query;
     const pageSize = Math.min(parseInt(limit) || 20, 100);
 
     // Build filter
     const filter = {};
     
-    if (searchQuery) {
-      const regex = new RegExp(searchQuery, 'i');
+    // Enhanced case-insensitive + slug-aware search
+    if (searchQuery && searchQuery.trim() !== "") {
+      const normalizedSlug = searchQuery
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, ""); // slug fallback
+
       filter.$or = [
-        { title: regex },
-        { slug: regex },
-        { authorName: regex }
+        { title: { $regex: searchQuery, $options: "i" } }, // title search
+        { slug: { $regex: normalizedSlug, $options: "i" } }, // slug fallback
+        { authorName: { $regex: searchQuery, $options: "i" } } // author search
       ];
     }
     
@@ -67,10 +73,13 @@ router.get("/", async (req, res) => {
       filter.updatedAt = { $lt: new Date(cursor) };
     }
 
+    // Debug logging
+    console.log(`[AdminSearch] query="${searchQuery}" → filter=`, JSON.stringify(filter));
+
     // Query with limit + 1 to check for more results
     const stories = await Story.find(filter)
       .select('_id slug title isActive pricing stats updatedAt')
-      .sort({ updatedAt: -1 })
+      .sort({ [sort]: order === "asc" ? 1 : -1 })
       .limit(pageSize + 1)
       .lean();
 
@@ -78,9 +87,10 @@ router.get("/", async (req, res) => {
     const items = hasMore ? stories.slice(0, pageSize) : stories;
     const nextCursor = hasMore ? items[items.length - 1].updatedAt.toISOString() : null;
 
+
     return ok(res, { items, nextCursor });
   } catch (error) {
-    console.error("Admin stories list error:", error);
+    console.error("❌ Error in GET /api/admin/stories:", error);
     return err(res, "SERVER_ERROR");
   }
 });
@@ -939,6 +949,131 @@ router.post('/validate-compliance', async (req, res) => {
   } catch (error) {
     console.error("Story compliance validation error:", error);
     return err(res, "SERVER_ERROR", "Failed to validate story compliance");
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/stories/{id}/related:
+ *   patch:
+ *     tags: [Admin]
+ *     summary: Update story related stories
+ *     description: Update related stories and featured status for a story
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path, name: id, required: true, schema: { type: string }, description: Story ID (string)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               relatedStoryIds: { type: array, items: { type: string }, description: Array of related story IDs }
+ *               featured: { type: boolean, description: Whether story is featured in recommendations }
+ *     responses:
+ *       200:
+ *         description: Related stories updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok: { type: boolean, example: true }
+ *                 message: { type: string, example: "Related stories updated successfully" }
+ *                 mutualSync: { type: object, properties: { added: { type: array }, removed: { type: array }, affectedStories: { type: number } } }
+ *       400: { description: "Bad Request", content: { application/json: { schema: { type: object, properties: { error: { type: string, example: "VALIDATION_ERROR" }, invalidIds: { type: array }, inactiveIds: { type: array } } } } } }
+ *       404: { description: "Not Found", content: { application/json: { schema: { type: object, properties: { error: { type: string, example: "NOT_FOUND" } } } } } }
+ */
+router.patch("/:id/related", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { relatedStoryIds, featured } = req.body;
+
+    if (!id || typeof id !== 'string') {
+      return err(res, "BAD_REQUEST", "Invalid story ID");
+    }
+
+    if (!Array.isArray(relatedStoryIds)) {
+      return err(res, "BAD_REQUEST", "relatedStoryIds must be an array");
+    }
+
+    // Find the story
+    const story = await Story.findById(id);
+    if (!story) {
+      return err(res, "NOT_FOUND", `Story with ID '${id}' not found`);
+    }
+
+    // Validate related stories exist and are active
+    const invalidIds = [];
+    const inactiveIds = [];
+    const validRelatedStories = [];
+
+    for (const relatedId of relatedStoryIds) {
+      const relatedStory = await Story.findOne({
+        $or: [{ _id: relatedId }, { slug: relatedId }]
+      });
+
+      if (!relatedStory) {
+        invalidIds.push(relatedId);
+      } else if (!relatedStory.isActive) {
+        inactiveIds.push(relatedId);
+      } else {
+        validRelatedStories.push(relatedStory._id.toString());
+      }
+    }
+
+    // Return validation errors if any
+    if (invalidIds.length > 0 || inactiveIds.length > 0) {
+      return err(res, "VALIDATION_ERROR", "Some related stories not found or inactive", {
+        invalidIds,
+        inactiveIds
+      });
+    }
+
+    // Store original related IDs for comparison
+    const originalRelatedIds = story.relatedStoryIds || [];
+    
+    // Update story
+    story.relatedStoryIds = validRelatedStories;
+    
+    // Update featured status if provided
+    if (typeof featured === 'boolean') {
+      story.featured = featured;
+    }
+
+    await story.save();
+
+    // Calculate mutual sync changes
+    const added = validRelatedStories.filter(id => !originalRelatedIds.includes(id));
+    const removed = originalRelatedIds.filter(id => !validRelatedStories.includes(id));
+
+    // Log admin action
+    await logEvent({
+      type: "admin.stories.related",
+      userId: req.userId,
+      meta: { 
+        targetStoryId: id, 
+        addedStories: added,
+        removedStories: removed,
+        featured: featured
+      },
+      level: "info"
+    });
+
+    return ok(res, {
+      message: "Related stories updated successfully",
+      mutualSync: {
+        added,
+        removed,
+        affectedStories: added.length + removed.length
+      }
+    });
+
+  } catch (error) {
+    console.error("Admin story related update error:", error);
+    return err(res, "SERVER_ERROR");
   }
 });
 
