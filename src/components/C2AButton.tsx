@@ -92,7 +92,7 @@ export default function C2AButton({
 
   const ONACCENT_STYLES: Record<ButtonVariant, string> = {
     primary: [
-      'bg-primary text-text-tertiary',
+      'bg-primary text-accent',
       'hover:bg-primary/90',
       'focus-visible:ring-primary/60',
       // Disabled aligns to secondary-onAccent logic
