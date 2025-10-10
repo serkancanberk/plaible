@@ -411,7 +411,7 @@ export default function CharacterCard({
       </div>
 
       {/* Content section */}
-      <div className="flex-grow flex flex-col justify-between px-spacing-md pt-spacing-md">
+      <div className="flex flex-col px-spacing-md pt-spacing-md">
         {/* Name + Role (tight grouping) */}
         <div className="flex flex-col gap-spacing-2xs">
           <h3 className="font-serif text-subheading text-accent">{name}</h3>
@@ -433,17 +433,15 @@ export default function CharacterCard({
             </button>
           </div>
         ) : null}
+      </div>
 
-        {/* Hooks section */}
+      {/* Unified bottom section: hooks + CTA */}
+      <div className="mt-auto pt-spacing-sm flex flex-col gap-spacing-sm px-spacing-md pb-spacing-md">
         {hooks && hooks.length > 0 && (
-          <div className="mt-spacing-sm font-mono text-caption text-text-secondary">
+          <div className="font-mono text-caption text-text-secondary mb-spacing-xs">
             {hooks.join(' · ')}
           </div>
         )}
-      </div>
-
-      {/* CTA section at bottom, full width */}
-      <div className="mt-spacing-lg px-spacing-md pb-spacing-md">
         <C2AButton
           variant="primary"
           typography="caption"
@@ -459,8 +457,8 @@ export default function CharacterCard({
       </div>
 
       {/* Back Face */}
-      <div className="absolute inset-0 backface-hidden rotate-y-180 flex flex-col justify-between bg-primary text-text-tertiary rounded-card p-spacing-md">
-        <div className="flex flex-col gap-spacing-sm">
+      <div className="absolute inset-0 backface-hidden rotate-y-180 flex flex-col justify-between bg-primary text-text-tertiary rounded-card px-spacing-md pt-spacing-md pb-spacing-md">
+        <div className="flex flex-col">
           <h3 className="font-serif text-subheading text-accent">{name}</h3>
           {role && <p className="font-sans text-caption text-text-tertiary">{role}</p>}
 
@@ -479,15 +477,15 @@ export default function CharacterCard({
               Less
             </button>
           </motion.div>
+        </div>
 
+        {/* Unified bottom section: hooks + CTA */}
+        <div className="mt-auto pt-spacing-sm flex flex-col gap-spacing-sm">
           {hooks && hooks.length > 0 && (
-            <div className="mt-spacing-md font-mono text-caption text-text-secondary">
+            <div className="font-mono text-caption text-text-secondary mb-spacing-xs">
               {hooks.join(' · ')}
             </div>
           )}
-        </div>
-
-        <div className="mt-auto pt-spacing-md">
           <C2AButton
             variant="primary"
             typography="caption"

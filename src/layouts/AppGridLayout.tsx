@@ -131,7 +131,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
         {
           type: "menu",
           icon: IconDots,
-          label: "Menu",
+          label: "More",
           onClick: () => setIsKebabOpen(!isKebabOpen),
         },
       ],
