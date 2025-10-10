@@ -160,7 +160,7 @@ const StorySettingsModal: React.FC<StorySettingsModalProps> = ({ open, onClose }
               onSelect={setLocalTimeFlavor}
               placeholder="Select time period"
               disabled={isSaving}
-              variant="onAccentWithDescription"
+              variant="withDescription"
               ariaLabel="Select Time Flavor"
             />
           </div>
@@ -180,7 +180,7 @@ const StorySettingsModal: React.FC<StorySettingsModalProps> = ({ open, onClose }
               onSelect={setLocalToneStyle}
               placeholder="Select tone style"
               disabled={isSaving}
-              variant="onAccentWithDescription"
+              variant="withDescription"
               ariaLabel="Select Tone Style"
             />
           </div>

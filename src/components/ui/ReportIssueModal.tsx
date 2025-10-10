@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import BaseModal from './BaseModal';
 import { Dropdown } from './Dropdown';
+import { Input } from './Input';
 import C2AButton from '../C2AButton';
 
 type ReportIssueModalProps = {
@@ -211,7 +212,7 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({ open, onClose }) =>
           </div>
         </div>
       ) : (
-        <div className="space-y-spacing-xl">
+        <div className="space-y-spacing-lg">
           {/* Category Dropdown */}
           <div className="space-y-spacing-sm">
             <label className="text-caption font-bold text-primary">
@@ -227,7 +228,7 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({ open, onClose }) =>
               onSelect={setSelectedCategory}
               placeholder={loadingCategories ? "Loading categories..." : categoriesError ? "Failed to load categories" : "Select a category"}
               disabled={loadingCategories || !!categoriesError}
-              variant="onAccentWithDescription"
+              variant="withDescription"
               ariaLabel="Select Category"
             />
             {errors.category && (
@@ -240,18 +241,18 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({ open, onClose }) =>
 
           {/* Message Input */}
           <div className="space-y-spacing-sm">
-            <label className="text-caption font-bold text-primary">
-              Message
-            </label>
-            <div className="relative">
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Describe the issue..."
-                rows={3}
-                className="w-full pl-spacing-md pr-spacing-md py-spacing-md border border-ui-muted rounded-card bg-white text-body focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent resize-vertical"
-              />
-            </div>
+            <Input
+              as="textarea"
+              variant="withDescription"
+              label="Message"
+              helperText="Describe the issue clearly."
+              placeholder="Describe the issue..."
+              rows={3}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              aria-label="Describe the issue"
+              className="resize-vertical"
+            />
             {errors.message && (
               <p className="text-caption text-alert mt-spacing-xs">{errors.message}</p>
             )}

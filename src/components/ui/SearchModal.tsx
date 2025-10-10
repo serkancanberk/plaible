@@ -4,6 +4,7 @@ import IconSearch from 'virtual:icons/tabler/search';
 import IconX from 'virtual:icons/tabler/x';
 import MenuItem from '../MenuItem';
 import { useSearchStories } from '../../hooks/useSearchStories';
+import { Input } from './Input';
 
 type SearchModalProps = {
   open: boolean;
@@ -30,21 +31,23 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose }) => {
 
       {/* Search Input */}
       <div className="relative mb-spacing-lg">
-        <div className="absolute inset-y-0 left-0 pl-spacing-md flex items-center pointer-events-none">
+        <div className="absolute inset-y-0 left-0 pl-spacing-md flex items-center pointer-events-none z-10">
           <IconSearch className="h-5 w-5 text-text-secondary" />
         </div>
-        <input
-          type="text"
+        <Input
+          variant="default"
+          size="md"
           placeholder="Type here"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-spacing-2xl pr-spacing-2xl py-spacing-md border border-ui-muted rounded-card bg-white text-body focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+          className="pl-spacing-2xl pr-spacing-2xl"
+          aria-label="Search Stories"
         />
         {searchQuery.length > 0 && (
           <button
             type="button"
             onClick={() => setSearchQuery("")}
-            className="absolute inset-y-0 right-0 pr-spacing-md flex items-center hover:opacity-70 transition-opacity"
+            className="absolute inset-y-0 right-0 pr-spacing-md flex items-center hover:opacity-70 transition-opacity z-10"
             aria-label="Clear search"
           >
             <IconX className="h-5 w-5 text-text-secondary" />

@@ -14,8 +14,6 @@ import IconChevronRight from 'virtual:icons/tabler/chevron-right';
 import IconChevronLeft from 'virtual:icons/tabler/chevron-left';
 import IconUser from 'virtual:icons/tabler/user';
 import IconSearch from 'virtual:icons/tabler/search';
-import IconDownload from 'virtual:icons/tabler/download';
-import IconShare from 'virtual:icons/tabler/share';
 import IconBookmark from 'virtual:icons/tabler/bookmark';
 import IconDots from 'virtual:icons/tabler/dots';
 import IconSettings from 'virtual:icons/tabler/settings';
@@ -85,12 +83,6 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
             onClick: openSearchModal,
           },
           {
-            type: "share",
-            icon: IconShare,
-            label: "Share",
-            onClick: () => console.log("Share clicked"),
-          },
-          {
             type: "save",
             icon: IconBookmark,
             label: "Save",
@@ -115,12 +107,6 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
           icon: IconSearch,
           label: "Search",
           onClick: openSearchModal,
-        },
-        {
-          type: "download",
-          icon: IconDownload,
-          label: "Download",
-          onClick: openGetAppModal,
         },
         {
           type: "add",
@@ -159,6 +145,23 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
 
   const openReportModal = () => setIsReportModalOpen(true);
   const closeReportModal = () => setIsReportModalOpen(false);
+
+  const openShareModal = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Check out this story on Plaible',
+          text: 'I found this amazing interactive story!',
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.log('Share cancelled');
+      }
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      console.log('Story link copied to clipboard');
+    }
+  };
 
   const scrollCategoriesRight = () => {
     const el = carouselRef.current;
@@ -382,7 +385,6 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
             { label: 'Play' },
             { label: 'Message' },
             { label: 'Search' },
-            { label: 'Download' },
             { label: 'Add' },
             { 
               label: 'Your Stories',
@@ -751,11 +753,31 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                             <div className="flex flex-col space-y-spacing-lg">
                               <NavItem
                                 variant="text-secondary"
+                                label="Download"
+                                className="w-full px-spacing-lg"
+                                onClick={() => {
+                                  console.log('[kebab] Download');
+                                  openGetAppModal();
+                                  setIsKebabOpen(false);
+                                }}
+                              />
+                              <NavItem
+                                variant="text-secondary"
                                 label="Story Settings"
                                 className="w-full px-spacing-lg"
                                 onClick={() => {
                                   console.log('[kebab] Story Settings');
                                   setIsStorySettingsModalOpen(true);
+                                  setIsKebabOpen(false);
+                                }}
+                              />
+                              <NavItem
+                                variant="text-secondary"
+                                label="Share"
+                                className="w-full px-spacing-lg"
+                                onClick={() => {
+                                  console.log('[kebab] Share');
+                                  openShareModal();
                                   setIsKebabOpen(false);
                                 }}
                               />

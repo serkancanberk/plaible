@@ -14,6 +14,7 @@ import CheckLegalStuffModal from '../components/ui/CheckLegalStuffModal';
 import KeepInTouchModal from '../components/ui/KeepInTouchModal';
 import PayAsYouGoModal from '../components/ui/PayAsYouGoModal';
 import { Dropdown } from '../components/ui/Dropdown';
+import { Input } from '../components/ui/Input';
 
 // Strict token lists (only configured/used tokens)
 const textTokenStyles = {
@@ -283,6 +284,11 @@ export default function StyleGuide() {
         <DropdownVariantsPreview />
       </section>
 
+      <section id="input-variants" className="my-12">
+        <h2 className="text-heading text-text-secondary mb-4">Input Variants</h2>
+        <InputVariantsPreview />
+      </section>
+
     </div>
   );
 }
@@ -476,5 +482,112 @@ function ExtraModalTriggers() {
       <KeepInTouchModal open={showKeepInTouch} onClose={() => setShowKeepInTouch(false)} />
       <PayAsYouGoModal open={showPayAsYouGo} onClose={() => setShowPayAsYouGo(false)} />
     </>
+  );
+}
+
+function InputVariantsPreview() {
+  const [defaultValue, setDefaultValue] = React.useState('');
+  const [withDescriptionValue, setWithDescriptionValue] = React.useState('');
+  const [compactValue, setCompactValue] = React.useState('');
+  const [onAccentValue, setOnAccentValue] = React.useState('');
+  const [onAccentWithDescriptionValue, setOnAccentWithDescriptionValue] = React.useState('');
+  const [onAccentCompactValue, setOnAccentCompactValue] = React.useState('');
+
+  return (
+    <div className="space-y-spacing-lg">
+      <div className="space-y-spacing-md">
+        <h3 className="text-subheading text-text-secondary">Default</h3>
+        <div className="w-64 h-32 bg-secondary flex items-center justify-center rounded-card">
+          <div className="w-48">
+            <Input
+              value={defaultValue}
+              onChange={(e) => setDefaultValue(e.target.value)}
+              placeholder="Enter text..."
+              variant="default"
+              label="Input Label"
+              helperText="This is helper text"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-spacing-md">
+        <h3 className="text-subheading text-text-secondary">With Description</h3>
+        <div className="w-64">
+          <Input
+            value={withDescriptionValue}
+            onChange={(e) => setWithDescriptionValue(e.target.value)}
+            placeholder="Enter text..."
+            variant="withDescription"
+            label="Input Label"
+            helperText="This is helper text with description"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-spacing-md">
+        <h3 className="text-subheading text-text-secondary">Compact</h3>
+        <div className="w-64 h-32 bg-secondary flex items-center justify-center rounded-card">
+          <div className="w-48">
+            <Input
+              value={compactValue}
+              onChange={(e) => setCompactValue(e.target.value)}
+              placeholder="Enter text..."
+              variant="compact"
+              size="sm"
+              label="Compact Input"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-spacing-md">
+        <h3 className="text-subheading text-text-secondary">On Accent - Default</h3>
+        <div className="bg-accent p-spacing-lg rounded-card">
+          <div className="max-w-xs">
+            <Input
+              value={onAccentValue}
+              onChange={(e) => setOnAccentValue(e.target.value)}
+              placeholder="Enter text..."
+              variant="onAccent"
+              label="Input Label"
+              helperText="This is helper text"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-spacing-md">
+        <h3 className="text-subheading text-text-secondary">On Accent - With Description</h3>
+        <div className="bg-accent p-spacing-lg rounded-card">
+          <div className="max-w-xs">
+            <Input
+              value={onAccentWithDescriptionValue}
+              onChange={(e) => setOnAccentWithDescriptionValue(e.target.value)}
+              placeholder="Enter text..."
+              variant="onAccentWithDescription"
+              label="Input Label"
+              helperText="This is helper text with description"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-spacing-md">
+        <h3 className="text-subheading text-text-secondary">On Accent - Compact</h3>
+        <div className="bg-accent p-spacing-lg rounded-card">
+          <div className="max-w-xs">
+            <Input
+              value={onAccentCompactValue}
+              onChange={(e) => setOnAccentCompactValue(e.target.value)}
+              placeholder="Enter text..."
+              variant="onAccentCompact"
+              size="sm"
+              label="Compact Input"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
