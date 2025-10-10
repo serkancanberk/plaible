@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import TextLink from './TextLink';
-import StartToPlayNowModal from './StartToPlayNowModal';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 export interface FeedbackData {
@@ -22,10 +20,14 @@ interface FeedbackCardProps {
 
 export const FeedbackCard: React.FC<FeedbackCardProps> = ({ data, variant = "default" }) => {
   const [imgError, setImgError] = React.useState(false);
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [imageLoaded, setImageLoaded] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(false);
   const shouldReduceMotion = useReducedMotion();
   const showFallback = imgError || !data.characterImageUrl;
+
+  // Character limit for text expansion
+  const CHAR_LIMIT = 180;
+  const shouldShowToggle = data.text.length > CHAR_LIMIT;
 
   const safeRating = Math.max(0, Math.min(5, Math.round(data.rating)));
   const stars = '★'.repeat(safeRating) + '☆'.repeat(5 - safeRating);
@@ -55,8 +57,7 @@ export const FeedbackCard: React.FC<FeedbackCardProps> = ({ data, variant = "def
   };
 
   return (
-    <>
-      <motion.article 
+    <motion.article 
         className={containerClasses}
         variants={cardVariants}
         initial="initial"
@@ -114,23 +115,36 @@ export const FeedbackCard: React.FC<FeedbackCardProps> = ({ data, variant = "def
           </div>
 
           {/* Row 2: Description */}
-          <p className="font-mono text-caption text-text-tertiary/90 line-clamp-2 leading-[1.6]">{data.text}</p>
-
-          {/* Row 3: CTA */}
-          <TextLink
-            href="#"
-            aria-label={`Play as ${data.character} now`}
-            onClick={(e) => {
-              e.preventDefault();
-              setIsModalOpen(true);
+          <motion.p
+            layout
+            className="font-mono text-caption text-text-tertiary/90 leading-[1.6] overflow-hidden"
+            animate={{ 
+              height: isExpanded ? "auto" : "40px",
+              transition: shouldReduceMotion ? { duration: 0 } : { duration: 0.35, ease: [0.22, 1, 0.36, 1] }
             }}
           >
-            {`Read more →`}
-          </TextLink>
+            {isExpanded
+              ? data.text
+              : data.text.slice(0, CHAR_LIMIT) + (data.text.length > CHAR_LIMIT ? "..." : "")}
+          </motion.p>
+
+          {/* Row 3: Toggle Button */}
+          {shouldShowToggle && (
+            <div className="w-full flex justify-start mt-spacing-xs">
+              <button
+                className="text-accent font-mono text-caption hover:underline transition-colors duration-200"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsExpanded(!isExpanded);
+                }}
+                aria-expanded={isExpanded}
+              >
+                {isExpanded ? "Read less ←" : "Read more →"}
+              </button>
+            </div>
+          )}
         </div>
       </motion.article>
-      <StartToPlayNowModal open={isModalOpen} onClose={() => setIsModalOpen(false)} />
-    </>
   );
 };
 
