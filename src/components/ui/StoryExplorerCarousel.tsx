@@ -1,6 +1,11 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import StoryCard from './StoryCard';
 import type { DBStoryListItem } from '../../types/story';
+
+// Constants for consistent sizing (matching CharacterCarousel)
+const CARD_W = 300;       // px
+const GAP = 32;           // px -> matches gap-spacing-xl
+const STEP = CARD_W + GAP; // 332px
 
 interface StoryExplorerCarouselProps {
   stories: DBStoryListItem[];
@@ -12,6 +17,20 @@ export default function StoryExplorerCarousel({ stories, onSelect }: StoryExplor
   const [isHovered, setIsHovered] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const [vpWidth, setVpWidth] = useState<number>(964); // 3*300 + 2*32
+
+  // Responsive viewport width calculation (matching CharacterCarousel)
+  useEffect(() => {
+    const compute = () => {
+      const w = window.innerWidth;
+      if (w < 640)      setVpWidth(300);         // 1 card
+      else if (w < 1024) setVpWidth(632);        // 2*300 + 32
+      else               setVpWidth(964);        // 3*300 + 2*32
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
+  }, []);
 
   // Check scroll position and update button states
   const updateScrollButtons = useCallback(() => {
@@ -23,49 +42,18 @@ export default function StoryExplorerCarousel({ stories, onSelect }: StoryExplor
     setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
   }, []);
 
-  // Desktop full navigation scroll functions
-  const scrollLeft = useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
+  // Card-by-card navigation scroll functions (matching CharacterCarousel)
+  const scrollBy = (delta: number) => {
+    if (!scrollerRef.current) return;
+    scrollerRef.current.scrollBy({ left: delta, behavior: 'smooth' });
+  };
+  
+  const scrollLeft = useCallback(() => scrollBy(-STEP), []);
+  const scrollRight = useCallback(() => scrollBy(STEP), []);
 
-    el.scrollTo({
-      left: 0,
-      behavior: 'smooth'
-    });
-  }, []);
-
-  const scrollRight = useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-
-    el.scrollTo({
-      left: el.scrollWidth,
-      behavior: 'smooth'
-    });
-  }, []);
-
-  // Mobile incremental scroll functions
-  const scrollLeftMobile = useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-
-    const cardWidth = Math.min(el.clientWidth * 0.8, 320); // Responsive card width, max 320px
-    el.scrollBy({
-      left: -cardWidth,
-      behavior: 'smooth'
-    });
-  }, []);
-
-  const scrollRightMobile = useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-
-    const cardWidth = Math.min(el.clientWidth * 0.8, 320); // Responsive card width, max 320px
-    el.scrollBy({
-      left: cardWidth,
-      behavior: 'smooth'
-    });
-  }, []);
+  // Mobile scroll functions (same as desktop for consistency)
+  const scrollLeftMobile = useCallback(() => scrollBy(-STEP), []);
+  const scrollRightMobile = useCallback(() => scrollBy(STEP), []);
 
   // Handle scroll events to update button states
   const handleScroll = useCallback(() => {
@@ -89,69 +77,92 @@ export default function StoryExplorerCarousel({ stories, onSelect }: StoryExplor
 
   return (
     <div 
-      className="relative"
+      className="relative w-full"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Desktop Arrow Buttons */}
-      <div className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10">
-        <button
-          onClick={scrollLeft}
-          disabled={!canScrollLeft}
-          className={`
-            w-10 h-10 rounded-full
-            flex items-center justify-center
-            transition-all duration-200
-            ${canScrollLeft 
-              ? 'bg-white/90 text-text-primary hover:bg-white shadow-lg hover:shadow-xl' 
-              : 'bg-white/50 text-text-tertiary cursor-not-allowed'
-            }
-            ${isHovered ? 'opacity-100' : 'opacity-0'}
-          `}
-          aria-label="Scroll to previous stories"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      {/* Left Arrow Button */}
+      <button
+        onClick={scrollLeft}
+        disabled={!canScrollLeft}
+        className={`
+          absolute left-0 top-1/2 -translate-y-1/2 z-10
+          w-12 h-12 rounded-full
+          bg-secondary backdrop-blur-sm
+          border border-white/10
+          flex items-center justify-center
+          transition-all duration-300 ease-out
+          hover:scale-105
+          shadow-[0_0_15px_rgba(247,255,0,0.25)]
+          hover:shadow-[0_0_20px_rgba(247,255,0,0.4)]
+          disabled:opacity-0 disabled:pointer-events-none
+          ${isHovered ? 'opacity-100 translate-x-2' : 'opacity-0 -translate-x-2'}
+          sm:block hidden
+        `}
+        aria-label="Scroll to beginning"
+      >
+        <div className="flex items-center justify-center w-full h-full">
+          <svg 
+            width="20" 
+            height="20" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            className="text-white"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <path 
+              d="M15 18L9 12L15 6" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            />
           </svg>
-        </button>
-      </div>
+        </div>
+      </button>
 
-      <div className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10">
-        <button
-          onClick={scrollRight}
-          disabled={!canScrollRight}
-          className={`
-            w-10 h-10 rounded-full
-            flex items-center justify-center
-            transition-all duration-200
-            ${canScrollRight 
-              ? 'bg-white/90 text-text-primary hover:bg-white shadow-lg hover:shadow-xl' 
-              : 'bg-white/50 text-text-tertiary cursor-not-allowed'
-            }
-            ${isHovered ? 'opacity-100' : 'opacity-0'}
-          `}
-          aria-label="Scroll to next stories"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      {/* Right Arrow Button */}
+      <button
+        onClick={scrollRight}
+        disabled={!canScrollRight}
+        className={`
+          absolute right-0 top-1/2 -translate-y-1/2 z-10
+          w-12 h-12 rounded-full
+          bg-secondary backdrop-blur-sm
+          border border-white/10
+          flex items-center justify-center
+          transition-all duration-300 ease-out
+          hover:scale-105
+          shadow-[0_0_15px_rgba(247,255,0,0.25)]
+          hover:shadow-[0_0_20px_rgba(247,255,0,0.4)]
+          disabled:opacity-0 disabled:pointer-events-none
+          ${isHovered ? 'opacity-100 -translate-x-2' : 'opacity-0 translate-x-2'}
+          sm:block hidden
+        `}
+        aria-label="Scroll to end"
+      >
+        <div className="flex items-center justify-center w-full h-full">
+          <svg 
+            width="20" 
+            height="20" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            className="text-white"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            <path 
+              d="M9 18L15 12L9 6" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            />
           </svg>
-        </button>
-      </div>
+        </div>
+      </button>
 
-      {/* Scroll Container */}
-      <div 
+      {/* Scrollable row */}
+      <div
         ref={scrollerRef}
-        className="overflow-x-auto no-scrollbar snap-x snap-mandatory scroll-smooth flex gap-spacing-xl px-spacing-md pb-spacing-md -mx-spacing-md touch-pan-x overscroll-x-contain"
+        className="flex gap-spacing-xl overflow-x-auto no-scrollbar snap-x snap-mandatory scroll-smooth justify-start"
         style={{ 
           WebkitOverflowScrolling: 'touch', 
           scrollbarWidth: 'none', 
@@ -162,7 +173,7 @@ export default function StoryExplorerCarousel({ stories, onSelect }: StoryExplor
         {stories.map((story) => (
           <div 
             key={story.slug || story._id} 
-            className="snap-start flex justify-center items-start w-full max-w-[300px] sm:max-w-[320px] lg:max-w-[350px]"
+            className="snap-start flex-shrink-0 w-[300px]"
           >
             <StoryCard
               title={story.title}
@@ -185,23 +196,34 @@ export default function StoryExplorerCarousel({ stories, onSelect }: StoryExplor
           disabled={!canScrollLeft}
           className={`
             w-12 h-12 rounded-full
+            bg-secondary backdrop-blur-sm
+            border border-white/10
             flex items-center justify-center
-            transition-all duration-200
-            ${canScrollLeft 
-              ? 'bg-white/90 text-text-primary hover:bg-white shadow-lg' 
-              : 'bg-white/50 text-text-tertiary cursor-not-allowed'
-            }
+            transition-all duration-300 ease-out
+            hover:scale-105
+            shadow-[0_0_15px_rgba(247,255,0,0.25)]
+            hover:shadow-[0_0_20px_rgba(247,255,0,0.4)]
+            disabled:opacity-0 disabled:pointer-events-none
           `}
-          aria-label="Scroll to previous stories"
+          aria-label="Scroll left one card"
         >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+          <div className="flex items-center justify-center w-full h-full">
+            <svg 
+              width="20" 
+              height="20" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              className="text-white"
+            >
+              <path 
+                d="M15 18L9 12L15 6" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
         </button>
 
         <button
@@ -209,23 +231,34 @@ export default function StoryExplorerCarousel({ stories, onSelect }: StoryExplor
           disabled={!canScrollRight}
           className={`
             w-12 h-12 rounded-full
+            bg-secondary backdrop-blur-sm
+            border border-white/10
             flex items-center justify-center
-            transition-all duration-200
-            ${canScrollRight 
-              ? 'bg-white/90 text-text-primary hover:bg-white shadow-lg' 
-              : 'bg-white/50 text-text-tertiary cursor-not-allowed'
-            }
+            transition-all duration-300 ease-out
+            hover:scale-105
+            shadow-[0_0_15px_rgba(247,255,0,0.25)]
+            hover:shadow-[0_0_20px_rgba(247,255,0,0.4)]
+            disabled:opacity-0 disabled:pointer-events-none
           `}
-          aria-label="Scroll to next stories"
+          aria-label="Scroll right one card"
         >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+          <div className="flex items-center justify-center w-full h-full">
+            <svg 
+              width="20" 
+              height="20" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              className="text-white"
+            >
+              <path 
+                d="M9 18L15 12L9 6" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
         </button>
       </div>
     </div>
