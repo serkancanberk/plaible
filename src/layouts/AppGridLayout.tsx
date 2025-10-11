@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import PlaibleLogo from '../components/PlaibleLogo';
 import NavItem from '../components/ui/NavItem';
 import MenuItem from '../components/MenuItem';
@@ -31,10 +31,17 @@ type AppGridLayoutProps = {
 export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [selectedMain, setSelectedMain] = useState<'books' | 'stories' | 'biographies'>('books');
-  const [selectedSub, setSelectedSub] = useState<string | null>(null);
+  
+  // Initialize from URL params
+  const [selectedMain, setSelectedMain] = useState<'books' | 'stories' | 'biographies'>(
+    (searchParams.get('category') as 'books' | 'stories' | 'biographies') || 'books'
+  );
+  const [selectedSub, setSelectedSub] = useState<string | null>(
+    searchParams.get('subcategory')
+  );
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [isGetAppModalOpen, setIsGetAppModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -136,6 +143,18 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const { data: stories, total, loading, error } = useStories({ page, pageSize, category: selectedMain, subcategory: selectedSub ?? undefined });
   console.log('[Mobile useStories params]', { page, pageSize, category: selectedMain, subcategory: selectedSub ?? undefined });
   const pageCount = Math.max(1, Math.ceil((total || 0) / pageSize));
+
+  // URL sync function
+  const updateUrl = (main: string, sub?: string | null) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('category', main);
+    if (sub) {
+      params.set('subcategory', sub);
+    } else {
+      params.delete('subcategory');
+    }
+    setSearchParams(params);
+  };
 
   const openGetAppModal = () => setIsGetAppModalOpen(true);
   const closeGetAppModal = () => setIsGetAppModalOpen(false);
@@ -460,6 +479,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                                 setSelectedMain(opt.id);
                                 setSelectedSub(null);
                                 setPage(1);
+                                updateUrl(opt.id, null);
                                 setIsTypeMenuOpen(false);
                               }}
                               className="block w-full text-left px-spacing-md py-spacing-xs text-mono text-label text-accent hover:bg-accent/10"
@@ -528,6 +548,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                           console.log('[Mobile Subcategory Click]', { selectedMain, selectedSub: sub.value });
                           setSelectedSub(sub.value);
                           setPage(1);
+                          updateUrl(selectedMain, sub.value);
                         }}
                       />
                     );
@@ -836,6 +857,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                                 setSelectedMain(opt.id);
                                 setSelectedSub(null);
                                 setPage(1);
+                                updateUrl(opt.id, null);
                                 setIsTypeMenuOpen(false);
                               }}
                               className="block w-full text-left px-spacing-md py-spacing-xs text-mono text-label text-accent hover:bg-accent/10"
@@ -902,6 +924,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                           onClick={() => {
                             setSelectedSub(sub.value);
                             setPage(1);
+                            updateUrl(selectedMain, sub.value);
                           }}
                         />
                       );

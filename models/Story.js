@@ -274,7 +274,7 @@ storySchema.methods.incrementSaved = async function () {
   return this.save();
 };
 
-/** Pre-validate to normalize slug/_id */
+/** Pre-validate to normalize slug/_id and categories */
 storySchema.pre("validate", function (next) {
   if (!this.slug && this.title) {
     this.slug = toSlug(this.title);
@@ -284,6 +284,15 @@ storySchema.pre("validate", function (next) {
   if (!this._id) {
     this._id = this.slug || toSlug(this.title || "");
   }
+  
+  // Normalize categories
+  if (this.mainCategory) {
+    this.mainCategory = this.mainCategory.toLowerCase().trim();
+  }
+  if (this.subCategory) {
+    this.subCategory = this.subCategory.toLowerCase().replace(/\s+/g, '-');
+  }
+  
   next();
 });
 

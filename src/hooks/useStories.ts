@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { fetchJson } from '../lib/http';
 import type { StoriesListResponse, DBStoryListItem } from '../types/story';
 
@@ -11,7 +12,14 @@ export type UseStoriesParams = {
 };
 
 export function useStories(params: UseStoriesParams = {}) {
-  const { page = 1, pageSize = 9, sort, category, subcategory } = params;
+  const [searchParams] = useSearchParams();
+  
+  // Read from URL params with fallbacks
+  const urlCategory = searchParams.get('category') || 'books';
+  const urlSubcategory = searchParams.get('subcategory');
+  
+  // Use URL params if not explicitly provided
+  const { page = 1, pageSize = 9, sort, category = urlCategory, subcategory = urlSubcategory } = params;
   const [data, setData] = React.useState<DBStoryListItem[]>([]);
   const [total, setTotal] = React.useState<number>(0);
   const [loading, setLoading] = React.useState<boolean>(false);

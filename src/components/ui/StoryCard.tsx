@@ -329,8 +329,8 @@ export default function StoryCard({
       to={to}
       className={[
         'block bg-primary text-text-tertiary rounded-card shadow-card overflow-hidden',
-        'border border-transparent hover:border-accent/15',
-        'transition-all duration-200 ease-in-out hover:scale-[1.01]',
+        'border border-transparent',
+        'transition-opacity duration-200 ease-out hover:opacity-90',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent',
         'flex flex-col justify-between h-full min-h-card',
         className,
