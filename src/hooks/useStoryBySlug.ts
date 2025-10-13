@@ -42,6 +42,8 @@ export interface StoryData {
       videos: string[];
     };
     roles?: string[];
+    helloMessage?: string;
+    onboardingText?: string;
   }>;
   funFacts?: FunFacts;
 }

@@ -76,9 +76,41 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
 
   // Check if we're on a story details page to hide SubNavigation
   const isStoryDetailsPage = location.pathname.includes('/stories/') && location.pathname !== '/app';
+  
+  // Check if we're on the play onboard page to hide SubNavigation
+  const hideSubNavigation = location.pathname.includes('/play/onboard');
+
+  // Check if we're on the play onboard page for header title
+  const isPlayOnboardPage = location.pathname.includes('/play/onboard');
 
   // Header configuration based on route
   const getHeaderConfig = () => {
+    if (isPlayOnboardPage) {
+      return {
+        title: "The World Is Waiting For You",
+        actions: [
+          {
+            type: "search",
+            icon: IconSearch,
+            label: "Search",
+            onClick: openSearchModal,
+          },
+          {
+            type: "save",
+            icon: IconBookmark,
+            label: "Save",
+            onClick: () => console.log("Save clicked"),
+          },
+          {
+            type: "menu",
+            icon: IconDots,
+            label: "More",
+            onClick: () => setIsKebabOpen(!isKebabOpen),
+          },
+        ],
+      };
+    }
+
     if (isStoryDetailsPage) {
       return {
         title: "Step Into The Story",
@@ -424,11 +456,11 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
         <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl flex flex-col">
           {/* Section heading */}
           <div className="px-spacing-md pt-spacing-2xl pb-spacing-sm">
-            <div className="text-heading font-serif text-accent">Choose A Story</div>
+            <div className="text-heading font-serif text-accent">{getHeaderConfig().title}</div>
           </div>
 
           {/* SubNavigation - only show on main feed page */}
-          {!isStoryDetailsPage && (
+          {!isStoryDetailsPage && !hideSubNavigation && (
             <section className="px-spacing-md py-spacing-sm mt-spacing-lg">
             <div className="flex items-center justify-between gap-spacing-md">
               {/* Left: Dropdown + Scrollable categories */}
@@ -825,7 +857,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
             {/* Divider after header */}
 
             {/* SubNavigation - only show on main feed page */}
-            {!isStoryDetailsPage && (
+            {!isStoryDetailsPage && !hideSubNavigation && (
               <section className="px-spacing-md py-spacing-sm mt-spacing-lg">
               <div className="flex items-center justify-between gap-spacing-md">
                 {/* Left: Dropdown + Scrollable categories */}

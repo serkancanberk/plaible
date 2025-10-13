@@ -41,6 +41,18 @@ const characterSchema = new Schema(
     summary: { type: String, required: true, trim: true },
     hooks: { type: [String], default: [] },
     assets: { type: characterAssets, default: () => ({}) },
+    helloMessage: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 120,
+    },
+    onboardingText: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 500,
+    },
   },
   { _id: false }
 );

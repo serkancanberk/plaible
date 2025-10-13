@@ -6,6 +6,7 @@ import { AppGridLayout } from '../layouts/AppGridLayout';
 import { PlayPage } from './PlayPage';
 import { StoriesFeedPage } from '../pages/StoriesFeedPage';
 import { StoryDetailsPage } from '../pages/StoryDetailsPage';
+import PlayOnboardPage from '../pages/PlayOnboardPage';
 const StyleGuide = React.lazy(() => import('../pages/StyleGuide'));
 import { StyleGuideLayout } from '../layouts/StyleGuideLayout';
 import { UI_BG_TOKENS } from '../pages/tokens';
@@ -21,6 +22,7 @@ export const AppPublic: React.FC = () => {
       <Route path="/app" element={<AppGridLayout />}>
         <Route index element={<StoriesFeedPage />} />
         <Route path="stories/:slug" element={<StoryDetailsPage />} />
+        <Route path="play/onboard/:storySlug/:characterSlug" element={<PlayOnboardPage />} />
       </Route>
       <Route path="/styleguide" element={
         <React.Suspense fallback={<div className="p-8 text-text-primary">Loading Style Guide…</div>}>

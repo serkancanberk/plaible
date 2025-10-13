@@ -446,16 +446,16 @@ export default function StoryCard({
         <div className="mt-spacing-md flex items-center gap-spacing-lg text-caption font-mono text-accent mb-spacing-md">
           {showPlayCount ? (
             <span className="inline-flex items-center gap-spacing-xs" title="Play count">
-              <span aria-hidden="true">👀</span>
+             <span aria-hidden="true" style={{ transform: 'scaleX(-1)', display: 'inline-block' }}>👀</span>
               <span className="sr-only">Plays:</span>
-              <span>{formatCount(stats!.totalPlayed as number)}</span>
+              <span className="text-text-tertiary">{formatCount(stats!.totalPlayed as number)}</span>
             </span>
           ) : null}
           {showRating ? (
             <span className="inline-flex items-center gap-spacing-xs" title="Rating">
-              <span aria-hidden="true">★</span>
+              <span aria-hidden="true" className="text-accent font-sans text-caption">★</span>
               <span className="sr-only">Rating:</span>
-              <span>{clampRating(stats!.avgRating as number).toFixed(1)}</span>
+              <span className="text-text-tertiary">{clampRating(stats!.avgRating as number).toFixed(1)}</span>
             </span>
           ) : null}
         </div>

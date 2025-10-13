@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import StoryHeader from '../components/StoryHeader';
 import { CharacterCarousel } from '../components/ui/CharacterCarousel';
@@ -18,6 +18,7 @@ import StoryExplorerCarousel from '../components/ui/StoryExplorerCarousel';
 
 export const StoryDetailsPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const [selectedStarsFilter, setSelectedStarsFilter] = React.useState<number | undefined>(undefined);
   const shouldReduceMotion = useReducedMotion();
   
@@ -101,7 +102,12 @@ export const StoryDetailsPage: React.FC = () => {
           <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl px-spacing-md">
             <CharacterCarousel
               characters={(story.characters || []) as any}
-              onPlay={(id) => console.log('Play as character:', id)}
+              onPlay={(characterId) => {
+                // Create character slug from character ID or name
+                const character = story.characters?.find(c => c.id === characterId);
+                const characterSlug = character?.name?.toLowerCase().replace(/\s+/g, '-') || characterId;
+                navigate(`/app/play/onboard/${slug}/${characterSlug}`);
+              }}
             />
           </div>
         </section>

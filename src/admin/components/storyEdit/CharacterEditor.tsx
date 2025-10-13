@@ -173,6 +173,48 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({ story, onUpdat
                     />
                   </div>
 
+                  <div className="mt-6">
+                    <h4 className="font-mono text-sm text-gray-500 uppercase tracking-wide mb-3">
+                      Character Introduction
+                    </h4>
+
+                    <div className="flex flex-col gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Hello Message
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={120}
+                          value={character.helloMessage || ""}
+                          onChange={(e) => updateCharacter(index, { helloMessage: e.target.value })}
+                          placeholder="e.g. Welcome to the story, brave soul."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                        <p className="text-xs text-gray-500 text-right mt-1">
+                          {120 - (character.helloMessage?.length || 0)} / 120
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Onboarding Text
+                        </label>
+                        <textarea
+                          maxLength={500}
+                          rows={4}
+                          value={character.onboardingText || ""}
+                          onChange={(e) => updateCharacter(index, { onboardingText: e.target.value })}
+                          placeholder="e.g. You'll begin your journey in the old laboratory..."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none h-[120px]"
+                        />
+                        <p className="text-xs text-gray-500 text-right mt-1">
+                          {500 - (character.onboardingText?.length || 0)} / 500
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Hooks

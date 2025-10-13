@@ -400,6 +400,8 @@ export interface Character {
     images: string[];
     videos: string[];
   };
+  helloMessage?: string;
+  onboardingText?: string;
 }
 
 export interface Role {
