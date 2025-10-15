@@ -10,6 +10,7 @@ const STEP = CARD_W + GAP; // 332px
 export interface Character {
   id: string;
   name: string;
+  displayName?: string;
   summary: string;
   hooks: string[];
   assets: {
@@ -188,6 +189,7 @@ export const CharacterCarousel: React.FC<CharacterCarouselProps> = ({ characters
               <CharacterCard
                 id={character.id}
                 name={character.name}
+                displayName={character.displayName}
                 role={character.roles?.join(' · ')}
                 summary={character.summary}
                 hooks={character.hooks}

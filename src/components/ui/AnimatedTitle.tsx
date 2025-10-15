@@ -29,7 +29,7 @@ export const AnimatedTitle = ({ userName = "visitor", characterName }: AnimatedT
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => setStep((prev) => (prev + 1) % 2), 2500);
+    const interval = setInterval(() => setStep((prev) => (prev + 1) % 2), 3500);
     return () => clearInterval(interval);
   }, []);
 
@@ -43,7 +43,7 @@ export const AnimatedTitle = ({ userName = "visitor", characterName }: AnimatedT
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.8, ease: "easeInOut" }}
-      className="flex flex-col justify-center items-center gap-spacing-sm text-center font-serif text-heading text-accent max-w-[640px] mx-auto"
+      className="flex flex-col justify-center items-start gap-spacing-sm text-left font-serif text-heading text-accent"
     >
       <AnimatePresence mode="wait">
         <motion.div

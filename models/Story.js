@@ -38,6 +38,12 @@ const characterSchema = new Schema(
   {
     id: { type: String, required: true, trim: true },
     name: { type: String, required: true, trim: true },
+    displayName: {
+      type: String,
+      trim: true,
+      maxlength: 60,
+      default: "",
+    },
     summary: { type: String, required: true, trim: true },
     hooks: { type: [String], default: [] },
     assets: { type: characterAssets, default: () => ({}) },
@@ -56,6 +62,15 @@ const characterSchema = new Schema(
   },
   { _id: false }
 );
+
+// Virtual for display label - uses displayName if available, otherwise falls back to name
+characterSchema.virtual('displayLabel').get(function () {
+  return (this.displayName && this.displayName.trim()) ? this.displayName.trim() : this.name;
+});
+
+// Ensure virtuals are included in JSON output
+characterSchema.set('toJSON', { virtuals: true });
+characterSchema.set('toObject', { virtuals: true });
 
 const roleSchema = new Schema(
   {

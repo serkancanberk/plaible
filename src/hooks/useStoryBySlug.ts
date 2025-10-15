@@ -35,6 +35,7 @@ export interface StoryData {
   characters?: Array<{
     id: string;
     name: string;
+    displayName?: string;
     summary: string;
     hooks: string[];
     assets: {

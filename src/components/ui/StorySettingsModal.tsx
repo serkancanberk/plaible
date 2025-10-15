@@ -7,9 +7,10 @@ import C2AButton from '../C2AButton';
 type StorySettingsModalProps = {
   open: boolean;
   onClose: () => void;
+  onSaveSettings?: (settings: { theme: string; time: string }) => void;
 };
 
-const StorySettingsModal: React.FC<StorySettingsModalProps> = ({ open, onClose }) => {
+const StorySettingsModal: React.FC<StorySettingsModalProps> = ({ open, onClose, onSaveSettings }) => {
   const {
     selectedToneStyle,
     selectedTimeFlavor,
@@ -88,6 +89,13 @@ const StorySettingsModal: React.FC<StorySettingsModalProps> = ({ open, onClose }
       
       try {
         await savePreferences();
+        
+        // Trigger callback AFTER async save completes with latest state values
+        onSaveSettings?.({
+          theme: selectedTone?.displayLabel || 'Original',
+          time: selectedFlavor?.displayLabel || 'Original'
+        });
+        
         setShowSuccess(true);
       } catch (error) {
         console.error('Failed to save preferences:', error);

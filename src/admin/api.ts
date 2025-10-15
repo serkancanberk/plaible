@@ -394,6 +394,7 @@ export interface User {
 export interface Character {
   id: string;
   name: string;
+  displayName?: string;
   summary: string;
   hooks: string[];
   assets: {

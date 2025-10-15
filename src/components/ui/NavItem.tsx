@@ -14,7 +14,8 @@ export type NavItemProps = {
     | 'text-muted'
     | 'text+icon'
     | 'text+icon-tertiary'
-    | 'text+icon-secondary';
+    | 'text+icon-secondary'
+    | 'text-accent';
   icon?: React.ReactNode;
   label?: string;
   href?: string;
@@ -41,7 +42,8 @@ export default function NavItem({
   const isMuted = variant === 'text-muted';
   const isTertiary = variant === 'icon-tertiary' || variant === 'icon+text-tertiary' || variant === 'text-tertiary' || variant === 'text+icon-tertiary';
   const isSecondary = variant === 'icon-secondary' || variant === 'icon+text-secondary' || variant === 'text-secondary' || variant === 'text+icon-secondary';
-  const isTextOnly = variant === 'text' || variant === 'text-tertiary' || variant === 'text-secondary' || variant === 'text-muted';
+  const isAccent = variant === 'text-accent';
+  const isTextOnly = variant === 'text' || variant === 'text-tertiary' || variant === 'text-secondary' || variant === 'text-muted' || variant === 'text-accent';
   const isPlainText = variant === 'text';
   const isIconOnly = variant === 'icon' || variant === 'icon-tertiary' || variant === 'icon-secondary';
   const isIconText = variant === 'icon+text' || variant === 'icon+text-tertiary' || variant === 'icon+text-secondary';
@@ -54,13 +56,15 @@ export default function NavItem({
     (
       isMuted
         ? 'text-ui-muted'
-        : isPlainText
-          ? (active ? 'text-text-primary' : 'text-text-secondary')
-          : isTertiary
-            ? 'text-text-tertiary'
-            : isSecondary
-              ? 'text-text-secondary'
-              : 'text-text-primary'
+        : isAccent
+          ? (active ? 'text-accent' : 'text-accent')
+          : isPlainText
+            ? (active ? 'text-text-primary' : 'text-text-secondary')
+            : isTertiary
+              ? 'text-text-tertiary'
+              : isSecondary
+                ? 'text-text-secondary'
+                : 'text-text-primary'
     ),
     'rounded-md',
     'transition-colors',
@@ -70,7 +74,7 @@ export default function NavItem({
 
   // Apply hover visuals ONLY for interactive variants
   if (!isMuted) {
-    baseClasses.push('hover:text-text-secondary', 'hover:opacity-50');
+    baseClasses.push(isAccent ? 'hover:text-accent' : 'hover:text-text-secondary', 'hover:opacity-50');
   }
 
   // Apply vertical padding only to icon and icon+text variants
@@ -80,7 +84,7 @@ export default function NavItem({
 
   if (active && !isMuted) {
     // For plain text variant, rely on primary text color via base color above; no accent/bold
-    if (!isPlainText) {
+    if (!isPlainText && !isAccent) {
       baseClasses.push('text-accent', 'font-bold');
     }
   }
@@ -126,7 +130,7 @@ export default function NavItem({
     if (isTextOnly) {
       return (
         <div className="flex items-center justify-start w-full">
-          <span className={isTertiary ? 'text-text-tertiary' : isSecondary ? 'text-text-secondary' : undefined}>{label}</span>
+          <span className={isAccent ? 'text-accent' : isTertiary ? 'text-text-tertiary' : isSecondary ? 'text-text-secondary' : undefined}>{label}</span>
         </div>
       );
     }

@@ -29,6 +29,7 @@ const getYouTubeThumbnail = (videoId: string): string => {
 export type CharacterCardProps = {
   id: string;
   name: string;
+  displayName?: string;
   role?: string;
   summary?: string;
   hooks?: string[];
@@ -38,17 +39,20 @@ export type CharacterCardProps = {
   };
   onPlay?: (characterId: string) => void;
   className?: string;
+  variant?: 'default' | 'image';
 };
 
 export default function CharacterCard({
   id,
   name,
+  displayName,
   role,
   summary,
   hooks,
   assets,
   onPlay,
   className,
+  variant = 'default',
 }: CharacterCardProps) {
   // Debug: Log props.assets received by CharacterCard
   console.log('[CharacterCard -> props.assets]', {
@@ -118,6 +122,9 @@ export default function CharacterCard({
   const hasMedia = mediaItems.length > 0;
   const hasMultipleMedia = mediaItems.length > 1;
   const currentMedia = mediaItems[currentMediaIndex];
+  
+  // CharacterCard always uses the canonical name for display
+  const display = name;
 
   // Safeguards: Ensure mediaItems is never undefined and add safety checks
   if (!mediaItems || !Array.isArray(mediaItems)) {
@@ -251,7 +258,7 @@ export default function CharacterCard({
         return (
           <img
             src={getYouTubeThumbnail(item.videoId!)}
-            alt={`${name} video thumbnail`}
+            alt={`${display} video thumbnail`}
             className="h-full w-full object-cover rounded-t-md"
             loading="lazy"
           />
@@ -264,7 +271,7 @@ export default function CharacterCard({
             className="h-full w-full object-cover rounded-t-md"
             controls
             src={item.url}
-            aria-label={`${name} video`}
+            aria-label={`${display} video`}
           />
         );
       } else {
@@ -281,7 +288,7 @@ export default function CharacterCard({
         <img
           className="h-full w-full object-cover rounded-t-md"
           src={item.url}
-          alt={name}
+            alt={display}
           loading="lazy"
         />
       );
@@ -307,6 +314,40 @@ export default function CharacterCard({
     hasMultipleMedia: mediaItems.length > 1,
   });
 
+  // Flexible Image Variant - matches default variant structure
+  if (variant === 'image') {
+    return (
+      <div
+        className={[
+          'block bg-primary text-text-tertiary rounded-card shadow-card overflow-hidden',
+          'border border-transparent',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent',
+          'flex flex-col justify-between h-full min-h-card',
+          className,
+        ].filter(Boolean).join(' ')}
+        aria-label={display}
+      >
+        {/* Media section with internal padding for breathing space */}
+        <div className="px-spacing-md pt-spacing-md py-spacing-md h-full">
+          <div className="w-full h-full rounded-md overflow-hidden bg-ui-muted relative">
+            {assets?.images?.[0] ? (
+              <img
+                src={assets.images[0]}
+                alt={display}
+                className="w-full h-full object-cover object-center transition-transform duration-300 ease-in-out hover:scale-[1.03]"
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-ui-muted text-text-secondary">
+                <span className="text-label">No image</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       className="relative preserve-3d transition-transform duration-500 ease-in-out"
@@ -323,7 +364,7 @@ export default function CharacterCard({
             'flex flex-col justify-between h-full min-h-card',
             className,
           ].filter(Boolean).join(' ')}
-          aria-label={role ? `${name} - ${role}` : name}
+          aria-label={role ? `${display} - ${role}` : display}
         >
       {/* Media section with inner padding */}
       <div className="px-spacing-md pt-spacing-md">
@@ -414,7 +455,7 @@ export default function CharacterCard({
       <div className="flex flex-col px-spacing-md pt-spacing-md">
         {/* Name + Role (tight grouping) */}
         <div className="flex flex-col gap-spacing-2xs">
-          <h3 className="font-serif text-subheading text-accent">{name}</h3>
+          <h3 className="font-serif text-subheading text-accent">{display}</h3>
           {role ? (
             <p className="font-sans text-caption text-text-tertiary">{role}</p>
           ) : null}
@@ -459,7 +500,7 @@ export default function CharacterCard({
       {/* Back Face */}
       <div className="absolute inset-0 backface-hidden rotate-y-180 flex flex-col justify-between bg-primary text-text-tertiary rounded-card px-spacing-md pt-spacing-md pb-spacing-md">
         <div className="flex flex-col">
-          <h3 className="font-serif text-subheading text-accent">{name}</h3>
+          <h3 className="font-serif text-subheading text-accent">{display}</h3>
           {role && <p className="font-sans text-caption text-text-tertiary">{role}</p>}
 
           <motion.div

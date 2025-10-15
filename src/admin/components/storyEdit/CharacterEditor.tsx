@@ -158,6 +158,22 @@ export const CharacterEditor: React.FC<CharacterEditorProps> = ({ story, onUpdat
                         placeholder="Character name"
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Display Name
+                      </label>
+                      <input
+                        type="text"
+                        value={character.displayName || ""}
+                        onChange={(e) => updateCharacter(index, { displayName: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        placeholder="Shown in UI (e.g., Victor)"
+                        maxLength={60}
+                      />
+                      <p className="text-xs text-gray-500 text-right mt-1">
+                        {60 - (character.displayName?.length || 0)} / 60
+                      </p>
+                    </div>
                   </div>
 
                   <div>
