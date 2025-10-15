@@ -33,6 +33,13 @@ export const StoryDetailsPage: React.FC = () => {
   const { stats, loading: statsLoading, error: statsError } = useStoryStats(slug);
   const { stories: relatedStories, loading: relatedLoading, error: relatedError } = useRelatedStories(slug);
 
+  // Reusable navigation handler for all CharacterCarousels
+  const handleCharacterPlay = (characterId: string) => {
+    const character = story?.characters?.find(c => c.id === characterId);
+    const characterSlug = character?.name?.toLowerCase().replace(/\s+/g, '-') || characterId;
+    navigate(`/app/play/onboard/${slug}/${characterSlug}`);
+  };
+
   // Animation variants
   const pageVariants = shouldReduceMotion ? undefined : {
     initial: { opacity: 0, y: 20 },
@@ -102,12 +109,7 @@ export const StoryDetailsPage: React.FC = () => {
           <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl px-spacing-md">
             <CharacterCarousel
               characters={(story.characters || []) as any}
-              onPlay={(characterId) => {
-                // Create character slug from character ID or name
-                const character = story.characters?.find(c => c.id === characterId);
-                const characterSlug = character?.name?.toLowerCase().replace(/\s+/g, '-') || characterId;
-                navigate(`/app/play/onboard/${slug}/${characterSlug}`);
-              }}
+              onPlay={handleCharacterPlay}
             />
           </div>
         </section>
@@ -139,7 +141,7 @@ export const StoryDetailsPage: React.FC = () => {
           <div className="mt-spacing-lg pb-spacing-md">
             <CharacterCarousel
               characters={(story.characters || []) as any}
-              onPlay={(id) => console.log('Play as character:', id)}
+              onPlay={handleCharacterPlay}
             />
           </div>
         </section>
@@ -321,7 +323,7 @@ export const StoryDetailsPage: React.FC = () => {
           <div className="mt-spacing-lg pb-spacing-md">
             <CharacterCarousel
               characters={(story.characters || []) as any}
-              onPlay={(id) => console.log('Play as character:', id)}
+              onPlay={handleCharacterPlay}
             />
           </div>
         </section>
@@ -349,7 +351,7 @@ export const StoryDetailsPage: React.FC = () => {
           <div className="mt-spacing-lg pb-spacing-md">
             <CharacterCarousel
               characters={(story.characters || []) as any}
-              onPlay={(id) => console.log('Play as character:', id)}
+              onPlay={handleCharacterPlay}
             />
           </div>
         </section>
