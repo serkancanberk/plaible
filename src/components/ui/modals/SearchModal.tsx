@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import BaseModal from './BaseModal';
 import IconSearch from 'virtual:icons/tabler/search';
 import IconX from 'virtual:icons/tabler/x';
-import MenuItem from '../MenuItem';
-import { useSearchStories } from '../../hooks/useSearchStories';
-import { Input } from './Input';
+import MenuItem from '../../MenuItem';
+import { useSearchStories } from '../../../hooks/useSearchStories';
+import { Input } from '../Input';
 
 type SearchModalProps = {
   open: boolean;

@@ -9,6 +9,7 @@ type BaseModalProps = {
   children: React.ReactNode;
   footer?: React.ReactNode;
   variant?: 'accent' | 'plain';
+  className?: string;
 };
 
 export const BaseModal: React.FC<BaseModalProps> = ({
@@ -19,6 +20,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   children,
   footer,
   variant = 'plain',
+  className,
 }) => {
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -39,7 +41,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
     return createPortal(
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
         <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-        <div className="relative z-10 w-[90%] max-w-[560px] bg-accent rounded-[16px] px-spacing-xl py-spacing-2xl text-primary shadow-lg">
+        <div className={`relative z-10 w-[90%] ${className || 'max-w-[560px]'} bg-accent rounded-[16px] px-spacing-xl py-spacing-2xl text-primary shadow-lg`}>
           {title ? (
             <div className="mb-spacing-lg">
               <div className="flex items-end justify-between">

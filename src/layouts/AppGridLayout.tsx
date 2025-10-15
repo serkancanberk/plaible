@@ -18,10 +18,10 @@ import IconBookmark from 'virtual:icons/tabler/bookmark';
 import IconDots from 'virtual:icons/tabler/dots';
 import IconSettings from 'virtual:icons/tabler/settings';
 import IconFlag from 'virtual:icons/tabler/flag';
-import GetTheAppModal from '../components/ui/GetTheAppModal';
-import SearchModal from '../components/ui/SearchModal';
-import StorySettingsModal from '../components/ui/StorySettingsModal';
-import ReportIssueModal from '../components/ui/ReportIssueModal';
+import GetTheAppModal from '../components/ui/modals/GetTheAppModal';
+import SearchModal from '../components/ui/modals/SearchModal';
+import StorySettingsModal from '../components/ui/modals/StorySettingsModal';
+import ReportIssueModal from '../components/ui/modals/ReportIssueModal';
 import { StorySettingsProvider } from '../components/ui/storySettings/StorySettingsProvider';
 
 type AppGridLayoutProps = {

@@ -10,9 +10,9 @@ import C2AButtonGroupPreview from '../styleguide/C2AButtonGroupPreview';
 import { UI_BG_TOKENS } from './tokens';
 import TextLink from '../components/ui/TextLink';
 import React from 'react';
-import CheckLegalStuffModal from '../components/ui/CheckLegalStuffModal';
-import KeepInTouchModal from '../components/ui/KeepInTouchModal';
-import PayAsYouGoModal from '../components/ui/PayAsYouGoModal';
+import CheckLegalStuffModal from '../components/ui/modals/CheckLegalStuffModal';
+import KeepInTouchModal from '../components/ui/modals/KeepInTouchModal';
+import PayAsYouGoModal from '../components/ui/modals/PayAsYouGoModal';
 import { Dropdown } from '../components/ui/Dropdown';
 import { Input } from '../components/ui/Input';
 

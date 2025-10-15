@@ -3,61 +3,35 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStoryBySlug } from '../hooks/useStoryBySlug';
 import { useUser } from '../hooks/useUser';
-import StorySettingsModal from '../components/ui/StorySettingsModal';
-import ChangeCharacterModal from '../components/ui/ChangeCharacterModal';
+import StorySettingsModal from '../components/ui/modals/StorySettingsModal';
+import ChangeCharacterModal from '../components/ui/modals/ChangeCharacterModal';
 import C2AButton from '../components/C2AButton';
 import NavItem from '../components/ui/NavItem';
 import { AnimatedTitle } from '../components/ui/AnimatedTitle';
 import CharacterCard from '../components/ui/CharacterCard';
 import { CharacterCarousel } from '../components/ui/CharacterCarousel';
 import IconSettings from 'virtual:icons/tabler/settings';
+import { useStorySettingsContext } from '../components/ui/storySettings/StorySettingsProvider';
 
 const PlayOnboardPage: React.FC = () => {
   const { storySlug, characterSlug } = useParams<{ storySlug: string; characterSlug: string }>();
   const navigate = useNavigate();
   const { data: story, loading: storyLoading, error: storyError } = useStoryBySlug(storySlug);
   const { data: user, loading: userLoading } = useUser();
+  const { selectedToneStyle, selectedTimeFlavor } = useStorySettingsContext();
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [showCharacterOverlay, setShowCharacterOverlay] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
-  const [selectedSettings, setSelectedSettings] = useState({
-    theme: (story as any)?.settings?.theme || 'Original',
-    time: (story as any)?.settings?.time || 'Original'
-  });
+  
+  // Derive settings from context
+  const selectedSettings = {
+    theme: selectedToneStyle?.displayLabel || 'Original',
+    time: selectedTimeFlavor?.displayLabel || 'Original'
+  };
 
-  // Load settings from localStorage on mount (only once)
-  useEffect(() => {
-    const saved = localStorage.getItem('plaibleStorySettings');
-    if (saved) {
-      try {
-        const parsedSettings = JSON.parse(saved);
-        setSelectedSettings({
-          theme: parsedSettings.theme || 'Original',
-          time: parsedSettings.time || 'Original'
-        });
-      } catch (error) {
-        console.error('Failed to parse saved settings:', error);
-      }
-    }
-  }, []);
+  // Settings are now managed by StorySettingsProvider context
 
-  // Sync story settings into local state (only if no localStorage data exists)
-  useEffect(() => {
-    const saved = localStorage.getItem('plaibleStorySettings');
-    if (!saved && (story as any)?.settings) {
-      setSelectedSettings({
-        theme: (story as any).settings.theme || 'Original',
-        time: (story as any).settings.time || 'Original'
-      });
-    }
-  }, [story]);
-
-  // Persist settings to localStorage
-  useEffect(() => {
-    console.log("Page State:", selectedSettings);
-    localStorage.setItem('plaibleStorySettings', JSON.stringify(selectedSettings));
-  }, [selectedSettings]);
 
   // Handle ESC key for overlay
   useEffect(() => {
@@ -84,6 +58,13 @@ const PlayOnboardPage: React.FC = () => {
     }, 400);
   };
 
+  const handleCharacterSelect = (characterId: string) => {
+    setShowCharacterModal(false);
+    setTimeout(() => {
+      navigate(`/app/play/onboard/${storySlug}/${characterId}`);
+    }, 150);
+  };
+
   // Loading state
   if (storyLoading || userLoading) {
     return (
@@ -103,7 +84,7 @@ const PlayOnboardPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-13rem)] flex flex-col justify-center items-center">
+    <div className="flex flex-col justify-center items-center min-h-[calc(100vh-96px)] px-spacing-lg py-spacing-md">
       <AnimatePresence>
         {!isStarting && (
           <motion.div
@@ -113,7 +94,7 @@ const PlayOnboardPage: React.FC = () => {
             transition={{ duration: 0.4, ease: "easeInOut" }}
           >
             {/* Main Grid Content - Height-Synchronized Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] items-stretch gap-spacing-lg md:gap-spacing-xl max-w-[1024px] mx-auto px-spacing-xl py-spacing-xl min-h-[480px]">
+            <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] items-stretch gap-spacing-lg md:gap-spacing-xl max-w-[1024px] mx-auto px-spacing-xl py-spacing-xl">
               {/* Left Column - Character Image */}
               <div className="flex justify-center md:justify-center items-stretch">
                 <div className="w-[300px] h-full">
@@ -171,22 +152,25 @@ const PlayOnboardPage: React.FC = () => {
                   </C2AButton>
 
                   {/* Combined contextual information */}
-                  <p className="text-caption text-text-secondary text-left mt-spacing-md">
-                    You're about to experience this story as 
-                    <span className="text-accent"> {character?.displayName || character?.name}</span>, 
-                    in the <span className="text-accent">{selectedSettings.theme} Theme</span>, 
-                    set in <span className="text-accent">{selectedSettings.time} Time</span>.
-                    <br />
-                    Want to change 
-                    <button
-                      onClick={() => setShowCharacterOverlay(true)}
-                      className="ml-1 font-sans text-accent text-caption underline hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
-                    >character</button> or 
-                    <button
-                      onClick={() => setSettingsModalOpen(true)}
-                      className="ml-1 font-sans text-accent text-caption underline hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
-                    >story settings</button> before starting?
-                  </p>
+                  <div className="text-caption text-text-secondary text-left mt-spacing-md space-y-spacing-sm">
+                    <p>
+                      You're about to experience this story as 
+                      <span className="text-accent"> {character?.displayName || character?.name}</span>, 
+                      in the <span className="text-accent">{selectedSettings.theme} Theme</span>, 
+                      set in <span className="text-accent">{selectedSettings.time} Time</span>.
+                    </p>
+                    <p>
+                      Want to change 
+                      <button
+                        onClick={() => setShowCharacterModal(true)}
+                        className="ml-1 font-sans text-accent text-caption underline hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
+                      >character</button> or 
+                      <button
+                        onClick={() => setSettingsModalOpen(true)}
+                        className="ml-1 font-sans text-accent text-caption underline hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
+                      >story settings</button> before starting?
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -199,56 +183,17 @@ const PlayOnboardPage: React.FC = () => {
       <StorySettingsModal
         open={isSettingsModalOpen}
         onClose={() => setSettingsModalOpen(false)}
-        onSaveSettings={(updatedSettings) => {
-          console.log("Saved Settings:", updatedSettings);
-          setSelectedSettings({
-            theme: updatedSettings.theme || 'Original',
-            time: updatedSettings.time || 'Original'
-          });
-          console.log("Page State Updated:", {
-            theme: updatedSettings.theme || 'Original',
-            time: updatedSettings.time || 'Original'
-          });
-        }}
       />
       
       {showCharacterModal && (
         <ChangeCharacterModal
           isOpen={showCharacterModal}
           onClose={() => setShowCharacterModal(false)}
+          characters={story?.characters || []}
+          onCharacterSelect={handleCharacterSelect}
         />
       )}
 
-      {/* CharacterCarousel Overlay */}
-      {showCharacterOverlay && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowCharacterOverlay(false);
-          }}
-        >
-          <div className="relative w-full max-w-5xl mx-auto px-4">
-            <CharacterCarousel
-              characters={story?.characters || []}
-              onPlay={(characterId) => {
-                // Navigate to the selected character
-                const selectedCharacter = story?.characters?.find(c => c.id === characterId);
-                if (selectedCharacter) {
-                  const characterSlug = selectedCharacter.name.toLowerCase().replace(/\s+/g, '-');
-                  navigate(`/app/play/onboard/${storySlug}/${characterSlug}`);
-                }
-                setShowCharacterOverlay(false);
-              }}
-            />
-            <button
-              onClick={() => setShowCharacterOverlay(false)}
-              className="absolute top-4 right-6 text-accent font-mono hover:brightness-125 text-xl"
-            >
-              ✕ Close
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

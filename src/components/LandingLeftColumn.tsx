@@ -2,11 +2,11 @@ import React from 'react';
 import PlaibleLogo from './PlaibleLogo';
 import MenuItem from './MenuItem';
 import C2AButton from './C2AButton';
-import StartToPlayNowModal from './ui/StartToPlayNowModal';
-import GetTheAppModal from './ui/GetTheAppModal';
-import PayAsYouGoModal from './ui/PayAsYouGoModal';
-import KeepInTouchModal from './ui/KeepInTouchModal';
-import CheckLegalStuffModal from './ui/CheckLegalStuffModal';
+import StartToPlayNowModal from './ui/modals/StartToPlayNowModal';
+import GetTheAppModal from './ui/modals/GetTheAppModal';
+import PayAsYouGoModal from './ui/modals/PayAsYouGoModal';
+import KeepInTouchModal from './ui/modals/KeepInTouchModal';
+import CheckLegalStuffModal from './ui/modals/CheckLegalStuffModal';
 
 type Props = {
   openStartModal: () => void;

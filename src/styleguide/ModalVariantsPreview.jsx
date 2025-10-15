@@ -1,6 +1,6 @@
 import React from 'react';
-import BaseModal from '../components/ui/BaseModal';
-import GetTheAppModal from '../components/ui/GetTheAppModal';
+import BaseModal from '../components/ui/modals/BaseModal';
+import GetTheAppModal from '../components/ui/modals/GetTheAppModal';
 import C2AButton from '../components/C2AButton';
 
 export default function ModalVariantsPreview({ extraTriggers }) {

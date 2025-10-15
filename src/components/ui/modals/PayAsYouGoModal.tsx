@@ -1,6 +1,6 @@
 import React from 'react';
 import BaseModal from './BaseModal';
-import C2AButton from '../../components/C2AButton';
+import C2AButton from '../../C2AButton';
 
 type Props = {
   open: boolean;

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import BaseModal from './BaseModal';
-import { Dropdown } from './Dropdown';
-import { Input } from './Input';
-import C2AButton from '../C2AButton';
+import { Dropdown } from '../Dropdown';
+import { Input } from '../Input';
+import C2AButton from '../../C2AButton';
 
 type ReportIssueModalProps = {
   open: boolean;

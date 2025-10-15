@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import BaseModal from './BaseModal';
-import { useStorySettingsContext } from './storySettings/StorySettingsProvider';
-import { Dropdown } from './Dropdown';
-import C2AButton from '../C2AButton';
+import { useStorySettingsContext } from '../storySettings/StorySettingsProvider';
+import { Dropdown } from '../Dropdown';
+import C2AButton from '../../C2AButton';
 
 type StorySettingsModalProps = {
   open: boolean;
@@ -198,15 +198,27 @@ const StorySettingsModal: React.FC<StorySettingsModalProps> = ({ open, onClose, 
       {/* Footer Actions */}
       <div className="flex items-center justify-between mt-spacing-xl pt-spacing-lg border-t border-primary/20">
         {showSuccess ? (
-          <C2AButton
-            variant="secondary"
-            context="onAccent"
-            onClick={handleBackToOptions}
-            fullWidth
-            aria-label="Back to Time and Theme Options"
-          >
-            Back to Time and Theme Options
-          </C2AButton>
+          <>
+            <C2AButton
+              variant="ghost"
+              context="onAccent"
+              onClick={handleBackToOptions}
+              aria-label="Back to Settings"
+            >
+              Back
+            </C2AButton>
+            
+            <C2AButton
+              variant="primary"
+              context="onAccent"
+              onClick={onClose}
+              fullWidth
+              className="ml-spacing-md"
+              aria-label="Done"
+            >
+              Done
+            </C2AButton>
+          </>
         ) : (
           <>
             <C2AButton

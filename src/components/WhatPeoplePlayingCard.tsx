@@ -1,6 +1,6 @@
 import React from 'react';
 import TextLink from './ui/TextLink';
-import StartToPlayNowModal from './ui/StartToPlayNowModal';
+import StartToPlayNowModal from './ui/modals/StartToPlayNowModal';
 
 type WhatPeoplePlayingCardProps = {
   username: string;

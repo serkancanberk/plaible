@@ -2,10 +2,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import PlaibleLogo from '../components/PlaibleLogo';
 import LandingLeftColumn from '../components/LandingLeftColumn';
 import MenuItem from '../components/MenuItem';
-import StartToPlayNowModal from '../components/ui/StartToPlayNowModal';
-import GetTheAppModal from '../components/ui/GetTheAppModal';
-import KeepInTouchModal from '../components/ui/KeepInTouchModal';
-import CheckLegalStuffModal from '../components/ui/CheckLegalStuffModal';
+import StartToPlayNowModal from '../components/ui/modals/StartToPlayNowModal';
+import GetTheAppModal from '../components/ui/modals/GetTheAppModal';
+import KeepInTouchModal from '../components/ui/modals/KeepInTouchModal';
+import CheckLegalStuffModal from '../components/ui/modals/CheckLegalStuffModal';
 import { MobileHeader } from '../components/ui/MobileHeader';
 import { FeedbackCard, FeedbackData } from '../components/ui/FeedbackCard';
 
