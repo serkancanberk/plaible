@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import C2AButton from '../C2AButton';
+import IconSparkles from 'virtual:icons/tabler/sparkles';
 
 // YouTube utility functions (copied from admin components)
 const getYouTubeVideoId = (url: string): string | null => {
@@ -329,14 +330,23 @@ export default function CharacterCard({
       >
         {/* Media section with internal padding for breathing space */}
         <div className="px-spacing-md pt-spacing-md py-spacing-md h-full">
-          <div className="w-full h-full rounded-md overflow-hidden bg-ui-muted relative">
+          <div className="w-full h-full rounded-md overflow-hidden bg-ui-muted relative group">
             {assets?.images?.[0] ? (
-              <img
-                src={assets.images[0]}
-                alt={display}
-                className="w-full h-full object-cover object-center transition-transform duration-300 ease-in-out hover:scale-[1.03]"
-                loading="lazy"
-              />
+              <>
+                <img
+                  src={assets.images[0]}
+                  alt={display}
+                  className="w-full h-full object-cover object-center transition-transform duration-300 ease-in-out hover:scale-[1.03]"
+                  loading="lazy"
+                />
+                {/* Personalized Avatar Hover Overlay */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-primary/75 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out pointer-events-none gap-spacing-xs">
+                  <IconSparkles className="text-text-tertiary/75 text-lg" />
+                  <p className="text-sm font-mono text-text-tertiary/75 text-center px-spacing-sm">
+                    You may generate your personalized {displayName || display} avatar soon.
+                  </p>
+                </div>
+              </>
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-ui-muted text-text-secondary">
                 <span className="text-label">No image</span>

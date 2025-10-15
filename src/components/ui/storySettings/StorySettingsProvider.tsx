@@ -60,16 +60,13 @@ export const StorySettingsProvider: React.FC<StorySettingsProviderProps> = ({ ch
   // localStorage helpers
   const STORAGE_KEY = 'storySettings';
 
-  const loadFromLocalStorage = (): { selectedToneStyle: StorySetting | null; selectedTimeFlavor: StorySetting | null } | null => {
+  const loadFromLocalStorage = (): UserPreferences | null => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed.selectedToneStyle && parsed.selectedTimeFlavor) {
-          return {
-            selectedToneStyle: parsed.selectedToneStyle,
-            selectedTimeFlavor: parsed.selectedTimeFlavor
-          };
+        if (parsed.preferredToneStyle && parsed.preferredTimeFlavor) {
+          return parsed;
         }
       }
     } catch (err) {
@@ -78,13 +75,9 @@ export const StorySettingsProvider: React.FC<StorySettingsProviderProps> = ({ ch
     return null;
   };
 
-  const saveToLocalStorage = (toneStyle: StorySetting | null, timeFlavor: StorySetting | null) => {
+  const saveToLocalStorage = (preferences: UserPreferences) => {
     try {
-      const settings = {
-        selectedToneStyle: toneStyle,
-        selectedTimeFlavor: timeFlavor
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
     } catch (err) {
       console.warn('Failed to save story settings to localStorage:', err);
     }
@@ -112,22 +105,6 @@ export const StorySettingsProvider: React.FC<StorySettingsProviderProps> = ({ ch
     loadInitialData();
   }, []);
 
-  // Load settings from localStorage on mount
-  useEffect(() => {
-    const savedSettings = loadFromLocalStorage();
-    if (savedSettings) {
-      setSelectedToneStyle(savedSettings.selectedToneStyle);
-      setSelectedTimeFlavor(savedSettings.selectedTimeFlavor);
-    }
-  }, []);
-
-  // Save settings to localStorage whenever they change
-  useEffect(() => {
-    if (selectedToneStyle && selectedTimeFlavor) {
-      saveToLocalStorage(selectedToneStyle, selectedTimeFlavor);
-    }
-  }, [selectedToneStyle, selectedTimeFlavor]);
-
   const loadInitialData = async () => {
     setIsLoading(true);
     setError(null);
@@ -138,23 +115,6 @@ export const StorySettingsProvider: React.FC<StorySettingsProviderProps> = ({ ch
       if (settingsResponse.ok) {
         setAvailableToneStyles(settingsResponse.settings.tone_styles);
         setAvailableTimeFlavors(settingsResponse.settings.time_flavors);
-        
-        // Set default values if no localStorage data exists
-        const savedSettings = loadFromLocalStorage();
-        if (!savedSettings || !savedSettings.selectedToneStyle || !savedSettings.selectedTimeFlavor) {
-          const defaultToneStyle = settingsResponse.settings.tone_styles.find(
-            style => style.id.toLowerCase().includes('original') || 
-            style.displayLabel.toLowerCase().includes('original')
-          ) || settingsResponse.settings.tone_styles[0];
-          
-          const defaultTimeFlavor = settingsResponse.settings.time_flavors.find(
-            flavor => flavor.id.toLowerCase().includes('original') || 
-            flavor.displayLabel.toLowerCase().includes('original')
-          ) || settingsResponse.settings.time_flavors[0];
-          
-          if (defaultToneStyle) setSelectedToneStyle(defaultToneStyle);
-          if (defaultTimeFlavor) setSelectedTimeFlavor(defaultTimeFlavor);
-        }
       }
 
       // Try to load user preferences from backend first
@@ -171,13 +131,8 @@ export const StorySettingsProvider: React.FC<StorySettingsProviderProps> = ({ ch
 
       // If no backend preferences, try localStorage
       if (!backendPreferences) {
-        const localSettings = loadFromLocalStorage();
-        if (localSettings && localSettings.selectedToneStyle && localSettings.selectedTimeFlavor) {
-          // Convert localStorage settings to backend format for compatibility
-          const localPreferences: UserPreferences = {
-            preferredToneStyle: localSettings.selectedToneStyle.id,
-            preferredTimeFlavor: localSettings.selectedTimeFlavor.id
-          };
+        const localPreferences = loadFromLocalStorage();
+        if (localPreferences) {
           setSavedPreferences(localPreferences);
           backendPreferences = localPreferences;
         }

@@ -10,8 +10,8 @@ import NavItem from '../components/ui/NavItem';
 import { AnimatedTitle } from '../components/ui/AnimatedTitle';
 import CharacterCard from '../components/ui/CharacterCard';
 import { CharacterCarousel } from '../components/ui/CharacterCarousel';
-import IconSettings from 'virtual:icons/tabler/settings';
 import { useStorySettingsContext } from '../components/ui/storySettings/StorySettingsProvider';
+import IconSettings from 'virtual:icons/tabler/settings';
 
 const PlayOnboardPage: React.FC = () => {
   const { storySlug, characterSlug } = useParams<{ storySlug: string; characterSlug: string }>();
@@ -23,15 +23,53 @@ const PlayOnboardPage: React.FC = () => {
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [showCharacterOverlay, setShowCharacterOverlay] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
-  
-  // Derive settings from context
-  const selectedSettings = {
-    theme: selectedToneStyle?.displayLabel || 'Original',
-    time: selectedTimeFlavor?.displayLabel || 'Original'
-  };
+  const [selectedSettings, setSelectedSettings] = useState({
+    theme: (story as any)?.settings?.theme || 'Original',
+    time: (story as any)?.settings?.time || 'Original'
+  });
 
-  // Settings are now managed by StorySettingsProvider context
+  // Load settings from localStorage on mount (only once)
+  useEffect(() => {
+    const saved = localStorage.getItem('plaibleStorySettings');
+    if (saved) {
+      try {
+        const parsedSettings = JSON.parse(saved);
+        setSelectedSettings({
+          theme: parsedSettings.theme || 'Original',
+          time: parsedSettings.time || 'Original'
+        });
+      } catch (error) {
+        console.error('Failed to parse saved settings:', error);
+      }
+    }
+  }, []);
 
+  // Sync story settings into local state (only if no localStorage data exists)
+  useEffect(() => {
+    const saved = localStorage.getItem('plaibleStorySettings');
+    if (!saved && (story as any)?.settings) {
+      setSelectedSettings({
+        theme: (story as any).settings.theme || 'Original',
+        time: (story as any).settings.time || 'Original'
+      });
+    }
+  }, [story]);
+
+  // Listen to context changes and update local state
+  useEffect(() => {
+    if (selectedToneStyle && selectedTimeFlavor) {
+      setSelectedSettings({
+        theme: selectedToneStyle.displayLabel || 'Original',
+        time: selectedTimeFlavor.displayLabel || 'Original'
+      });
+    }
+  }, [selectedToneStyle, selectedTimeFlavor]);
+
+  // Persist settings to localStorage
+  useEffect(() => {
+    console.log("Page State:", selectedSettings);
+    localStorage.setItem('plaibleStorySettings', JSON.stringify(selectedSettings));
+  }, [selectedSettings]);
 
   // Handle ESC key for overlay
   useEffect(() => {
@@ -154,10 +192,10 @@ const PlayOnboardPage: React.FC = () => {
                   {/* Combined contextual information */}
                   <div className="text-caption text-text-secondary text-left mt-spacing-md space-y-spacing-sm">
                     <p>
-                      You're about to experience this story as 
+                    You’ll play this story as  
                       <span className="text-accent"> {character?.displayName || character?.name}</span>, 
-                      in the <span className="text-accent">{selectedSettings.theme} Theme</span>, 
-                      set in <span className="text-accent">{selectedSettings.time} Time</span>.
+                      in the <span className="text-accent">{selectedSettings.theme} theme</span>, 
+                      set in <span className="text-accent">{selectedSettings.time} time</span>.
                     </p>
                     <p>
                       Want to change 
