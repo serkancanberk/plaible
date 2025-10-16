@@ -691,9 +691,34 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                     <NavItem
                       variant="icon"
                       icon={
-                        <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
-                          <IconUser className="w-4 h-4" />
-                        </span>
+                        user.profilePictureUrl ? (
+                          <>
+                            {console.log("[PROFILE_IMG_RENDER]", "Collapsed Sidebar")}
+                            <img
+                              src={user.profilePictureUrl}
+                              alt={user.email || 'User'}
+                              className="w-9 h-9 rounded-full object-cover hover:opacity-80 transition-opacity"
+                              onError={(e) => {
+                                // Replace the image with the default icon
+                                const target = e.target as HTMLImageElement;
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  parent.innerHTML = `
+                                    <span class="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
+                                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                      </svg>
+                                    </span>
+                                  `;
+                                }
+                              }}
+                            />
+                          </>
+                        ) : (
+                          <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
+                            <IconUser className="w-4 h-4" />
+                          </span>
+                        )
                       }
                     />
                   ) : (
@@ -793,9 +818,34 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                         variant="icon+text"
                         label={user.identity?.displayName || user.email || "User"}
                         icon={
-                          <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
-                            <IconUser className="w-4 h-4" />
-                          </span>
+                          user.profilePictureUrl ? (
+                            <>
+                              {console.log("[PROFILE_IMG_RENDER]", "Expanded Sidebar")}
+                              <img
+                                src={user.profilePictureUrl}
+                                alt={user.email || 'User'}
+                                className="w-9 h-9 rounded-full object-cover hover:opacity-80 transition-opacity"
+                                onError={(e) => {
+                                  // Replace the image with the default icon
+                                  const target = e.target as HTMLImageElement;
+                                  const parent = target.parentElement;
+                                  if (parent) {
+                                    parent.innerHTML = `
+                                      <span class="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                        </svg>
+                                      </span>
+                                    `;
+                                  }
+                                }}
+                              />
+                            </>
+                          ) : (
+                            <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
+                              <IconUser className="w-4 h-4" />
+                            </span>
+                          )
                         }
                       />
                       <NavItem

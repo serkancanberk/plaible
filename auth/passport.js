@@ -35,7 +35,20 @@ passport.use(
         const lastName = name.familyName || "";
         const displayName = profile?.displayName || [firstName, lastName].filter(Boolean).join(" ");
         const photos = profile?.photos || [];
-        const profilePictureUrl = photos[0]?.value || null;
+        let profilePictureUrl = photos[0]?.value || null;
+        
+        // Request higher resolution profile image from Google
+        if (profilePictureUrl) {
+          profilePictureUrl = profilePictureUrl.replace(/s\d+-c/, "s256-c");
+          console.log('[OAUTH] Adjusted profile image URL:', profilePictureUrl);
+        }
+        
+        console.log('[GOOGLE_OAUTH] Profile data:', {
+          email: email,
+          displayName: displayName,
+          profilePictureUrl: profilePictureUrl,
+          photosCount: photos.length
+        });
 
         // Upsert by googleId; fallback to email
         let user = null;
@@ -74,6 +87,11 @@ passport.use(
         }
 
         await user.save();
+        console.log('[GOOGLE_OAUTH] User saved:', {
+          email: user.email,
+          profilePictureUrl: user.profilePictureUrl,
+          id: user._id
+        });
         return done(null, user);
       } catch (err) {
         return done(err);

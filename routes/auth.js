@@ -150,6 +150,13 @@ router.get("/me", async (req, res) => {
       identity: user.identity || { displayName: user.displayName },
       wallet: { balance: user.wallet?.balance ?? 0 },
     };
+    
+    console.log('[AUTH_ME] Returning user data:', {
+      email: safe.email,
+      profilePictureUrl: safe.profilePictureUrl,
+      hasProfilePicture: !!safe.profilePictureUrl
+    });
+    
     res.json(safe);
   } catch (err) {
     return res.status(401).json({ error: "INVALID_TOKEN" });

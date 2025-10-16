@@ -38,6 +38,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const res = await fetch('/api/auth/me', { credentials: 'include' });
       if (!res.ok) throw new Error('Not authenticated');
       const data = await res.json();
+      
+      console.log('[AUTH_ME] Received user data:', {
+        email: data.email,
+        profilePictureUrl: data.profilePictureUrl,
+        hasProfilePicture: !!data.profilePictureUrl,
+        identity: data.identity
+      });
+      
       setUser(data);
     } catch {
       setUser(null);
