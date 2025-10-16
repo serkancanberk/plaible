@@ -15,6 +15,7 @@ export interface AdminUser {
   email: string;
   name: string;
   role: string;
+  profilePictureUrl?: string;
 }
 
 // Check authentication status

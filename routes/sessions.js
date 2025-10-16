@@ -369,6 +369,12 @@ router.get("/", async (req, res) => {
       .limit(limit)
       .lean();
 
+    console.log('[SESSIONS_LIST]', {
+      userId: String(req.userId),
+      status,
+      count: sessions.length
+    });
+
     if (!sessions.length) {
       return ok(res, { items: [] });
     }

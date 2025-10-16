@@ -1,4 +1,6 @@
-import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
+import { useUserSessions, type UserSessionItem } from '../hooks/useUserSessions';
+import { useSavedStories, type SavedStoryItem } from '../hooks/useSavedStories';
 
 interface UserData {
   _id: string;
@@ -12,6 +14,8 @@ interface UserData {
   wallet: {
     balance: number;
   };
+  sessions?: UserSessionItem[];
+  savedStories?: SavedStoryItem[];
 }
 
 interface AuthContextType {
@@ -32,6 +36,11 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Additional user-scoped data
+  const { sessions, fetchSessions } = useUserSessions();
+  const { savedStories, fetchSavedStories } = useSavedStories();
+  const fetchedExtrasForUserIdRef = useRef<string | null>(null);
 
   const fetchUser = useCallback(async () => {
     try {
@@ -78,11 +87,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log("👋 Logging out...");
       await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      // Reset derived data holders
+      fetchedExtrasForUserIdRef.current = null;
       setUser(null);
       window.location.href = '/app';
     } catch (err) {
       console.error("❌ Logout failed:", err);
       // Still clear local state even if API call fails
+      fetchedExtrasForUserIdRef.current = null;
       setUser(null);
       window.location.href = '/app';
     }
@@ -91,6 +103,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     fetchUser();
   }, [fetchUser]);
+
+  // Fetch user-bound lists (sessions, saved stories) once user is known
+  useEffect(() => {
+    const userId = user?._id || null;
+    if (!userId) return;
+    if (fetchedExtrasForUserIdRef.current === userId) return; // avoid duplicate fetches
+    fetchedExtrasForUserIdRef.current = userId;
+    // Clear any previous user's lists to avoid leakage in UI
+    setUser(prev => (prev ? { ...prev, sessions: [], savedStories: [] } : prev));
+    console.log('[DATA_FETCH] Fetching sessions & savedStories for', user?.email);
+    fetchSessions();
+    fetchSavedStories();
+  }, [user?._id, fetchSessions, fetchSavedStories]);
+
+  // Merge fetched lists into user object to expose via context
+  useEffect(() => {
+    if (!user?._id) return;
+    setUser(prev => (prev ? { ...prev, sessions, savedStories } : prev));
+  }, [sessions, savedStories]);
 
   return (
     <AuthContext.Provider

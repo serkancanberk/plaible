@@ -132,6 +132,11 @@ router.get("/", async (req, res) => {
       .limit(limit + 1)
       .lean();
 
+    console.log('[SAVES_LIST]', {
+      userId: String(req.userId),
+      count: docs.length
+    });
+
     const hasMore = docs.length > limit;
     const items = (hasMore ? docs.slice(0, limit) : docs).map(d => ({
       slug: d.slug,

@@ -19,9 +19,29 @@ export const AdminProfile: React.FC = () => {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-2 text-sm text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-md px-3 py-2"
       >
-        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-          {user.name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'A'}
-        </div>
+        {user.profilePictureUrl ? (
+          <img
+            src={user.profilePictureUrl}
+            alt={user.email || 'Admin User'}
+            className="w-9 h-9 rounded-full object-cover hover:opacity-80 transition-opacity"
+            onError={(e) => {
+              // Replace the image with the default icon
+              const target = e.target as HTMLImageElement;
+              const parent = target.parentElement;
+              if (parent) {
+                parent.innerHTML = `
+                  <div class="w-9 h-9 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    ${user.name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'A'}
+                  </div>
+                `;
+              }
+            }}
+          />
+        ) : (
+          <div className="w-9 h-9 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+            {user.name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'A'}
+          </div>
+        )}
         <span className="hidden md:block">{user.name || user.email}</span>
         <svg
           className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}

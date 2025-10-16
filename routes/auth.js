@@ -164,7 +164,7 @@ router.get("/me", async (req, res) => {
 });
 
 // Admin authentication check
-router.get("/admin/check", (req, res) => {
+router.get("/admin/check", async (req, res) => {
   const adminToken = req.cookies?.admin_token;
   if (!adminToken) {
     return res.status(401).json({ error: "UNAUTHENTICATED" });
@@ -179,12 +179,19 @@ router.get("/admin/check", (req, res) => {
       return res.status(403).json({ error: "FORBIDDEN" });
     }
     
+    // Fetch full user data including profilePictureUrl
+    const user = await User.findOne({ email: decoded.email }).lean();
+    if (!user) {
+      return res.status(404).json({ error: "USER_NOT_FOUND" });
+    }
+    
     res.json({
       ok: true,
       user: {
         email: decoded.email,
         name: decoded.name,
-        role: decoded.role
+        role: decoded.role,
+        profilePictureUrl: user.profilePictureUrl
       }
     });
   } catch (err) {

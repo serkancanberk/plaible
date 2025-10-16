@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import PlaibleLogo from '../components/PlaibleLogo';
+import { motion, AnimatePresence } from 'framer-motion';
 import NavItem from '../components/ui/NavItem';
 import MenuItem from '../components/MenuItem';
 import StoryCard from '../components/ui/StoryCard';
@@ -52,6 +53,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isKebabOpen, setIsKebabOpen] = useState(false);
   const kebabRef = useRef<HTMLDivElement | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const mobileCarouselRef = useRef<HTMLDivElement | null>(null);
   const mobileDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -423,6 +426,17 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
     };
   }, []);
 
+  // Close user menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Debug: Log selectedMain state changes
   useEffect(() => {
     console.log('[useEffect:selectedMain changed]', selectedMain);
@@ -791,69 +805,111 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
 
                 {/* Bottom zone: Recent, Saved, User */}
                 <div className="flex-1 flex flex-col justify-end">
-                  {/* Recent section */}
-                  <div className="mt-spacing-lg">
-                    <div className="text-body font-semibold text-text-primary">Recent</div>
-                    <div className="mt-spacing-sm space-y-spacing-xs">
-                      <NavItem variant="text" label="“BookName”, Character…" />
-                      <NavItem variant="text" label="“BookName”, Character…" />
-                      <NavItem variant="text" label="“BookName”, Character…" />
-                    </div>
-                  </div>
+                  {/* Debug sidebar state */}
+                  <span className="sr-only">
+                    {(() => {
+                      console.log("[SIDEBAR_STATE]", user ? "Authenticated user → showing Recent/Saved" : "Visitor → hiding Recent/Saved");
+                      return '';
+                    })()}
+                  </span>
 
-                  {/* Saved section */}
-                  <div className="mt-spacing-lg">
-                    <div className="text-body font-semibold text-text-primary">Saved</div>
-                    <div className="mt-spacing-sm space-y-spacing-xs">
-                      <NavItem variant="text" label="“BookName”, Character…" />
-                      <NavItem variant="text" label="“BookName”, Character…" />
-                      <NavItem variant="text" label="“BookName”, Character…" />
-                    </div>
-                  </div>
+                  {user ? (
+                    <>
+                      <span className="sr-only">
+                        {(() => {
+                          if (!(user.sessions?.length) && !(user.savedStories?.length)) {
+                            console.log("[SIDEBAR_STATE] Auth user with empty recent/saved lists.");
+                          }
+                          return '';
+                        })()}
+                      </span>
+                      {/* Recent section */}
+                      <div className="mt-spacing-lg">
+                        <div className="text-body font-semibold text-text-primary">Recent</div>
+                        <div className="mt-spacing-sm space-y-spacing-xs">
+                          {user.sessions?.length ? (
+                            user.sessions.map((s: any) => (
+                              <NavItem
+                                key={s._id}
+                                variant="text"
+                                label={`${s.story?.title || ''}, Chapter ${s.progress?.chapter ?? 1}`}
+                                onClick={() => navigate(`/app/play/run/${s.story?.slug || ''}`)}
+                              />
+                            ))
+                          ) : (
+                            <span className="font-mono text-caption text-ui-muted mt-spacing-xs">There is no story yet here.</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Saved section */}
+                      <div className="mt-spacing-lg">
+                        <div className="text-body font-semibold text-text-primary">Saved</div>
+                        <div className="mt-spacing-sm space-y-spacing-xs">
+                          {user.savedStories?.length ? (
+                            user.savedStories.map((s: any) => (
+                              <NavItem
+                                key={s.slug}
+                                variant="text"
+                                label={s.title}
+                                onClick={() => navigate(`/app/story/${s.slug}`)}
+                              />
+                            ))
+                          ) : (
+                            <span className="font-mono text-caption text-ui-muted mt-spacing-xs">There is no story yet here.</span>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  ) : null}
 
                   {/* User profile */}
                   {user ? (
-                    <div className="mt-spacing-xl">
-                      <NavItem
-                        variant="icon+text"
-                        label={user.identity?.displayName || user.email || "User"}
-                        icon={
-                          user.profilePictureUrl ? (
-                            <>
-                              {console.log("[PROFILE_IMG_RENDER]", "Expanded Sidebar")}
-                              <img
-                                src={user.profilePictureUrl}
-                                alt={user.email || 'User'}
-                                className="w-9 h-9 rounded-full object-cover hover:opacity-80 transition-opacity"
-                                onError={(e) => {
-                                  // Replace the image with the default icon
-                                  const target = e.target as HTMLImageElement;
-                                  const parent = target.parentElement;
-                                  if (parent) {
-                                    parent.innerHTML = `
-                                      <span class="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                        </svg>
-                                      </span>
-                                    `;
-                                  }
-                                }}
-                              />
-                            </>
-                          ) : (
-                            <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
-                              <IconUser className="w-4 h-4" />
-                            </span>
-                          )
-                        }
-                      />
-                      <NavItem
-                        variant="text"
-                        label="🚪 Logout"
-                        className="mt-spacing-sm text-text-secondary hover:text-accent transition-colors cursor-pointer"
-                        onClick={logout}
-                      />
+                    <div className="mt-spacing-xl relative">
+                      <div
+                        ref={menuRef}
+                        className="relative flex items-center gap-spacing-sm cursor-pointer select-none"
+                        onClick={() => setIsMenuOpen(prev => !prev)}
+                      >
+                        {user.profilePictureUrl ? (
+                          <img
+                            src={user.profilePictureUrl}
+                            alt={user.email || 'User'}
+                            className="w-9 h-9 rounded-full object-cover hover:opacity-80 transition-opacity"
+                          />
+                        ) : (
+                          <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
+                            <IconUser className="w-4 h-4" />
+                          </span>
+                        )}
+                        <span className="text-body text-text-primary truncate">
+                          {user.identity?.displayName || user.email || 'User'}
+                        </span>
+                        <AnimatePresence>
+                          {isMenuOpen && (
+                            <motion.div
+                              initial={{ y: 20, opacity: 0 }}
+                              animate={{ y: 0, opacity: 1 }}
+                              exit={{ y: 20, opacity: 0 }}
+                              transition={{ duration: 0.25, ease: 'easeOut' }}
+                              className="absolute bottom-spacing-2xl left-0 right-0 bg-secondary rounded-card shadow-lg p-spacing-md flex flex-col space-y-spacing-sm"
+                            >
+                              <button
+                                className="text-body text-text-primary hover:text-accent transition-colors text-left"
+                                onClick={() => navigate('/app/profile')}
+                              >
+                                Edit Your Profile
+                              </button>
+                              <button
+                                className="text-body text-text-primary hover:text-accent transition-colors text-left"
+                                onClick={logout}
+                              >
+                                Logout
+                              </button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     </div>
                   ) : (
                     <NavItem
