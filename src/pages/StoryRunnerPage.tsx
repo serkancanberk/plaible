@@ -6,6 +6,7 @@ import { useChatMessages } from '../hooks/useChatMessages';
 import { useStoryRunner, StoryContext } from '../hooks/useStoryRunner';
 import { useStorySettingsContext } from '../components/ui/storySettings/StorySettingsProvider';
 import { AuthGuard } from '../components/AuthGuard';
+import StoryPaymentPrompt from '../components/StoryPaymentPrompt';
 
 const StoryRunnerPage: React.FC = () => {
   const { storySlug, characterSlug } = useParams<{ storySlug: string; characterSlug: string }>();
@@ -89,47 +90,23 @@ const StoryRunnerPage: React.FC = () => {
     );
   }
 
-  // Show error state if session failed to start
-  if (sessionError) {
-    const isAuthError = sessionError.includes('401') || sessionError.includes('UNAUTHENTICATED');
-    
+  // Show payment prompt for HTTP 402 errors
+  if (sessionError && (sessionError.includes('402') || sessionError.includes('PAYMENT') || sessionError.includes('INSUFFICIENT_CREDITS'))) {
     return (
       <div className="flex flex-col h-screen bg-secondary">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-body text-text-secondary mb-spacing-md">
-              {isAuthError ? 'Session expired. Please sign in again.' : 'Failed to start story session'}
-            </div>
-            <div className="text-caption text-text-tertiary mb-spacing-md">
-              {sessionError}
-            </div>
-            {isAuthError ? (
-              <button
-                onClick={() => {
-                  // Redirect to login
-                  window.location.href = '/login';
-                }}
-                className="text-caption text-accent hover:text-text-primary transition-colors"
-              >
-                Go to Login
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  // Retry starting the session
-                  if (storySlug && characterSlug && selectedToneStyle && selectedTimeFlavor) {
-                    startSession().catch(error => {
-                      console.error('Failed to retry session:', error);
-                    });
-                  }
-                }}
-                className="text-caption text-accent hover:text-text-primary transition-colors"
-              >
-                Try again
-              </button>
-            )}
-          </div>
-        </div>
+        <StoryPaymentPrompt
+          onAddCredits={() => {
+            // Placeholder top-up flow trigger
+            console.log('[PAYMENT] Add Credits clicked');
+          }}
+          onTryAgain={() => {
+            if (storySlug && characterSlug && selectedToneStyle && selectedTimeFlavor) {
+              startSession().catch(error => {
+                console.error('Failed to retry session:', error);
+              });
+            }
+          }}
+        />
       </div>
     );
   }

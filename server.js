@@ -130,8 +130,15 @@ app.get("/api/health", (req, res) => {
 const devFallbackUserId = new mongoose.Types.ObjectId("64b7cafe1234567890cafe12");
 export function authGuard(req, res, next) {
   console.log("DEBUG authGuard -> cookies:", req.cookies);
-  const token = req.cookies?.admin_token || req.cookies?.user_token || req.cookies?.plaible_jwt;
-  console.log("DEBUG authGuard -> raw token:", token);
+  // Prefer public app token for /api routes when multiple exist
+  const tokenName = req.cookies?.plaible_jwt
+    ? 'plaible_jwt'
+    : (req.cookies?.user_token
+        ? 'user_token'
+        : (req.cookies?.admin_token ? 'admin_token' : 'none'));
+  const token = req.cookies?.[tokenName];
+  req.selectedTokenName = tokenName;
+  console.log("DEBUG authGuard -> raw token (prefer plaible_jwt):", tokenName);
   
   if (token) {
     try {
@@ -139,6 +146,7 @@ export function authGuard(req, res, next) {
       console.log("DEBUG authGuard -> decoded payload:", decoded);
       req.userId = decoded?.sub || decoded?.uid || decoded?._id;
       console.log("DEBUG authGuard -> req.userId set to:", req.userId);
+      console.log(`[VERIFY_ISOLATION] route=authGuard userId=${String(req.userId)} cookie=${req.selectedTokenName}`);
       return next();
     } catch (err) {
       console.error("DEBUG authGuard -> jwt.verify error:", err);

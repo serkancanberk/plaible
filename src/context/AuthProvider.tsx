@@ -38,13 +38,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Additional user-scoped data
-  const { sessions, fetchSessions } = useUserSessions();
-  const { savedStories, fetchSavedStories } = useSavedStories();
+  const { sessions, fetchSessions, clearSessions } = useUserSessions();
+  const { savedStories, fetchSavedStories, clearSaved } = useSavedStories();
   const fetchedExtrasForUserIdRef = useRef<string | null>(null);
 
   const fetchUser = useCallback(async () => {
     try {
-      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      const res = await fetch('/api/auth/me', { credentials: 'include', cache: 'no-store' as RequestCache });
       if (!res.ok) throw new Error('Not authenticated');
       const data = await res.json();
       
@@ -111,10 +111,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (fetchedExtrasForUserIdRef.current === userId) return; // avoid duplicate fetches
     fetchedExtrasForUserIdRef.current = userId;
     // Clear any previous user's lists to avoid leakage in UI
+    clearSessions();
+    clearSaved();
     setUser(prev => (prev ? { ...prev, sessions: [], savedStories: [] } : prev));
+    console.log('[VERIFY_ISOLATION_FRONTEND] State cleared for user switch');
     console.log('[DATA_FETCH] Fetching sessions & savedStories for', user?.email);
-    fetchSessions();
-    fetchSavedStories();
+    fetchSessions(user?.email);
+    fetchSavedStories(user?.email);
   }, [user?._id, fetchSessions, fetchSavedStories]);
 
   // Merge fetched lists into user object to expose via context
@@ -122,6 +125,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user?._id) return;
     setUser(prev => (prev ? { ...prev, sessions, savedStories } : prev));
   }, [sessions, savedStories]);
+
+  // Cleanup on unmount or remount to ensure lists are cleared before next mount
+  useEffect(() => {
+    return () => {
+      clearSessions();
+      clearSaved();
+      setUser(prev => (prev ? { ...prev, sessions: [], savedStories: [] } : prev));
+      console.log('[VERIFY_ISOLATION_FRONTEND] State cleared in cleanup');
+    };
+  }, [clearSessions, clearSaved]);
+
+  // Clear lists on connection reset (visibility change) to avoid stale leakage
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') return;
+      setUser(prev => (prev ? { ...prev, sessions: [], savedStories: [] } : prev));
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
 
   return (
     <AuthContext.Provider

@@ -346,6 +346,10 @@ router.get("/active", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     if (!req.userId) return err(res, 401, "UNAUTHENTICATED");
+    res.set("Cache-Control", "no-store");
+    res.removeHeader("ETag");
+    const cookieName = req.selectedTokenName || (req.cookies?.plaible_jwt ? 'plaible_jwt' : (req.cookies?.admin_token ? 'admin_token' : 'unknown'));
+    console.log(`[VERIFY_ISOLATION] route=/api/sessions userId=${String(req.userId)} cookie=${cookieName}`);
 
     const valid = new Set(["active", "completed", "all"]);
     const status = valid.has(String(req.query.status)) ? String(req.query.status) : "active";

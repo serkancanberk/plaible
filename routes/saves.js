@@ -115,6 +115,10 @@ router.delete("/:slug", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     if (!req.userId) return err(res, "UNAUTHENTICATED", 401);
+    res.set("Cache-Control", "no-store");
+    res.removeHeader("ETag");
+    const cookieName = req.selectedTokenName || (req.cookies?.plaible_jwt ? 'plaible_jwt' : (req.cookies?.admin_token ? 'admin_token' : 'unknown'));
+    console.log(`[VERIFY_ISOLATION] route=/api/saves userId=${String(req.userId)} cookie=${cookieName}`);
     let limit = parseInt(String(req.query.limit ?? "20"), 10);
     if (Number.isNaN(limit) || limit <= 0) limit = 20;
     if (limit > 50) limit = 50;

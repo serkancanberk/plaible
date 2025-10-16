@@ -4,6 +4,7 @@ export type NavItemProps = {
   variant?:
     | 'icon'
     | 'icon+text'
+    | 'icon+text-outline'
     | 'text'
     | 'icon-tertiary'
     | 'icon+text-tertiary'
@@ -48,7 +49,8 @@ export default function NavItem({
   const isTextOnly = variant === 'text' || variant === 'text-tertiary' || variant === 'text-secondary' || variant === 'text-muted' || variant === 'text-accent';
   const isPlainText = variant === 'text';
   const isIconOnly = variant === 'icon' || variant === 'icon-tertiary' || variant === 'icon-secondary';
-  const isIconText = variant === 'icon+text' || variant === 'icon+text-tertiary' || variant === 'icon+text-secondary';
+  const isIconText = variant === 'icon+text' || variant === 'icon+text-outline' || variant === 'icon+text-tertiary' || variant === 'icon+text-secondary';
+  const isOutline = variant === 'icon+text-outline';
   const isTextIcon = variant === 'text+icon' || variant === 'text+icon-tertiary' || variant === 'text+icon-secondary';
 
   const baseClasses = [
@@ -76,7 +78,8 @@ export default function NavItem({
 
   // Apply hover visuals ONLY for interactive variants
   if (!isMuted) {
-    baseClasses.push(isAccent ? 'hover:text-accent' : 'hover:text-text-secondary', 'hover:opacity-50');
+    baseClasses.push(isAccent ? 'hover:text-accent' : 'hover:text-text-secondary');
+    baseClasses.push(isOutline ? 'hover:opacity-70' : 'hover:opacity-50');
   }
 
   // Apply vertical padding only to icon and icon+text variants
@@ -108,15 +111,18 @@ export default function NavItem({
   }
 
   const iconWrapperClasses = [
-    'w-8', 'h-8', 'flex', 'items-center', 'justify-center', 'rounded-full', 'bg-primary',
-    isTertiary
-      ? 'text-text-tertiary'
-      : isSecondary
-        ? 'text-text-secondary'
-        : (isIconOnly || isIconText)
-          ? 'text-accent'
-          : 'text-text-primary',
-  ].join(' ');
+    'w-8', 'h-8', 'flex', 'items-center', 'justify-center', 'rounded-full',
+    isOutline ? 'transform-gpu backface-hidden bg-transparent border border-primary/80 text-primary/90' : 'bg-primary',
+    !isOutline && (
+      isTertiary
+        ? 'text-text-tertiary'
+        : isSecondary
+          ? 'text-text-secondary'
+          : (isIconOnly || isIconText)
+            ? 'text-accent'
+            : 'text-text-primary'
+    ) || ''
+  ].filter(Boolean).join(' ');
 
   const content = (() => {
     // ICON ONLY VARIANTS: always use wrapper for consistency
@@ -170,7 +176,7 @@ export default function NavItem({
               'transition-opacity', 'transition-transform', 'duration-300', 'ease-in-out',
               collapsed ? 'opacity-0 scale-95' : 'opacity-100 scale-100',
               'origin-left',
-              isTertiary ? 'text-text-tertiary' : isSecondary ? 'text-text-secondary' : '',
+              isOutline ? 'text-text-primary' : (isTertiary ? 'text-text-tertiary' : isSecondary ? 'text-text-secondary' : ''),
             ].join(' ')}
           >
             {label}

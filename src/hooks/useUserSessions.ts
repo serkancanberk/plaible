@@ -12,19 +12,28 @@ export const useUserSessions = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchSessions = useCallback(async () => {
+  const clearSessions = useCallback(() => {
+    setSessions([]);
+  }, []);
+
+  const fetchSessions = useCallback(async (email?: string) => {
     try {
       setLoading(true);
       setError(null);
+      console.log('[VERIFY_ISOLATION_FETCH_START] email=', email || 'unknown');
+      // Clear any previous local data to avoid ghost lists
+      setSessions([]);
       console.log('[FETCH] GET /api/sessions');
       const res = await fetch('/api/sessions', {
         credentials: 'include',
+        cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
       });
       if (!res.ok) throw new Error('Failed to load sessions');
       const data = await res.json();
       const items: UserSessionItem[] = Array.isArray(data.items) ? data.items : [];
       console.log('[FETCH_RESULT] /api/sessions count=', items.length);
+      console.log('[VERIFY_ISOLATION_FETCH_DONE] count=', items.length);
       // Sort by updatedAt desc
       items.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
       setSessions(items);
@@ -39,7 +48,7 @@ export const useUserSessions = () => {
     // Intentionally not auto-fetching; let caller control when user is ready
   }, []);
 
-  return { sessions, loading, error, fetchSessions };
+  return { sessions, loading, error, fetchSessions, clearSessions };
 };
 
 

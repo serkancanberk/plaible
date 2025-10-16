@@ -16,6 +16,7 @@ import IconChevronLeft from 'virtual:icons/tabler/chevron-left';
 import IconUser from 'virtual:icons/tabler/user';
 import IconSearch from 'virtual:icons/tabler/search';
 import IconBookmark from 'virtual:icons/tabler/bookmark';
+import IconClock from 'virtual:icons/tabler/clock';
 import IconDots from 'virtual:icons/tabler/dots';
 import IconSettings from 'virtual:icons/tabler/settings';
 import IconFlag from 'virtual:icons/tabler/flag';
@@ -472,6 +473,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
       <div className="min-h-screen w-full bg-secondary">
       {(() => {
         console.log('[Render] selectedMain =', selectedMain);
+        console.log('[ROLLBACK] Layout and scroll behavior restored to previous stable version');
         return null;
       })()}
       {/* Mobile branch */}
@@ -825,7 +827,15 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                       </span>
                       {/* Recent section */}
                       <div className="mt-spacing-lg">
-                        <div className="text-body font-semibold text-text-primary">Recent</div>
+                        <NavItem
+                          variant="icon+text-outline"
+                          label="Recent"
+                          icon={
+                            <span className="w-8 h-8 flex items-center justify-center rounded-full border border-primary text-primary">
+                              <IconClock className="w-4 h-4" />
+                            </span>
+                          }
+                        />
                         <div className="mt-spacing-sm space-y-spacing-xs">
                           {user.sessions?.length ? (
                             user.sessions.map((s: any) => (
@@ -844,7 +854,15 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
 
                       {/* Saved section */}
                       <div className="mt-spacing-lg">
-                        <div className="text-body font-semibold text-text-primary">Saved</div>
+                        <NavItem
+                          variant="icon+text-outline"
+                          label="Saved"
+                          icon={
+                            <span className="w-8 h-8 flex items-center justify-center rounded-full border border-primary text-primary">
+                              <IconBookmark className="w-4 h-4" />
+                            </span>
+                          }
+                        />
                         <div className="mt-spacing-sm space-y-spacing-xs">
                           {user.savedStories?.length ? (
                             user.savedStories.map((s: any) => (
