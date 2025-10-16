@@ -18,11 +18,13 @@ import IconBookmark from 'virtual:icons/tabler/bookmark';
 import IconDots from 'virtual:icons/tabler/dots';
 import IconSettings from 'virtual:icons/tabler/settings';
 import IconFlag from 'virtual:icons/tabler/flag';
+import IconGoogle from 'virtual:icons/simple-icons/google';
 import GetTheAppModal from '../components/ui/modals/GetTheAppModal';
 import SearchModal from '../components/ui/modals/SearchModal';
 import StorySettingsModal from '../components/ui/modals/StorySettingsModal';
 import ReportIssueModal from '../components/ui/modals/ReportIssueModal';
 import { StorySettingsProvider } from '../components/ui/storySettings/StorySettingsProvider';
+import { useAuth } from '../hooks/useAuth';
 
 type AppGridLayoutProps = {
   children?: React.ReactNode;
@@ -34,6 +36,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { user, login, logout } = useAuth();
   
   // Initialize from URL params
   const [selectedMain, setSelectedMain] = useState<'books' | 'stories' | 'biographies'>(
@@ -77,17 +80,46 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   // Check if we're on a story details page to hide SubNavigation
   const isStoryDetailsPage = location.pathname.includes('/stories/') && location.pathname !== '/app';
   
-  // Check if we're on the play onboard page to hide SubNavigation
-  const hideSubNavigation = location.pathname.includes('/play/onboard');
+  // Check if we're on the play onboard page or story runner page to hide SubNavigation
+  const hideSubNavigation = location.pathname.includes('/play/onboard') || location.pathname.includes('/play/run');
 
   // Check if we're on the play onboard page for header title
   const isPlayOnboardPage = location.pathname.includes('/play/onboard');
+  
+  // Check if we're on the story runner page
+  const isStoryRunnerPage = location.pathname.includes('/play/run');
 
   // Header configuration based on route
   const getHeaderConfig = () => {
     if (isPlayOnboardPage) {
       return {
         title: "The World Is Waiting For You",
+        actions: [
+          {
+            type: "search",
+            icon: IconSearch,
+            label: "Search",
+            onClick: openSearchModal,
+          },
+          {
+            type: "save",
+            icon: IconBookmark,
+            label: "Save",
+            onClick: () => console.log("Save clicked"),
+          },
+          {
+            type: "menu",
+            icon: IconDots,
+            label: "More",
+            onClick: () => setIsKebabOpen(!isKebabOpen),
+          },
+        ],
+      };
+    }
+
+    if (isStoryRunnerPage) {
+      return {
+        title: "In the Scene",
         actions: [
           {
             type: "search",
@@ -655,14 +687,27 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
 
                 {/* Bottom: user avatar only */}
                 <div className="mt-auto pb-spacing-md w-full flex items-center justify-center">
-                  <NavItem
-                    variant="icon"
-                    icon={
-                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
-                        <IconUser className="w-4 h-4" />
-                      </span>
-                    }
-                  />
+                  {user ? (
+                    <NavItem
+                      variant="icon"
+                      icon={
+                        <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
+                          <IconUser className="w-4 h-4" />
+                        </span>
+                      }
+                    />
+                  ) : (
+                    <NavItem
+                      variant="icon"
+                      icon={
+                        <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
+                          <IconGoogle className="w-4 h-4" />
+                        </span>
+                      }
+                      onClick={() => login(window.location.pathname)}
+                      title="Sign in to start your story"
+                    />
+                  )}
                 </div>
               </div>
             ) : (
@@ -742,16 +787,37 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                   </div>
 
                   {/* User profile */}
-                  <NavItem
-                    variant="icon+text"
-                    label="FirstName LastName"
-                    className="mt-spacing-xl"
-                    icon={
-                      <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
-                        <IconUser className="w-4 h-4" />
-                      </span>
-                    }
-                  />
+                  {user ? (
+                    <div className="mt-spacing-xl">
+                      <NavItem
+                        variant="icon+text"
+                        label={user.identity?.displayName || user.email || "User"}
+                        icon={
+                          <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
+                            <IconUser className="w-4 h-4" />
+                          </span>
+                        }
+                      />
+                      <NavItem
+                        variant="text"
+                        label="🚪 Logout"
+                        className="mt-spacing-sm text-text-secondary hover:text-accent transition-colors cursor-pointer"
+                        onClick={logout}
+                      />
+                    </div>
+                  ) : (
+                    <NavItem
+                      variant="icon+text"
+                      label="Continue with Google"
+                      className="mt-spacing-xl"
+                      icon={
+                        <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
+                          <IconGoogle className="w-4 h-4" />
+                        </span>
+                      }
+                      onClick={() => login(window.location.pathname)}
+                    />
+                  )}
                 </div>
               </div>
             )}

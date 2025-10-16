@@ -7,32 +7,37 @@ import { PlayPage } from './PlayPage';
 import { StoriesFeedPage } from '../pages/StoriesFeedPage';
 import { StoryDetailsPage } from '../pages/StoryDetailsPage';
 import PlayOnboardPage from '../pages/PlayOnboardPage';
+import StoryRunnerPage from '../pages/StoryRunnerPage';
 const StyleGuide = React.lazy(() => import('../pages/StyleGuide'));
 import { StyleGuideLayout } from '../layouts/StyleGuideLayout';
 import { UI_BG_TOKENS } from '../pages/tokens';
+import { AuthProvider } from '../context/AuthProvider';
 
 export const AppPublic: React.FC = () => {
   return (
-    <Routes>
-      <Route path="/play" element={
-        <AppGridLayout>
-          <PlayPage />
-        </AppGridLayout>
-      } />
-      <Route path="/app" element={<AppGridLayout />}>
-        <Route index element={<StoriesFeedPage />} />
-        <Route path="stories/:slug" element={<StoryDetailsPage />} />
-        <Route path="play/onboard/:storySlug/:characterSlug" element={<PlayOnboardPage />} />
-      </Route>
-      <Route path="/styleguide" element={
-        <React.Suspense fallback={<div className="p-8 text-text-primary">Loading Style Guide…</div>}>
-          <StyleGuideLayout bgClass={UI_BG_TOKENS.muted}>
-            <StyleGuide />
-          </StyleGuideLayout>
-        </React.Suspense>
-      } />
-      <Route path="*" element={<LandingGridLayout right={<LandingFeed />} />} />
-    </Routes>
+    <AuthProvider>
+      <Routes>
+        <Route path="/play" element={
+          <AppGridLayout>
+            <PlayPage />
+          </AppGridLayout>
+        } />
+        <Route path="/app" element={<AppGridLayout />}>
+          <Route index element={<StoriesFeedPage />} />
+          <Route path="stories/:slug" element={<StoryDetailsPage />} />
+          <Route path="play/onboard/:storySlug/:characterSlug" element={<PlayOnboardPage />} />
+          <Route path="play/run/:storySlug/:characterSlug" element={<StoryRunnerPage />} />
+        </Route>
+        <Route path="/styleguide" element={
+          <React.Suspense fallback={<div className="p-8 text-text-primary">Loading Style Guide…</div>}>
+            <StyleGuideLayout bgClass={UI_BG_TOKENS.muted}>
+              <StyleGuide />
+            </StyleGuideLayout>
+          </React.Suspense>
+        } />
+        <Route path="*" element={<LandingGridLayout right={<LandingFeed />} />} />
+      </Routes>
+    </AuthProvider>
   );
 };
 

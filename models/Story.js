@@ -38,6 +38,7 @@ const characterSchema = new Schema(
   {
     id: { type: String, required: true, trim: true },
     name: { type: String, required: true, trim: true },
+    slug: { type: String, trim: true, default: "" },
     displayName: {
       type: String,
       trim: true,

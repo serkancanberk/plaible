@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStoryBySlug } from '../hooks/useStoryBySlug';
-import { useUser } from '../hooks/useUser';
+import { useAuth } from '../hooks/useAuth';
 import StorySettingsModal from '../components/ui/modals/StorySettingsModal';
 import ChangeCharacterModal from '../components/ui/modals/ChangeCharacterModal';
 import C2AButton from '../components/C2AButton';
@@ -17,7 +17,7 @@ const PlayOnboardPage: React.FC = () => {
   const { storySlug, characterSlug } = useParams<{ storySlug: string; characterSlug: string }>();
   const navigate = useNavigate();
   const { data: story, loading: storyLoading, error: storyError } = useStoryBySlug(storySlug);
-  const { data: user, loading: userLoading } = useUser();
+  const { user, isLoading: userLoading } = useAuth();
   const { selectedToneStyle, selectedTimeFlavor } = useStorySettingsContext();
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
   const [showCharacterModal, setShowCharacterModal] = useState(false);
@@ -89,10 +89,16 @@ const PlayOnboardPage: React.FC = () => {
 
   // Handle start button click with animation
   const handleStart = () => {
+    if (!user) {
+      // Redirect to login with current path as redirect
+      window.location.href = `/api/auth/google?redirect=${encodeURIComponent(window.location.pathname)}`;
+      return;
+    }
+    
     setIsStarting(true);
     // Navigate after animation completes
     setTimeout(() => {
-      navigate(`/app/play/session/${storySlug}/${characterSlug}`);
+      navigate(`/app/play/run/${storySlug}/${characterSlug}`);
     }, 400);
   };
 

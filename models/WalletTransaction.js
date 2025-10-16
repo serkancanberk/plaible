@@ -147,4 +147,45 @@ walletTransactionSchema.statics.getTransactionStats = async function(options = {
   };
 };
 
+// Static method to create a deduction transaction
+walletTransactionSchema.statics.createDeduct = async function(userId, amount, storyId, chapter, reason) {
+  try {
+    // Get current user balance
+    const { User } = await import('./User.js');
+    const user = await User.findById(userId).lean();
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    const currentBalance = user.wallet?.balance || 0;
+    const newBalance = currentBalance - amount;
+    
+    if (newBalance < 0) {
+      throw new Error('Insufficient balance for deduction');
+    }
+    
+    // Create the transaction
+    const transaction = new this({
+      userId: new mongoose.Types.ObjectId(userId),
+      type: 'debit',
+      source: 'play',
+      amount: amount,
+      balanceAfter: newBalance,
+      note: reason,
+      metadata: {
+        storyId: storyId,
+        sessionId: `chapter-${chapter}`
+      }
+    });
+    
+    const savedTransaction = await transaction.save();
+    console.log(`✅ WalletTransaction created: ${amount} credits deducted for user ${userId}`);
+    
+    return savedTransaction;
+  } catch (error) {
+    console.error('❌ WalletTransaction.createDeduct error:', error);
+    throw error;
+  }
+};
+
 export const WalletTransaction = mongoose.models.WalletTransaction || mongoose.model("WalletTransaction", walletTransactionSchema);

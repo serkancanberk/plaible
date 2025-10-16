@@ -38,6 +38,8 @@ const StorySettingsContext = createContext<StorySettingsContextType | undefined>
 export const useStorySettingsContext = () => {
   const context = useContext(StorySettingsContext);
   if (!context) {
+    console.warn("⚠️ StorySettingsProvider is missing in the React tree!");
+    console.warn("⚠️ Make sure StoryRunnerPage is wrapped with StorySettingsProvider");
     throw new Error('useStorySettingsContext must be used within a StorySettingsProvider');
   }
   return context;

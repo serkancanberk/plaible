@@ -23,6 +23,7 @@ export type NavItemProps = {
   active?: boolean;
   className?: string;
   collapsed?: boolean;
+  title?: string; // Added for accessibility
 };
 
 const PlaceholderIcon: React.FC = () => (
@@ -38,6 +39,7 @@ export default function NavItem({
   active = false,
   className,
   collapsed = false,
+  title,
 }: NavItemProps) {
   const isMuted = variant === 'text-muted';
   const isTertiary = variant === 'icon-tertiary' || variant === 'icon+text-tertiary' || variant === 'text-tertiary' || variant === 'text+icon-tertiary';
@@ -99,7 +101,7 @@ export default function NavItem({
   // For 'text-muted', render a non-interactive element regardless of href/onClick
   if (isMuted) {
     return (
-      <span className={baseClasses.join(' ')} aria-disabled="true" tabIndex={-1}>
+      <span className={baseClasses.join(' ')} aria-disabled="true" tabIndex={-1} title={title}>
         {label}
       </span>
     );
@@ -182,7 +184,7 @@ export default function NavItem({
 
   if (href) {
     return (
-      <a href={href} className={classes}>
+      <a href={href} className={classes} title={title}>
         {content}
       </a>
     );
@@ -190,13 +192,13 @@ export default function NavItem({
 
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={classes}>
+      <button type="button" onClick={onClick} className={classes} title={title}>
         {content}
       </button>
     );
   }
 
   return (
-    <div className={classes}>{content}</div>
+    <div className={classes} title={title}>{content}</div>
   );
 }

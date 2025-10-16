@@ -13,7 +13,7 @@ export async function fetchJson<T>(url: string, init: JsonInit = {}, signal?: Ab
         ...(init.headers || {}),
       },
       signal: combinedSignal,
-      credentials: init.credentials ?? 'same-origin',
+      credentials: init.credentials ?? 'include',
     });
 
     if (!res.ok) {

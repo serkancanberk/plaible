@@ -130,7 +130,7 @@ app.get("/api/health", (req, res) => {
 const devFallbackUserId = new mongoose.Types.ObjectId("64b7cafe1234567890cafe12");
 export function authGuard(req, res, next) {
   console.log("DEBUG authGuard -> cookies:", req.cookies);
-  const token = req.cookies?.admin_token || req.cookies?.plaible_jwt;
+  const token = req.cookies?.admin_token || req.cookies?.user_token || req.cookies?.plaible_jwt;
   console.log("DEBUG authGuard -> raw token:", token);
   
   if (token) {

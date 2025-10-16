@@ -9,6 +9,8 @@ import { User } from '../models/User.js';
 import { StoryPrompt } from '../src/models/storyPromptModel.js';
 import { generateStoryPrompt } from '../src/utils/generateStoryPrompt.js';
 import { generateFirstChapter } from '../utils/storyEngine.js';
+import StoryRunnerMessage from '../models/StoryRunnerMessage.js';
+import { generateStart } from '../services/llmProvider.js';
 
 const router = express.Router();
 
@@ -235,13 +237,17 @@ router.post('/start', async (req, res) => {
       });
     }
 
-    // 2. Validate that story exists
-    const story = await Story.findById(storyId);
+    // 2. Validate that story exists (try by ID first, then by slug)
+    let story = await Story.findById(storyId);
     if (!story) {
-      return res.status(404).json({
-        success: false,
-        error: 'Story not found'
-      });
+      // Try to find by slug if not found by ID
+      story = await Story.findOne({ slug: storyId });
+      if (!story) {
+        return res.status(404).json({
+          success: false,
+          error: 'Story not found'
+        });
+      }
     }
 
     // 3. Get story settings for default values
@@ -355,18 +361,68 @@ router.post('/start', async (req, res) => {
     await storyPrompt.save();
     console.log('✅ System prompt saved to story_prompts collection');
 
-    // 10. Return response
+    // 10. Generate initial assistant message
+    const startTime = Date.now();
+    const llmResponse = await generateStart({
+      story: story,
+      characterId: req.body.characterId || 'default',
+      roleIds: req.body.roleIds || []
+    });
+    
+    const latency = Date.now() - startTime;
+    
+    // 11. Create initial assistant message
+    const initialMessage = new StoryRunnerMessage({
+      sessionId: savedSession._id,
+      role: 'assistant',
+      content: llmResponse.text || 'Welcome to your story adventure!',
+      choices: llmResponse.choices || ['Continue', 'Explore'],
+      metadata: {
+        chapter: 1,
+        beat: 1,
+        tokenUsage: {
+          prompt: 0, // Will be updated when we implement token tracking
+          completion: 0,
+          total: 0
+        },
+        model: 'gpt-4o-mini',
+        finishReason: 'stop',
+        latency: latency
+      }
+    });
+
+    const savedMessage = await initialMessage.save();
+    console.log('✅ Initial message created:', savedMessage._id);
+
+    // 12. Update session with message tracking
+    await savedSession.addMessage(savedMessage._id, 0);
+
+    // 13. Return response with first message
     res.status(201).json({
-      success: true,
-      data: {
-        sessionId: savedSession._id.toString(),
-        storyPrompt: generatedPrompt,
-        storyId: storyId,
-        toneStyleId: finalToneStyleId,
-        timeFlavorId: finalTimeFlavorId,
-        storyTitle: story.title,
-        authorName: story.authorName,
-        sessionStartedAt: savedSession.sessionStartedAt
+      ok: true,
+      sessionId: savedSession._id.toString(),
+      firstMessage: {
+        id: savedMessage._id.toString(),
+        role: savedMessage.role,
+        content: savedMessage.content,
+        choices: savedMessage.choices,
+        metadata: {
+          chapter: savedMessage.metadata.chapter,
+          beat: savedMessage.metadata.beat
+        }
+      },
+      story: {
+        title: story.title,
+        slug: story.slug,
+        character: {
+          id: req.body.characterId || 'default',
+          name: story.characters?.find(c => c.id === req.body.characterId)?.name || 'Your Character',
+          displayName: story.characters?.find(c => c.id === req.body.characterId)?.displayName || 'Your Character'
+        }
+      },
+      settings: {
+        toneStyle: finalToneStyleId,
+        timeFlavor: finalTimeFlavorId
       }
     });
 
@@ -525,6 +581,197 @@ router.post('/continue', async (req, res) => {
     console.error('Error continuing story:', error);
     res.status(500).json({
       success: false,
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/storyrunner/turn
+ * Process a user turn in the story
+ */
+router.post('/turn', async (req, res) => {
+  try {
+    const { sessionId, userMessage, choiceId, clientTurnId } = req.body;
+
+    if (!sessionId || !userMessage) {
+      return res.status(400).json({
+        ok: false,
+        error: 'sessionId and userMessage are required'
+      });
+    }
+
+    console.log('🎭 Processing turn for session:', sessionId);
+
+    // 1. Get session and validate
+    const session = await UserStorySession.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Session not found'
+      });
+    }
+
+    if (session.status !== 'active') {
+      return res.status(400).json({
+        ok: false,
+        error: 'Session is not active'
+      });
+    }
+
+    // 2. Get story details
+    const story = await Story.findById(session.storyId);
+    if (!story) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Story not found'
+      });
+    }
+
+    // 3. Save user message
+    const userMessageDoc = new StoryRunnerMessage({
+      sessionId: session._id,
+      role: 'user',
+      content: userMessage,
+      metadata: {
+        chapter: session.progress.currentChapter,
+        beat: session.progress.currentBeat,
+        tokenUsage: { prompt: 0, completion: 0, total: 0 },
+        model: 'user',
+        finishReason: 'user_input',
+        latency: 0
+      }
+    });
+
+    const savedUserMessage = await userMessageDoc.save();
+    await session.addMessage(savedUserMessage._id, 0);
+
+    // 4. Generate assistant response
+    const startTime = Date.now();
+    const { generateTurn } = await import('../services/llmProvider.js');
+    
+    const llmResponse = await generateTurn({
+      story: story,
+      session: session,
+      chosen: choiceId,
+      freeText: userMessage
+    });
+    
+    const latency = Date.now() - startTime;
+
+    // 5. Save assistant message
+    const assistantMessage = new StoryRunnerMessage({
+      sessionId: session._id,
+      role: 'assistant',
+      content: llmResponse.text || 'The story continues...',
+      choices: llmResponse.choices || ['Continue', 'Explore'],
+      metadata: {
+        chapter: session.progress.currentChapter,
+        beat: session.progress.currentBeat,
+        tokenUsage: {
+          prompt: 0, // Will be updated when we implement token tracking
+          completion: 0,
+          total: 0
+        },
+        model: 'gpt-4o-mini',
+        finishReason: 'stop',
+        latency: latency
+      }
+    });
+
+    const savedAssistantMessage = await assistantMessage.save();
+    await session.addMessage(savedAssistantMessage._id, 0);
+
+    // 6. Update session progress if needed
+    if (choiceId) {
+      await session.recordChoice(savedAssistantMessage._id, choiceId);
+      await session.advanceBeat();
+    }
+
+    // 7. Return response
+    res.json({
+      ok: true,
+      sessionId: sessionId,
+      assistantMessage: {
+        id: savedAssistantMessage._id.toString(),
+        role: savedAssistantMessage.role,
+        content: savedAssistantMessage.content,
+        choices: savedAssistantMessage.choices,
+        metadata: {
+          chapter: savedAssistantMessage.metadata.chapter,
+          beat: savedAssistantMessage.metadata.beat,
+          tokenUsage: savedAssistantMessage.metadata.tokenUsage,
+          latency: savedAssistantMessage.metadata.latency
+        }
+      },
+      progress: {
+        chapter: session.progress.currentChapter,
+        beat: session.progress.currentBeat,
+        completed: session.progress.completed
+      }
+    });
+
+  } catch (error) {
+    console.error('Error processing turn:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/storyrunner/session/:id/messages
+ * Get all messages for a session with pagination
+ */
+router.get('/session/:id/messages', async (req, res) => {
+  try {
+    const { id: sessionId } = req.params;
+    const { limit = 50, offset = 0 } = req.query;
+
+    // Validate session exists
+    const session = await UserStorySession.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Session not found'
+      });
+    }
+
+    // Get messages with pagination
+    const messages = await StoryRunnerMessage.getMessagesForSession(
+      sessionId, 
+      parseInt(limit), 
+      parseInt(offset)
+    );
+
+    // Get total count
+    const totalCount = await StoryRunnerMessage.getMessageCount(sessionId);
+
+    res.json({
+      ok: true,
+      messages: messages.map(msg => ({
+        id: msg._id.toString(),
+        role: msg.role,
+        content: msg.content,
+        choices: msg.choices,
+        metadata: msg.metadata,
+        createdAt: msg.createdAt
+      })),
+      pagination: {
+        total: totalCount,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        hasMore: (parseInt(offset) + parseInt(limit)) < totalCount
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    res.status(500).json({
+      ok: false,
       error: 'Internal server error',
       details: error.message
     });

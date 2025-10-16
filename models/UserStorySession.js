@@ -94,6 +94,61 @@ const userStorySessionSchema = new Schema(
         interactionStyle: { type: String, enum: ["passive", "interactive", "immersive"], default: "interactive" }
       },
       default: {}
+    },
+
+    // Message tracking fields
+    messageCount: { 
+      type: Number, 
+      default: 0,
+      min: 0
+    },
+    
+    totalTokensUsed: { 
+      type: Number, 
+      default: 0,
+      min: 0
+    },
+    
+    lastMessageAt: { 
+      type: Date 
+    },
+    
+    // Conversation context management
+    conversationContext: {
+      recentMessages: [{ 
+        type: Schema.Types.ObjectId, 
+        ref: "StoryRunnerMessage" 
+      }],
+      contextSummary: String,
+      lastContextUpdate: Date,
+    },
+    
+    // Enhanced progress tracking
+    progress: {
+      currentChapter: { 
+        type: Number, 
+        default: 1,
+        min: 1
+      },
+      currentBeat: { 
+        type: Number, 
+        default: 1,
+        min: 1
+      },
+      choicesMade: [
+        {
+          messageId: { 
+            type: Schema.Types.ObjectId, 
+            ref: "StoryRunnerMessage" 
+          },
+          choiceId: String,
+          timestamp: Date,
+        },
+      ],
+      completed: { 
+        type: Boolean, 
+        default: false 
+      },
     }
   },
   { 
@@ -176,13 +231,6 @@ userStorySessionSchema.methods.updateActivity = function() {
   return this.save();
 };
 
-// Instance method to advance to next chapter
-userStorySessionSchema.methods.advanceChapter = function() {
-  this.currentChapter += 1;
-  this.chaptersGenerated += 1;
-  this.lastActivityAt = new Date();
-  return this.save();
-};
 
 // Instance method to finish session
 userStorySessionSchema.methods.finishSession = function() {
@@ -194,6 +242,48 @@ userStorySessionSchema.methods.finishSession = function() {
 // Instance method to abandon session
 userStorySessionSchema.methods.abandonSession = function() {
   this.status = "abandoned";
+  this.lastActivityAt = new Date();
+  return this.save();
+};
+
+// Instance method to add a message to the session
+userStorySessionSchema.methods.addMessage = function(messageId, tokenUsage = 0) {
+  this.messageCount += 1;
+  this.totalTokensUsed += tokenUsage;
+  this.lastMessageAt = new Date();
+  
+  // Add to recent messages (keep last 10)
+  this.conversationContext.recentMessages.push(messageId);
+  if (this.conversationContext.recentMessages.length > 10) {
+    this.conversationContext.recentMessages = this.conversationContext.recentMessages.slice(-10);
+  }
+  
+  this.conversationContext.lastContextUpdate = new Date();
+  return this.save();
+};
+
+// Instance method to record a choice made by the user
+userStorySessionSchema.methods.recordChoice = function(messageId, choiceId) {
+  this.progress.choicesMade.push({
+    messageId,
+    choiceId,
+    timestamp: new Date()
+  });
+  return this.save();
+};
+
+// Instance method to advance beat
+userStorySessionSchema.methods.advanceBeat = function() {
+  this.progress.currentBeat += 1;
+  this.lastActivityAt = new Date();
+  return this.save();
+};
+
+// Instance method to advance chapter
+userStorySessionSchema.methods.advanceChapter = function() {
+  this.progress.currentChapter += 1;
+  this.progress.currentBeat = 1; // Reset beat when advancing chapter
+  this.chaptersGenerated += 1;
   this.lastActivityAt = new Date();
   return this.save();
 };

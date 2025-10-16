@@ -2,13 +2,19 @@ import { Router } from "express";
 import passport from "passport";
 import "../auth/passport.js";
 import { signJwt, verifyJwt } from "../auth/config.js";
+import { User } from "../models/User.js";
+import { RefreshToken } from "../models/RefreshToken.js";
+import passportCore from "passport";
+
+// Environment variables
 const FE_ORIGIN = process.env.FE_ORIGIN || "/";
 const NODE_ENV = process.env.NODE_ENV || "development";
 const isProduction = NODE_ENV === "production";
 const FORCE_SECURE_COOKIE = String(process.env.FORCE_SECURE_COOKIE || "").toLowerCase() === "true";
-import { User } from "../models/User.js";
-import { RefreshToken } from "../models/RefreshToken.js";
-import passportCore from "passport";
+
+// Frontend URLs from environment
+const PUBLIC_FRONTEND_URL = process.env.PUBLIC_FRONTEND_URL || "http://localhost:5173";
+const ADMIN_FRONTEND_URL = process.env.ADMIN_FRONTEND_URL || "http://localhost:5174/admin.html#/users";
 
 const router = Router();
 
@@ -40,6 +46,12 @@ router.get("/google", (req, res, next) => {
   if (process.env.NODE_ENV === "development" && process.env.AUTH_DEBUG === "1") {
     console.log("[auth] HIT /api/auth/google");
   }
+  
+  // Store redirect URL for after authentication
+  const redirectUrl = req.query.redirect || '/app';
+  req.session = req.session || {};
+  req.session.oauthRedirect = redirectUrl;
+  
   const forceConsent =
     String(process.env.GOOGLE_FORCE_CONSENT || "").toLowerCase() === "true" ||
     req.query.force === "1";
@@ -47,7 +59,7 @@ router.get("/google", (req, res, next) => {
     scope: ["profile", "email"],
   };
   if (forceConsent) {
-    // Force Google’s consent screen every time
+    // Force Google's consent screen every time
     opts.prompt = "consent";
     // Optional: get refresh token in real app flows
     // opts.accessType = "offline";
@@ -62,81 +74,61 @@ router.get(
   passport.authenticate("google", { session: false, failureRedirect: "/api/auth/failure" }),
   async (req, res) => {
     try {
-      console.log("DEBUG ENV:", {
-        PUBLIC_FRONTEND_URL: process.env.PUBLIC_FRONTEND_URL,
-        ADMIN_FRONTEND_URL: process.env.ADMIN_FRONTEND_URL,
-      });
-      
       const user = req.user;
-      const userEmail = user.email?.toLowerCase();
-      const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
-      
-      // Check if this is an admin user
-      const isAdmin = adminEmail && userEmail === adminEmail;
-      
-      // Determine redirect target with proper priority order
-      const redirectUrl =
-        req.query.redirect ||
-        process.env.ADMIN_FRONTEND_URL ||
-        process.env.PUBLIC_FRONTEND_URL ||
-        "/";
+      const isAdmin = Array.isArray(user.roles) && user.roles.includes('admin');
+      const storedRedirect = req.session?.oauthRedirect;
+      const PUBLIC_FRONTEND_URL =
+        process.env.PUBLIC_FRONTEND_URL || 'http://localhost:5173';
+      const ADMIN_FRONTEND_URL =
+        process.env.ADMIN_FRONTEND_URL || 'http://localhost:5174/admin.html#/users';
 
+      console.log('============================');
+      console.log('🎯 [OAUTH CALLBACK TRIGGERED]');
+      console.log('User:', user.email);
+      console.log('Roles:', user.roles);
+      console.log('Stored Redirect:', storedRedirect);
+      console.log('============================');
+
+      // clear session redirect
+      if (req.session) delete req.session.oauthRedirect;
+
+      // generate JWT for user
+      const token = signJwt({ 
+        sub: user._id.toString(),
+        email: user.email,
+        name: user.identity?.displayName || user.fullName,
+        role: isAdmin ? 'admin' : 'user'
+      }, { expiresIn: isAdmin ? '1h' : '7d' });
+
+      // set appropriate cookie
       if (isAdmin) {
-        // Issue admin JWT cookie for admin dashboard
-        const adminToken = signJwt({ 
-          sub: user._id.toString(),
-          email: user.email,
-          name: user.identity?.displayName || user.fullName,
-          role: 'admin'
-        }, { expiresIn: '1h' });
-        
-        // Create refresh token
-        const userAgent = req.get('User-Agent') || '';
-        const ipAddress = req.ip || req.connection.remoteAddress || '';
-        const refreshTokenDoc = await RefreshToken.createToken(
-          user._id, 
-          user.email, 
-          userAgent, 
-          ipAddress
-        );
-        
-        const adminCookieOpts = {
+        res.cookie('admin_token', token, {
           httpOnly: true,
-          sameSite: isProduction ? "strict" : "lax",
-          secure: isProduction || FORCE_SECURE_COOKIE,
+          secure: process.env.NODE_ENV === 'production',
           maxAge: 60 * 60 * 1000, // 1 hour
-          path: "/",
-        };
-        
-        const refreshCookieOpts = {
-          httpOnly: true,
-          sameSite: isProduction ? "strict" : "lax",
-          secure: isProduction || FORCE_SECURE_COOKIE,
-          maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-          path: "/",
-        };
-        
-        res.cookie("admin_token", adminToken, adminCookieOpts);
-        res.cookie("admin_refresh_token", refreshTokenDoc.token, refreshCookieOpts);
-        
-        console.log("Admin login successful:", user.email);
-        return res.redirect(redirectUrl);
+        });
+
+        console.log('✅ Redirecting admin user to:', ADMIN_FRONTEND_URL);
+        return res.redirect(ADMIN_FRONTEND_URL);
       } else {
-        // Regular user - issue regular JWT cookie
-        const token = signJwt({ sub: user._id.toString() });
-        const cookieOpts = {
+        res.cookie('plaible_jwt', token, {
           httpOnly: true,
-          sameSite: isProduction ? "lax" : "lax",
-          secure: isProduction || FORCE_SECURE_COOKIE,
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-          path: "/",
-        };
-        res.cookie("plaible_jwt", token, cookieOpts);
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+
+        const redirectPath =
+          storedRedirect && storedRedirect.startsWith('/app')
+            ? storedRedirect
+            : '/app';
+        const redirectUrl = `${PUBLIC_FRONTEND_URL}${redirectPath}`;
+
+        console.log('🌍 Redirecting public user to:', redirectUrl);
         return res.redirect(redirectUrl);
       }
-    } catch (e) {
-      console.error("JWT issue in callback", e);
-      return res.redirect("/api/auth/failure");
+    } catch (error) {
+      console.error('❌ [OAUTH CALLBACK ERROR]', error);
+      return res.redirect('/api/auth/failure');
     }
   }
 );
@@ -254,29 +246,51 @@ router.post("/admin/refresh", async (req, res) => {
 
 // Logout
 router.post("/logout", async (req, res) => {
-  const cookieOpts = {
-    httpOnly: true,
-    sameSite: isProduction ? "strict" : "lax",
-    secure: isProduction || FORCE_SECURE_COOKIE,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: "/",
-  };
-  
-  // Revoke admin refresh token if present
-  const adminRefreshToken = req.cookies?.admin_refresh_token;
-  if (adminRefreshToken) {
-    try {
-      await RefreshToken.revokeToken(adminRefreshToken);
-      console.log("Admin refresh token revoked on logout");
-    } catch (error) {
-      console.error("Error revoking admin refresh token:", error);
+  try {
+    console.log('👋 User logout initiated');
+    
+    const cookieOpts = {
+      httpOnly: true,
+      sameSite: isProduction ? "strict" : "lax",
+      secure: isProduction || FORCE_SECURE_COOKIE,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/",
+    };
+    
+    // Revoke admin refresh token if present
+    const adminRefreshToken = req.cookies?.admin_refresh_token;
+    if (adminRefreshToken) {
+      try {
+        await RefreshToken.revokeToken(adminRefreshToken);
+        console.log("Admin refresh token revoked on logout");
+      } catch (error) {
+        console.error("Error revoking admin refresh token:", error);
+      }
     }
+    
+    // Clear all auth cookies
+    res.clearCookie("plaible_jwt", { ...cookieOpts });
+    res.clearCookie("admin_token", { ...cookieOpts });
+    res.clearCookie("admin_refresh_token", { ...cookieOpts });
+    res.clearCookie("connect.sid", { httpOnly: true, sameSite: 'lax' });
+    
+    // Clear session if it exists
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Session destroy error:", err);
+        } else {
+          console.log("Session cleared successfully");
+        }
+      });
+    }
+    
+    console.log('✅ User logged out successfully');
+    return res.status(200).json({ message: 'Logout successful' });
+  } catch (err) {
+    console.error('❌ Logout error:', err);
+    return res.status(500).json({ message: 'Logout failed' });
   }
-  
-  res.clearCookie("plaible_jwt", { ...cookieOpts });
-  res.clearCookie("admin_token", { ...cookieOpts });
-  res.clearCookie("admin_refresh_token", { ...cookieOpts });
-  return res.json({ ok: true });
 });
 
 // GET alias for logout (dev convenience)
