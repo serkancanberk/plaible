@@ -82,7 +82,7 @@ const StoryRunnerPage: React.FC = () => {
   // Show loading state while session is being created
   if (isSessionLoading) {
     return (
-      <div className="flex flex-col h-screen bg-secondary">
+      <div className="flex flex-1 min-h-0 flex-col bg-secondary">
         <div className="flex-1 flex items-center justify-center">
           <div className="text-body text-text-secondary">Starting your story session...</div>
         </div>
@@ -93,7 +93,7 @@ const StoryRunnerPage: React.FC = () => {
   // Show payment prompt for HTTP 402 errors
   if (sessionError && (sessionError.includes('402') || sessionError.includes('PAYMENT') || sessionError.includes('INSUFFICIENT_CREDITS'))) {
     return (
-      <div className="flex flex-col h-screen bg-secondary">
+      <div className="flex flex-1 min-h-0 flex-col bg-secondary">
         <StoryPaymentPrompt
           onAddCredits={() => {
             // Placeholder top-up flow trigger
@@ -117,7 +117,7 @@ const StoryRunnerPage: React.FC = () => {
 
   return (
     <AuthGuard>
-      <div className="flex flex-col h-screen bg-secondary">
+      <div className="flex flex-1 min-h-0 flex-col bg-secondary">
         {/* Error Alert */}
         {hasError && (
           <div className="text-center mt-spacing-lg">

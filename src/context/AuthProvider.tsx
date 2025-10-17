@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUserSessions, type UserSessionItem } from '../hooks/useUserSessions';
 import { useSavedStories, type SavedStoryItem } from '../hooks/useSavedStories';
 
@@ -36,6 +37,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   // Additional user-scoped data
   const { sessions, fetchSessions, clearSessions } = useUserSessions();
@@ -118,7 +120,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('[DATA_FETCH] Fetching sessions & savedStories for', user?.email);
     fetchSessions(user?.email);
     fetchSavedStories(user?.email);
-  }, [user?._id, fetchSessions, fetchSavedStories]);
+    
+    // Handle post-login redirect
+    const returnTo = localStorage.getItem("returnTo");
+    const pendingStory = localStorage.getItem("pendingStory");
+    
+    if (returnTo) {
+      console.log('[LOGIN_REDIRECT] Redirecting to saved path:', returnTo);
+      navigate(returnTo);
+      localStorage.removeItem("returnTo");
+      
+      if (pendingStory) {
+        try {
+          const { storySlug, characterSlug } = JSON.parse(pendingStory);
+          console.log('[LOGIN_REDIRECT] Restored story context:', { storySlug, characterSlug });
+          localStorage.removeItem("pendingStory");
+        } catch (error) {
+          console.error('[LOGIN_REDIRECT] Failed to parse pending story:', error);
+          localStorage.removeItem("pendingStory");
+        }
+      }
+    }
+  }, [user?._id, fetchSessions, fetchSavedStories, navigate]);
 
   // Merge fetched lists into user object to expose via context
   useEffect(() => {

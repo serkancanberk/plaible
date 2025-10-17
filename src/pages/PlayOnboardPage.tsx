@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStoryBySlug } from '../hooks/useStoryBySlug';
 import { useAuth } from '../hooks/useAuth';
@@ -16,6 +16,7 @@ import IconSettings from 'virtual:icons/tabler/settings';
 const PlayOnboardPage: React.FC = () => {
   const { storySlug, characterSlug } = useParams<{ storySlug: string; characterSlug: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: story, loading: storyLoading, error: storyError } = useStoryBySlug(storySlug);
   const { user, isLoading: userLoading } = useAuth();
   const { selectedToneStyle, selectedTimeFlavor } = useStorySettingsContext();
@@ -90,8 +91,16 @@ const PlayOnboardPage: React.FC = () => {
   // Handle start button click with animation
   const handleStart = () => {
     if (!user) {
+      // Store current path and story/character info for post-login redirect
+      localStorage.setItem("returnTo", location.pathname);
+      if (storySlug && characterSlug) {
+        localStorage.setItem("pendingStory", JSON.stringify({ 
+          storySlug, 
+          characterSlug 
+        }));
+      }
       // Redirect to login with current path as redirect
-      window.location.href = `/api/auth/google?redirect=${encodeURIComponent(window.location.pathname)}`;
+      window.location.href = `/api/auth/google?redirect=${encodeURIComponent(location.pathname)}`;
       return;
     }
     
@@ -128,7 +137,7 @@ const PlayOnboardPage: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col justify-center items-center min-h-[calc(100vh-96px)] px-spacing-lg py-spacing-md">
+    <div className="flex flex-1 min-h-0 flex-col items-center justify-center px-spacing-lg py-spacing-md">
       <AnimatePresence>
         {!isStarting && (
           <motion.div

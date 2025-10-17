@@ -470,7 +470,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
 
   return (
     <StorySettingsProvider>
-      <div className="min-h-screen w-full bg-secondary">
+      <div className="flex h-screen w-full bg-secondary">
       {(() => {
         console.log('[Render] selectedMain =', selectedMain);
         console.log('[ROLLBACK] Layout and scroll behavior restored to previous stable version');
@@ -669,7 +669,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
         {/* Sidebar */}
         <aside
           className={[
-            'fixed left-0 top-0 h-screen bg-accent transition-all duration-300 ease-in-out lg:static lg:translate-x-0 lg:block',
+            'fixed left-0 top-0 h-screen bg-accent transition-all duration-300 ease-in-out lg:static lg:translate-x-0 lg:block overflow-y-auto border-r border-ui-muted',
             sidebarCollapsed ? 'w-20 lg:w-20' : 'w-64 lg:w-64',
             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           ].join(' ')}
@@ -949,8 +949,12 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
         </aside>
 
         {/* Content column */}
-        <div className="flex-1 h-full overflow-y-auto">
-          <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl flex flex-col">
+        <div className="flex-1 h-full flex flex-col">
+          {/* Header */}
+          
+          {/* Sticky header remains as-is below */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl flex flex-col">
             {/* Header */}
             <header className="sticky top-0 z-30 border-b border-text-secondary/30 bg-secondary">
               <div className="flex items-center justify-between px-spacing-md pt-spacing-2xl pb-spacing-sm">
@@ -1171,17 +1175,31 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
             )}
 
 
-            {/* Content area - replaced with Outlet for routing */}
-            <Outlet />
+            {/* Content area - unified scroll with conditional centering */}
+            {isStoryRunnerPage ? (
+              // Do NOT center StoryRunner; allow its internal chat region to manage scroll
+              <Outlet />
+            ) : isPlayOnboardPage ? (
+              // Center onboarding pages using grid for true visual centering
+              <div className="flex-1 min-h-0 grid place-items-center px-spacing-md py-spacing-lg">
+                <div className="w-full max-w-none">
+                  <Outlet />
+                </div>
+              </div>
+            ) : (
+              // Default: top-aligned natural scroll
+              <Outlet />
+            )}
           </div>
         </div>
+      </div>
+      </div>
       </div>
       </div>
       <GetTheAppModal open={isGetAppModalOpen} onClose={closeGetAppModal} />
       <SearchModal open={isSearchModalOpen} onClose={closeSearchModal} />
       <StorySettingsModal open={isStorySettingsModalOpen} onClose={() => setIsStorySettingsModalOpen(false)} />
       <ReportIssueModal open={isReportModalOpen} onClose={closeReportModal} />
-      </div>
     </StorySettingsProvider>
   );
 };
