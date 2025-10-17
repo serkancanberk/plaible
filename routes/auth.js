@@ -100,6 +100,13 @@ router.get(
         role: isAdmin ? 'admin' : 'user'
       }, { expiresIn: isAdmin ? '1h' : '7d' });
 
+      // generate refresh token (longer lifespan)
+      const refreshToken = signJwt({ 
+        sub: user._id.toString(),
+        email: user.email,
+        type: 'refresh'
+      }, { expiresIn: '30d' });
+
       // set appropriate cookie
       if (isAdmin) {
         res.cookie('admin_token', token, {
@@ -117,6 +124,14 @@ router.get(
           maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
 
+        // Set refresh token cookie (30 days)
+        res.cookie('refreshToken', refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        });
+
         const redirectPath =
           storedRedirect && storedRedirect.startsWith('/app')
             ? storedRedirect
@@ -132,6 +147,45 @@ router.get(
     }
   }
 );
+
+// Refresh authentication token
+router.get("/refresh", async (req, res) => {
+  try {
+    const { refreshToken } = req.cookies;
+    if (!refreshToken) {
+      return res.status(401).json({ error: "No refresh token" });
+    }
+
+    // Verify refresh token
+    const payload = verifyJwt(refreshToken);
+    const user = await User.findById(payload.sub || payload.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Generate new access token
+    const newAccessToken = signJwt({ 
+      sub: user._id.toString(),
+      email: user.email,
+      name: user.identity?.displayName || user.fullName,
+      role: Array.isArray(user.roles) && user.roles.includes('admin') ? 'admin' : 'user'
+    }, { expiresIn: '7d' });
+
+    // Set new access token cookie
+    res.cookie("plaible_jwt", newAccessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    console.log('[AUTH_REFRESH] Token refreshed successfully for user:', user.email);
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("[AUTH_REFRESH_ERROR]", err.message);
+    return res.status(401).json({ error: "Invalid or expired refresh token" });
+  }
+});
 
 // Current user
 router.get("/me", async (req, res) => {
@@ -286,6 +340,7 @@ router.post("/logout", async (req, res) => {
     res.clearCookie("plaible_jwt", { ...cookieOpts });
     res.clearCookie("admin_token", { ...cookieOpts });
     res.clearCookie("admin_refresh_token", { ...cookieOpts });
+    res.clearCookie("refreshToken", { ...cookieOpts });
     res.clearCookie("connect.sid", { httpOnly: true, sameSite: 'lax' });
     
     // Clear session if it exists
@@ -331,6 +386,7 @@ router.get('/logout', async (req, res) => {
   res.clearCookie('plaible_jwt', { ...cookieOpts });
   res.clearCookie('admin_token', { ...cookieOpts });
   res.clearCookie('admin_refresh_token', { ...cookieOpts });
+  res.clearCookie('refreshToken', { ...cookieOpts });
   return res.json({ ok: true });
 });
 

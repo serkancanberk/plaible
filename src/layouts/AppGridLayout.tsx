@@ -93,89 +93,18 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   // Check if we're on the story runner page
   const isStoryRunnerPage = location.pathname.includes('/play/run');
 
-  // Header configuration based on route
-  const getHeaderConfig = () => {
-    if (isPlayOnboardPage) {
-      return {
-        title: "The World Is Waiting For You",
-        actions: [
-          {
-            type: "search",
-            icon: IconSearch,
-            label: "Search",
-            onClick: openSearchModal,
-          },
-          {
-            type: "save",
-            icon: IconBookmark,
-            label: "Save",
-            onClick: () => console.log("Save clicked"),
-          },
-          {
-            type: "menu",
-            icon: IconDots,
-            label: "More",
-            onClick: () => setIsKebabOpen(!isKebabOpen),
-          },
-        ],
-      };
-    }
+  // Unified header configuration - consistent across all pages
+  const getUnifiedHeaderConfig = () => {
+    // Dynamic title based on page context
+    const getPageTitle = () => {
+      if (isPlayOnboardPage) return "The World Is Waiting For You";
+      if (isStoryRunnerPage) return "In the Scene";
+      if (isStoryDetailsPage) return "Step Into The Story";
+      return "Choose A Story";
+    };
 
-    if (isStoryRunnerPage) {
-      return {
-        title: "In the Scene",
-        actions: [
-          {
-            type: "search",
-            icon: IconSearch,
-            label: "Search",
-            onClick: openSearchModal,
-          },
-          {
-            type: "save",
-            icon: IconBookmark,
-            label: "Save",
-            onClick: () => console.log("Save clicked"),
-          },
-          {
-            type: "menu",
-            icon: IconDots,
-            label: "More",
-            onClick: () => setIsKebabOpen(!isKebabOpen),
-          },
-        ],
-      };
-    }
-
-    if (isStoryDetailsPage) {
-      return {
-        title: "Step Into The Story",
-        actions: [
-          {
-            type: "search",
-            icon: IconSearch,
-            label: "Search",
-            onClick: openSearchModal,
-          },
-          {
-            type: "save",
-            icon: IconBookmark,
-            label: "Save",
-            onClick: () => console.log("Save clicked"),
-          },
-          {
-            type: "menu",
-            icon: IconDots,
-            label: "More",
-            onClick: () => setIsKebabOpen(!isKebabOpen),
-          },
-        ],
-      };
-    }
-
-    // Default feed header
     return {
-      title: "Choose A Story",
+      title: getPageTitle(),
       actions: [
         {
           type: "search",
@@ -187,7 +116,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
           type: "add",
           icon: IconPlus,
           label: "Add",
-          onClick: () => console.log("Add clicked"),
+          onClick: handleAddAction,
         },
         {
           type: "menu",
@@ -197,6 +126,11 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
         },
       ],
     };
+  };
+
+  // Legacy header configuration (kept for reference during transition)
+  const getHeaderConfig = () => {
+    return getUnifiedHeaderConfig();
   };
 
   const typeOptions: Array<{ id: 'books' | 'stories' | 'biographies'; label: 'Books' | 'Stories' | 'Biographies' }> = [
@@ -247,6 +181,19 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
     } else {
       navigator.clipboard.writeText(window.location.href);
       console.log('Story link copied to clipboard');
+    }
+  };
+
+  // Context-aware Add action handler
+  const handleAddAction = () => {
+    if (isStoryDetailsPage || isPlayOnboardPage || isStoryRunnerPage) {
+      // Save story functionality for story-related pages
+      console.log("Save story clicked");
+      // TODO: Implement actual save story functionality
+    } else {
+      // Add new story functionality for feed page
+      console.log("Add new story clicked");
+      // TODO: Implement actual add story functionality
     }
   };
 
@@ -470,10 +417,12 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
 
   return (
     <StorySettingsProvider>
-      <div className="flex h-screen w-full bg-secondary">
+      <div className="block lg:flex min-h-screen w-full bg-secondary">
       {(() => {
         console.log('[Render] selectedMain =', selectedMain);
         console.log('[ROLLBACK] Layout and scroll behavior restored to previous stable version');
+        console.log('[MOBILE_HOTFIX] applied: mobile uses natural page scroll; removed h-screen/overflow on mobile branch');
+        console.log('[BACKGROUND_PATCH] applied: replaced h-screen with min-h-screen for continuous mobile background');
         return null;
       })()}
       {/* Mobile branch */}
@@ -483,8 +432,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
           items={[
             { label: 'Play' },
             { label: 'Message' },
-            { label: 'Search' },
-            { label: 'Add' },
+            { label: 'Search', onClick: openSearchModal },
+            { label: 'Add', onClick: handleAddAction },
             { 
               label: 'Your Stories',
               children: [
@@ -501,7 +450,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
         />
 
         {/* Mobile content only - no sidebar */}
-        <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl flex flex-col">
+        <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl">
           {/* Section heading */}
           <div className="px-spacing-md pt-spacing-2xl pb-spacing-sm">
             <div className="text-heading font-serif text-accent">{getHeaderConfig().title}</div>
@@ -1181,7 +1130,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
               <Outlet />
             ) : isPlayOnboardPage ? (
               // Center onboarding pages using grid for true visual centering
-              <div className="flex-1 min-h-0 grid place-items-center px-spacing-md py-spacing-lg">
+              <div className="px-spacing-md py-spacing-lg grid place-items-center">
                 <div className="w-full max-w-none">
                   <Outlet />
                 </div>

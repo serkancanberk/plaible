@@ -44,9 +44,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { savedStories, fetchSavedStories, clearSaved } = useSavedStories();
   const fetchedExtrasForUserIdRef = useRef<string | null>(null);
 
+  const refreshAuth = useCallback(async () => {
+    try {
+      const response = await fetch("/api/auth/refresh", {
+        credentials: "include",
+        cache: 'no-store' as RequestCache
+      });
+      const data = await response.json();
+      if (data.ok) {
+        console.log("[AUTH_REFRESH] Token refreshed successfully");
+        return true;
+      } else {
+        console.warn("[AUTH_REFRESH] Failed:", data.error);
+        return false;
+      }
+    } catch (err) {
+      console.error("[AUTH_REFRESH_ERROR]", err);
+      return false;
+    }
+  }, []);
+
   const fetchUser = useCallback(async () => {
     try {
       const res = await fetch('/api/auth/me', { credentials: 'include', cache: 'no-store' as RequestCache });
+      if (res.status === 401) {
+        console.log("[AUTH] Missing cookie, attempting silent refresh");
+        const refreshSuccess = await refreshAuth();
+        if (refreshSuccess) {
+          // Retry fetchUser after successful refresh
+          const retryRes = await fetch('/api/auth/me', { credentials: 'include', cache: 'no-store' as RequestCache });
+          if (retryRes.ok) {
+            const data = await retryRes.json();
+            console.log('[AUTH_ME] Received user data after refresh:', {
+              email: data.email,
+              profilePictureUrl: data.profilePictureUrl,
+              hasProfilePicture: !!data.profilePictureUrl,
+              identity: data.identity
+            });
+            setUser(data);
+            return;
+          }
+        }
+        setUser(null);
+        return;
+      }
+      
       if (!res.ok) throw new Error('Not authenticated');
       const data = await res.json();
       
@@ -63,7 +105,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [refreshAuth]);
 
   const login = useCallback((redirectPath = window.location.pathname) => {
     const origin = window.location.origin;
@@ -168,6 +210,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, []);
+
+  // Auto-refresh interval to keep sessions alive
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!user) {
+        console.log("[AUTH_AUTO_REFRESH] No user, attempting refresh");
+        refreshAuth().then(success => {
+          if (success) {
+            fetchUser();
+          }
+        });
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [user, refreshAuth, fetchUser]);
 
   return (
     <AuthContext.Provider
