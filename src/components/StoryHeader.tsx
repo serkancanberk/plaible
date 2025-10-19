@@ -1,17 +1,20 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useStoryBySlug } from '../hooks/useStoryBySlug';
+import { useSaveStory } from '../hooks/useSaveStory';
 
 export const StoryHeader: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: story, loading, error } = useStoryBySlug(slug);
+  const { isSaved, loading: saveLoading, toggleSave, ToastComponent } = useSaveStory(slug || '');
 
   if (loading) return <p className="text-body text-text-tertiary">Loading story...</p>;
   if (error) return <p className="text-body text-text-tertiary">Error loading story.</p>;
   if (!story) return <p className="text-body text-text-tertiary">Story not found.</p>;
 
   return (
-    <div className="flex flex-col space-y-8 text-left md:text-left">
+    <>
+      <div className="flex flex-col space-y-8 text-left md:text-left">
       {/* Upper Section: Title + Metadata */}
       <div className="flex flex-col space-y-2">
         {/* Title */}
@@ -55,6 +58,29 @@ export const StoryHeader: React.FC = () => {
               {story.stats.avgRating}
             </span>
           </div>
+
+          {/* Save toggle */}
+          <button
+            onClick={toggleSave}
+            disabled={saveLoading}
+            className="font-mono text-caption text-text-tertiary flex items-center gap-2 hover:text-text-tertiary/50 transition-all duration-150 disabled:opacity-50"
+            title={isSaved ? "Remove from saved stories" : "Save this story"}
+          >
+            <span className="transition-transform duration-200">
+              🔖
+            </span>
+            <span className="font-mono text-caption text-text-tertiary hover:text-text-tertiary/50 transition-all duration-150 disabled:opacity-50">
+              {isSaved ? "Saved" : "Save"}
+            </span>
+          </button>
+
+          <span
+            className="font-mono text-caption text-text-tertiary flex items-center gap-2 hover:text-text-tertiary/50 transition-colors duration-150 cursor-pointer"
+            title="Share this story"
+          >
+            <span className="transition-transform duration-200">🔗</span>
+            <span>Share</span>
+          </span>
         </div>
       </div>
 
@@ -67,7 +93,9 @@ export const StoryHeader: React.FC = () => {
           {story.description}
         </p>
       </div>
-    </div>
+      {ToastComponent}
+      </div>
+    </>
   );
 };
 

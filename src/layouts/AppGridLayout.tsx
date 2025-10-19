@@ -785,7 +785,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                             </span>
                           }
                         />
-                        <div className="mt-spacing-sm space-y-spacing-xs">
+                        <div className="mt-spacing-xs space-x-spacing-xs space-y-spacing-xs">
                           {user.sessions?.length ? (
                             user.sessions.map((s: any) => (
                               <NavItem
@@ -796,7 +796,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                               />
                             ))
                           ) : (
-                            <span className="font-mono text-caption text-ui-muted mt-spacing-xs">There is no story yet here.</span>
+                            <span className="font-mono text-caption text-ui-muted mt-spacing-xs ml-spacing-sm">No story yet here.</span>
                           )}
                         </div>
                       </div>
@@ -812,7 +812,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                             </span>
                           }
                         />
-                        <div className="mt-spacing-sm space-y-spacing-xs">
+                        <div className="mt-spacing-xs space-x-spacing-xs space-y-spacing-xs">
                           {user.savedStories?.length ? (
                             user.savedStories.map((s: any) => (
                               <NavItem
@@ -823,7 +823,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                               />
                             ))
                           ) : (
-                            <span className="font-mono text-caption text-ui-muted mt-spacing-xs">There is no story yet here.</span>
+                            <span className="font-mono text-caption text-ui-muted mt-spacing-xs ml-spacing-sm">No story yet here.</span>
                           )}
                         </div>
                       </div>
@@ -849,7 +849,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                             <IconUser className="w-4 h-4" />
                           </span>
                         )}
-                        <span className="text-body text-text-primary truncate">
+                        <span className="font-mono text-label text-text-primary truncate">
                           {user.identity?.displayName || user.email || 'User'}
                         </span>
                         <AnimatePresence>
@@ -964,16 +964,6 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                                 onClick={() => {
                                   console.log('[kebab] Story Settings');
                                   setIsStorySettingsModalOpen(true);
-                                  setIsKebabOpen(false);
-                                }}
-                              />
-                              <NavItem
-                                variant="text-secondary"
-                                label="Share"
-                                className="w-full px-spacing-lg"
-                                onClick={() => {
-                                  console.log('[kebab] Share');
-                                  openShareModal();
                                   setIsKebabOpen(false);
                                 }}
                               />

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import C2AButton from '../C2AButton';
+import { useSaveStory } from '../../hooks/useSaveStory';
 import type { DBStoryAssets, DBStoryStats } from '../../types/story';
 
 // YouTube utility functions (copied from admin components)
@@ -63,6 +64,9 @@ export default function StoryCard({
   onPlay,
   className,
 }: StoryCardProps) {
+  // Save story functionality
+  const { isSaved, loading, toggleSave, ToastComponent } = useSaveStory(slug);
+
   // Debug: Log props.assets received by StoryCard
   console.log('[StoryCard -> props.assets]', {
     title,
@@ -325,7 +329,8 @@ export default function StoryCard({
   });
 
   return (
-    <Link
+    <>
+      <Link
       to={to}
       className={[
         'block bg-primary text-text-tertiary rounded-card shadow-card overflow-hidden',
@@ -458,6 +463,34 @@ export default function StoryCard({
               <span className="text-text-tertiary">{clampRating(stats!.avgRating as number).toFixed(1)}</span>
             </span>
           ) : null}
+          {/* Save toggle */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleSave();
+            }}
+            disabled={loading}
+            className="font-mono text-caption text-text-tertiary flex items-center gap-2 hover:text-text-tertiary/50 transition-all duration-150 disabled:opacity-50"
+            title={isSaved ? "Remove from saved stories" : "Save this story"}
+          >
+            <span 
+              aria-hidden="true" 
+              className="transition-transform duration-200"
+            >
+              🔖
+            </span>
+            <span className="sr-only">{isSaved ? "Saved:" : "Save:"}</span>
+            <span className="text-text-tertiary hover:text-text-tertiary/50 transition-all duration-150 disabled:opacity-50">{isSaved ? "Saved" : "Save"}</span>
+          </button>
+          {/* Share link - Visual test only */}
+          <span
+            className="inline-flex items-center gap-spacing-xs text-text-tertiary hover:text-text-tertiary/50 cursor-pointer transition-colors duration-150"
+            title="Share this story"
+          >
+            <span aria-hidden="true">🔗</span>
+            <span>Share</span>
+          </span>
         </div>
       </div>
 
@@ -475,6 +508,8 @@ export default function StoryCard({
           Play Now
         </C2AButton>
       </div>
-    </Link>
+      </Link>
+      {ToastComponent}
+    </>
   );
 }

@@ -26,6 +26,8 @@ interface AuthContextType {
   login: (redirectPath?: string) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  savedStories: string[];
+  updateSaveStatus: (slug: string, saved: boolean) => void;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -41,8 +43,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Additional user-scoped data
   const { sessions, fetchSessions, clearSessions } = useUserSessions();
-  const { savedStories, fetchSavedStories, clearSaved } = useSavedStories();
+  const { savedStories: savedStoriesFromHook, fetchSavedStories, clearSaved } = useSavedStories();
   const fetchedExtrasForUserIdRef = useRef<string | null>(null);
+
+  // Save story management
+  const [savedStories, setSavedStories] = useState<string[]>([]);
 
   const refreshAuth = useCallback(async () => {
     try {
@@ -134,14 +139,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Reset derived data holders
       fetchedExtrasForUserIdRef.current = null;
       setUser(null);
+      setSavedStories([]);
       window.location.href = '/app';
     } catch (err) {
       console.error("❌ Logout failed:", err);
       // Still clear local state even if API call fails
       fetchedExtrasForUserIdRef.current = null;
       setUser(null);
+      setSavedStories([]);
       window.location.href = '/app';
     }
+  }, []);
+
+  const updateSaveStatus = useCallback((slug: string, saved: boolean) => {
+    console.log('[AuthProvider] savedStories updated:', { slug, saved });
+    setSavedStories(prev => {
+      const newList = saved 
+        ? [...prev, slug] 
+        : prev.filter(s => s !== slug);
+      console.log('[AuthProvider] savedStories updated:', newList);
+      return newList;
+    });
   }, []);
 
   useEffect(() => {
@@ -188,8 +206,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Merge fetched lists into user object to expose via context
   useEffect(() => {
     if (!user?._id) return;
-    setUser(prev => (prev ? { ...prev, sessions, savedStories } : prev));
-  }, [sessions, savedStories]);
+    setUser(prev => (prev ? { ...prev, sessions, savedStories: savedStoriesFromHook } : prev));
+  }, [sessions, savedStoriesFromHook]);
 
   // Cleanup on unmount or remount to ensure lists are cleared before next mount
   useEffect(() => {
@@ -210,6 +228,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, []);
+
+  // Fetch saved stories when user logs in
+  useEffect(() => {
+    const fetchSavedStoriesList = async () => {
+      if (!user?._id) {
+        setSavedStories([]);
+        return;
+      }
+
+      try {
+        console.log('[AuthProvider] Fetching saved stories for user:', user._id);
+        const res = await fetch('/api/saves', {
+          credentials: 'include',
+          cache: 'no-store' as RequestCache
+        });
+        
+        if (!res.ok) {
+          console.warn('[AuthProvider] Failed to fetch saved stories:', res.status);
+          return;
+        }
+        
+        const data = await res.json();
+        const storySlugs = data.saved?.map((story: any) => story.slug) || [];
+        console.log('[AuthProvider] savedStories updated:', storySlugs);
+        setSavedStories(storySlugs);
+      } catch (err) {
+        console.error('[AuthProvider] Failed to fetch saved stories:', err);
+      }
+    };
+
+    fetchSavedStoriesList();
+  }, [user?._id]);
 
   // Auto-refresh interval to keep sessions alive
   useEffect(() => {
@@ -236,6 +286,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         login,
         logout,
         refreshUser: fetchUser,
+        savedStories,
+        updateSaveStatus,
       }}
     >
       {children}
