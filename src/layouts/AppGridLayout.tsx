@@ -27,6 +27,7 @@ import StorySettingsModal from '../components/ui/modals/StorySettingsModal';
 import ReportIssueModal from '../components/ui/modals/ReportIssueModal';
 import { StorySettingsProvider } from '../components/ui/storySettings/StorySettingsProvider';
 import { useAuth } from '../hooks/useAuth';
+import { handleAddBalanceNavigation } from '../utils/navigation';
 
 type AppGridLayoutProps = {
   children?: React.ReactNode;
@@ -103,19 +104,28 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
       return "Choose A Story";
     };
 
+    // Log wallet balance for debugging
+    console.log('[STATE_BIND][Wallet] Balance rendered:', {
+      hasUser: !!user,
+      balance: user?.wallet?.balance ?? 0,
+      email: user?.email,
+      timestamp: new Date().toISOString()
+    });
+
     return {
       title: getPageTitle(),
       actions: [
         {
           type: "search",
           icon: IconSearch,
-          label: "Search",
+          label: "Search Stories",
           onClick: openSearchModal,
         },
         {
           type: "add",
           icon: IconPlus,
-          label: "Add",
+          label: `Add Balance (${user?.wallet?.balance ?? 0})`,
+          title: `Wallet Balance: ${user?.wallet?.balance ?? 0}`,
           onClick: handleAddAction,
         },
         {
@@ -186,15 +196,14 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
 
   // Context-aware Add action handler
   const handleAddAction = () => {
-    if (isStoryDetailsPage || isPlayOnboardPage || isStoryRunnerPage) {
-      // Save story functionality for story-related pages
-      console.log("Save story clicked");
-      // TODO: Implement actual save story functionality
-    } else {
-      // Add new story functionality for feed page
-      console.log("Add new story clicked");
-      // TODO: Implement actual add story functionality
-    }
+    // Determine context for logging
+    let context = 'header';
+    if (isStoryDetailsPage) context = 'story-details';
+    else if (isPlayOnboardPage) context = 'onboard';
+    else if (isStoryRunnerPage) context = 'story-runner';
+    
+    // Always navigate to packages page for credits purchase
+    handleAddBalanceNavigation(navigate, context);
   };
 
   const scrollCategoriesRight = () => {
@@ -945,12 +954,16 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                     {getHeaderConfig().actions.find(action => action.type === 'menu') && (
                       <div ref={kebabRef} className="relative">
                         {isKebabOpen && (
-                          <div className="absolute right-0 mt-spacing-xs z-50 bg-primary rounded-card shadow-card w-48 py-spacing-lg px-spacing-sm">
-                            <div className="flex flex-col space-y-spacing-lg">
+                          <div className="absolute right-0 mt-spacing-xs z-50 bg-primary rounded-card shadow-card min-w-[260px] py-spacing-lg px-spacing-sm">
+                            {(() => {
+                              console.log('[UI_TWEAK][KebabMenu] Kebab menu rendered with updated styling');
+                              return null;
+                            })()}
+                            <div className="flex flex-col space-y-spacing-lg text-right">
                               <NavItem
                                 variant="text-secondary"
-                                label="Download"
-                                className="w-full px-spacing-lg"
+                                label="Get the Plaible App"
+                                className="w-full px-spacing-lg text-right whitespace-nowrap"
                                 onClick={() => {
                                   console.log('[kebab] Download');
                                   openGetAppModal();
@@ -960,7 +973,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                               <NavItem
                                 variant="text-secondary"
                                 label="Story Settings"
-                                className="w-full px-spacing-lg"
+                                className="w-full px-spacing-lg text-right whitespace-nowrap"
                                 onClick={() => {
                                   console.log('[kebab] Story Settings');
                                   setIsStorySettingsModalOpen(true);
@@ -969,8 +982,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                               />
                               <NavItem
                                 variant="text-secondary"
-                                label="Report"
-                                className="w-full px-spacing-lg"
+                                label="Report An Issue"
+                                className="w-full px-spacing-lg text-right whitespace-nowrap"
                                 onClick={() => {
                                   console.log('[kebab] Report');
                                   openReportModal();

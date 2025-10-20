@@ -10,6 +10,7 @@ import { StoriesPage } from './pages/StoriesPage';
 import { StoryEditPage } from './pages/StoryEditPage';
 import { FeedbacksPage } from './pages/FeedbacksPage';
 import { WalletAnalyticsPage } from './pages/WalletAnalyticsPage';
+import { PackageManagerPage } from './pages/PackageManagerPage';
 import { CategoryManagerPage } from './pages/CategoryManagerPage';
 import { StoryRunnerPage } from './pages/StoryRunnerPage';
 import { StoryPromptEditPage } from './pages/StoryPromptEditPage';
@@ -35,6 +36,7 @@ export const AppAdmin: React.FC = () => {
                   <Route path="/stories" element={<StoriesPage />} />
                   <Route path="/stories/edit/:storyId" element={<StoryEditPage />} />
                   <Route path="/feedbacks" element={<FeedbacksPage />} />
+                  <Route path="/package-manager" element={<PackageManagerPage />} />
                   <Route path="/wallet-analytics" element={<WalletAnalyticsPage />} />
                   <Route path="/category-manager" element={<CategoryManagerPage />} />
                   <Route path="/storyrunner" element={<StoryRunnerPage />} />

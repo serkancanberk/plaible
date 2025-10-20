@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { handleAddBalanceNavigation } from '../utils/navigation';
 import { ChatContainer, ChatInput, TypingIndicator, StoryHeader, CharacterStatus } from '../components/ui/chat';
 import { useStorySession } from '../hooks/useStorySession';
 import { useChatMessages } from '../hooks/useChatMessages';
@@ -96,8 +97,8 @@ const StoryRunnerPage: React.FC = () => {
       <div className="flex flex-1 min-h-0 flex-col bg-secondary">
         <StoryPaymentPrompt
           onAddCredits={() => {
-            // Placeholder top-up flow trigger
-            console.log('[PAYMENT] Add Credits clicked');
+            // Navigate to packages page for credits purchase using shared helper
+            handleAddBalanceNavigation(navigate, 'story-runner');
           }}
           onTryAgain={() => {
             if (storySlug && characterSlug && selectedToneStyle && selectedTimeFlavor) {

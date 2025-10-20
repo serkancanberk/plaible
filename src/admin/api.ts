@@ -375,9 +375,56 @@ export const adminApi = {
 
   updateBrief: (data: { title?: string; whatIsPlaible: string; howToPlay: string; storyrunnerRole: string }) =>
     api.put<{ ok: boolean; brief: Brief }>('/admin/brief', data),
+
+  // Packages
+  packages: {
+    getAll: () =>
+      api.get<{ ok: boolean; packages: Package[] }>('/api/packages/admin'),
+    
+    create: (data: CreatePackageData) =>
+      api.post<{ ok: boolean; package: Package }>('/api/packages', data),
+    
+    update: (id: string, data: UpdatePackageData) =>
+      api.patch<{ ok: boolean; package: Package }>(`/api/packages/${id}`, data),
+    
+    delete: (id: string) =>
+      api.delete<{ ok: boolean }>(`/api/packages/${id}`),
+  },
 };
 
 // Types
+export interface Package {
+  _id: string;
+  name: string;
+  credits: number;
+  price: number;
+  bonus: number;
+  description?: string;
+  isPopular: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  totalCredits: number;
+  pricePerCredit: string;
+  bonusPercentage: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePackageData {
+  name: string;
+  credits: number;
+  price: number;
+  bonus?: number;
+  description?: string;
+  isPopular?: boolean;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface UpdatePackageData extends Partial<CreatePackageData> {
+  isActive?: boolean;
+}
+
 export interface User {
   _id: string;
   email: string;

@@ -42,6 +42,7 @@ import uploadRouter from "./routes/upload.js";
 import storyRunnerRoutes from "./routes/storyRunnerRoutes.js";
 import { publicRouter as reportsPublicRouter, adminRouter as reportsAdminRouter } from "./routes/reports.js";
 import reportCategoryRoutes from "./routes/reportCategories.js";
+import packagesRouter from "./routes/packages.js";
 
 const { ObjectId } = mongoose.Types;
 
@@ -187,6 +188,9 @@ app.use("/api/story", authGuard, storyRunnerRoutes);
 
 // Wallet router
 app.use("/api/wallet", authGuard, walletRouter);
+
+// Packages router (public for GET, admin for POST/PATCH/DELETE)
+app.use("/api/packages", packagesRouter);
 
 // Feedbacks router
 // Public listing for story feedbacks (GET only)
@@ -488,7 +492,17 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(() => console.log("MongoDB connected"))
+  .then(async () => {
+    console.log("MongoDB connected");
+    
+    // Seed default packages if none exist
+    try {
+      const { Package } = await import("./models/Package.js");
+      await Package.createDefaultPackages();
+    } catch (error) {
+      console.error("Error seeding default packages:", error);
+    }
+  })
   .catch((err) => console.error("MongoDB connection error:", err));
 
 // Import RefreshToken model for cleanup job
