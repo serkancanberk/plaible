@@ -28,6 +28,7 @@ import ReportIssueModal from '../components/ui/modals/ReportIssueModal';
 import { StorySettingsProvider } from '../components/ui/storySettings/StorySettingsProvider';
 import { useAuth } from '../hooks/useAuth';
 import { handleAddBalanceNavigation } from '../utils/navigation';
+import IconSparkles from 'virtual:icons/tabler/sparkles';
 
 type AppGridLayoutProps = {
   children?: React.ReactNode;
@@ -57,6 +58,9 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const kebabRef = useRef<HTMLDivElement | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  
+  // Accordion state - only one section can be open at a time
+  const [expandedSection, setExpandedSection] = useState<'recent' | 'saved' | 'user' | null>('recent');
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const mobileCarouselRef = useRef<HTMLDivElement | null>(null);
   const mobileDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -204,6 +208,73 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
     
     // Always navigate to packages page for credits purchase
     handleAddBalanceNavigation(navigate, context);
+  };
+
+  // AccordionSection component for collapsible sidebar sections
+  const AccordionSection: React.FC<{
+    sectionName: 'recent' | 'saved' | 'user';
+    title: string;
+    icon: React.ReactNode;
+    children: React.ReactNode;
+    className?: string;
+  }> = ({ sectionName, title, icon, children, className = '' }) => {
+    const isExpanded = expandedSection === sectionName;
+    
+    const handleToggle = () => {
+      const newExpandedSection = isExpanded ? null : sectionName;
+      setExpandedSection(newExpandedSection);
+      console.log('[SIDEBAR][ACCORDION]', sectionName, newExpandedSection === sectionName);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleToggle();
+      }
+    };
+
+    return (
+      <div className={`mt-spacing-lg ${className}`}>
+        <button
+          onClick={handleToggle}
+          onKeyDown={handleKeyDown}
+          aria-expanded={isExpanded}
+          aria-controls={`accordion-content-${sectionName}`}
+          className="w-full flex items-center gap-spacing-sm text-text-primary hover:text-text-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-primary rounded-md"
+        >
+          <span className="w-8 h-8 flex items-center justify-center rounded-full border border-primary text-primary">
+            {icon}
+          </span>
+          <span className="font-mono text-label text-text-primary flex-1 text-left">
+            {title}
+          </span>
+          <motion.div
+            animate={{ rotate: isExpanded ? 90 : 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            className="w-4 h-4 flex items-center justify-center"
+          >
+            <IconChevronRight className="w-4 h-4" />
+          </motion.div>
+        </button>
+        
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              id={`accordion-content-${sectionName}`}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              className="overflow-hidden"
+            >
+              <div className="mt-spacing-xs space-x-spacing-xs space-y-spacing-xs">
+                {children}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
   };
 
   const scrollCategoriesRight = () => {
@@ -753,11 +824,11 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                   />
                   <NavItem
                     variant="icon+text"
-                    label="Add"
+                    label="Create (Soon)"
                     collapsed={sidebarCollapsed}
                     icon={
                       <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
-                        <IconPlus className="w-4 h-4" />
+                        <IconSparkles className="w-4 h-4" />
                       </span>
                     }
                   />
@@ -784,109 +855,99 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                         })()}
                       </span>
                       {/* Recent section */}
-                      <div className="mt-spacing-lg">
-                        <NavItem
-                          variant="icon+text-outline"
-                          label="Recent"
-                          icon={
-                            <span className="w-8 h-8 flex items-center justify-center rounded-full border border-primary text-primary">
-                              <IconClock className="w-4 h-4" />
-                            </span>
-                          }
-                        />
-                        <div className="mt-spacing-xs space-x-spacing-xs space-y-spacing-xs">
-                          {user.sessions?.length ? (
-                            user.sessions.map((s: any) => (
-                              <NavItem
-                                key={s._id}
-                                variant="text"
-                                label={`${s.story?.title || ''}, Chapter ${s.progress?.chapter ?? 1}`}
-                                onClick={() => navigate(`/app/play/run/${s.story?.slug || ''}`)}
-                              />
-                            ))
-                          ) : (
-                            <span className="font-mono text-caption text-ui-muted mt-spacing-xs ml-spacing-sm">No story yet here.</span>
-                          )}
-                        </div>
-                      </div>
+                      <AccordionSection
+                        sectionName="recent"
+                        title="Recent"
+                        icon={<IconClock className="w-4 h-4" />}
+                      >
+                        {user.sessions?.length ? (
+                          user.sessions.map((s: any) => (
+                            <NavItem
+                              key={s._id}
+                              variant="text"
+                              label={`${s.story?.title || ''}, Chapter ${s.progress?.chapter ?? 1}`}
+                              onClick={() => navigate(`/app/play/run/${s.story?.slug || ''}`)}
+                            />
+                          ))
+                        ) : (
+                          <span className="font-mono text-caption text-ui-muted mt-spacing-xs ml-spacing-sm">No story yet here.</span>
+                        )}
+                      </AccordionSection>
 
                       {/* Saved section */}
-                      <div className="mt-spacing-lg">
-                        <NavItem
-                          variant="icon+text-outline"
-                          label="Saved"
-                          icon={
-                            <span className="w-8 h-8 flex items-center justify-center rounded-full border border-primary text-primary">
-                              <IconBookmark className="w-4 h-4" />
-                            </span>
-                          }
-                        />
-                        <div className="mt-spacing-xs space-x-spacing-xs space-y-spacing-xs">
-                          {user.savedStories?.length ? (
-                            user.savedStories.map((s: any) => (
-                              <NavItem
-                                key={s.slug}
-                                variant="text"
-                                label={s.title}
-                                onClick={() => navigate(`/app/story/${s.slug}`)}
-                              />
-                            ))
-                          ) : (
-                            <span className="font-mono text-caption text-ui-muted mt-spacing-xs ml-spacing-sm">No story yet here.</span>
-                          )}
-                        </div>
-                      </div>
+                      <AccordionSection
+                        sectionName="saved"
+                        title="Saved"
+                        icon={<IconBookmark className="w-4 h-4" />}
+                      >
+                        {user.savedStories?.length ? (
+                          <div className="flex flex-col gap-spacing-xs">
+                            {user.savedStories.map((s: any) => (
+                              <button
+                                key={s.slug || s._id}
+                                className="font-mono text-label text-text-primary hover:text-accent/80 transition-colors duration-200 ease-in-out cursor-pointer py-spacing-xs w-full text-left rounded-md"
+                                onClick={() => {
+                                  const storyId = s.slug || s._id;
+                                  console.log("[SIDEBAR][NAV] Navigating to story:", s.title, storyId);
+                                  navigate(`/app/stories/${storyId}`);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    const storyId = s.slug || s._id;
+                                    console.log("[SIDEBAR][NAV] Navigating to story:", s.title, storyId);
+                                    navigate(`/app/stories/${storyId}`);
+                                  }
+                                }}
+                                title={`View ${s.title}`}
+                              >
+                                {s.title}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="font-mono text-caption text-ui-muted mt-spacing-xs ml-spacing-sm">No story yet here.</span>
+                        )}
+                      </AccordionSection>
                     </>
                   ) : null}
 
                   {/* User profile */}
                   {user ? (
-                    <div className="mt-spacing-xl relative">
-                      <div
-                        ref={menuRef}
-                        className="relative flex items-center gap-spacing-sm cursor-pointer select-none"
-                        onClick={() => setIsMenuOpen(prev => !prev)}
-                      >
-                        {user.profilePictureUrl ? (
+                    <AccordionSection
+                      sectionName="user"
+                      title={user.identity?.displayName || user.email || 'User'}
+                      icon={
+                        user.profilePictureUrl ? (
                           <img
                             src={user.profilePictureUrl}
-                            alt={user.email || 'User'}
-                            className="w-9 h-9 rounded-full object-cover hover:opacity-80 transition-opacity"
+                            alt={user.identity?.displayName || user.email || 'User'}
+                            className="w-8 h-8 rounded-full object-cover"
                           />
                         ) : (
-                          <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
-                            <IconUser className="w-4 h-4" />
-                          </span>
-                        )}
-                        <span className="font-mono text-label text-text-primary truncate">
-                          {user.identity?.displayName || user.email || 'User'}
-                        </span>
-                        <AnimatePresence>
-                          {isMenuOpen && (
-                            <motion.div
-                              initial={{ y: 20, opacity: 0 }}
-                              animate={{ y: 0, opacity: 1 }}
-                              exit={{ y: 20, opacity: 0 }}
-                              transition={{ duration: 0.25, ease: 'easeOut' }}
-                              className="absolute bottom-spacing-2xl left-0 right-0 bg-secondary rounded-card shadow-lg p-spacing-md flex flex-col space-y-spacing-sm"
-                            >
-                              <button
-                                className="text-body text-text-primary hover:text-accent transition-colors text-left"
-                                onClick={() => navigate('/app/profile')}
-                              >
-                                Edit Your Profile
-                              </button>
-                              <button
-                                className="text-body text-text-primary hover:text-accent transition-colors text-left"
-                                onClick={logout}
-                              >
-                                Logout
-                              </button>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                          <IconUser className="w-4 h-4" />
+                        )
+                      }
+                    >
+                      {(() => {
+                        console.log('[SIDEBAR][USER_MENU_STYLE] applied parity with Saved');
+                        return null;
+                      })()}
+                      <div className="flex flex-col gap-spacing-xs">
+                        <button
+                          className="font-mono text-caption text-text-secondary hover:text-text-secondary hover:opacity-50 rounded-md transition-colors cursor-pointer py-spacing-xs px-spacing-sm w-full text-left"
+                          onClick={() => navigate('/app/profile')}
+                        >
+                          Edit Profile
+                        </button>
+                        <button
+                          className="font-mono text-caption text-text-secondary hover:text-text-secondary hover:opacity-50 rounded-md transition-colors cursor-pointer py-spacing-xs px-spacing-sm w-full text-left"
+                          onClick={logout}
+                        >
+                          Log out
+                        </button>
                       </div>
-                    </div>
+                    </AccordionSection>
                   ) : (
                     <NavItem
                       variant="icon+text"
