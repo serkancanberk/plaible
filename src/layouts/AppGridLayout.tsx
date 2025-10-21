@@ -98,6 +98,18 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   // Check if we're on the story runner page
   const isStoryRunnerPage = location.pathname.includes('/play/run');
 
+  // Check if we're on the packages page
+  const isPackagesPage = location.pathname.includes('/packages');
+
+  // Route debug and redirect fix for /packages misnavigation
+  useEffect(() => {
+    console.log('[ROUTE_DEBUG] Current pathname:', location.pathname);
+    if (location.pathname === '/packages') {
+      console.warn('[ROUTE_FIX] Redirecting to /app/packages');
+      navigate('/app/packages', { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
   // Unified header configuration - consistent across all pages
   const getUnifiedHeaderConfig = () => {
     // Dynamic title based on page context
@@ -105,6 +117,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
       if (isPlayOnboardPage) return "The World Is Waiting For You";
       if (isStoryRunnerPage) return "In the Scene";
       if (isStoryDetailsPage) return "Step Into The Story";
+      if (location.pathname.includes('/packages')) return "Buy Credits";
       return "Choose A Story";
     };
 
@@ -537,7 +550,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
           </div>
 
           {/* SubNavigation - only show on main feed page */}
-          {!isStoryDetailsPage && !hideSubNavigation && (
+          {!isStoryDetailsPage && !hideSubNavigation && !isPackagesPage && (
             <section className="px-spacing-md py-spacing-sm mt-spacing-lg">
             <div className="flex items-center justify-between gap-spacing-md">
               {/* Left: Dropdown + Scrollable categories */}
@@ -680,6 +693,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
             </div>
           </section>
           )}
+
 
           {/* Content area - replaced with Outlet for routing */}
           <Outlet />
@@ -1064,7 +1078,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
             {/* Divider after header */}
 
             {/* SubNavigation - only show on main feed page */}
-            {!isStoryDetailsPage && !hideSubNavigation && (
+            {!isStoryDetailsPage && !hideSubNavigation && !isPackagesPage && (
               <section className="px-spacing-md py-spacing-sm mt-spacing-lg">
               <div className="flex items-center justify-between gap-spacing-md">
                 {/* Left: Dropdown + Scrollable categories */}

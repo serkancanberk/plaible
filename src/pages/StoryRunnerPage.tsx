@@ -7,12 +7,17 @@ import { useChatMessages } from '../hooks/useChatMessages';
 import { useStoryRunner, StoryContext } from '../hooks/useStoryRunner';
 import { useStorySettingsContext } from '../components/ui/storySettings/StorySettingsProvider';
 import { AuthGuard } from '../components/AuthGuard';
-import StoryPaymentPrompt from '../components/StoryPaymentPrompt';
+import { CreditsPurchaseSection } from '../components/credits/CreditsPurchaseSection';
 
 const StoryRunnerPage: React.FC = () => {
   const { storySlug, characterSlug } = useParams<{ storySlug: string; characterSlug: string }>();
   const navigate = useNavigate();
   const { selectedToneStyle, selectedTimeFlavor } = useStorySettingsContext();
+
+  const handlePurchase = (packageId: string) => {
+    console.log('[STORY_RUNNER][PURCHASE] Package selected:', packageId);
+    // TODO: Implement purchase flow (Stripe/PayPal integration)
+  };
   
   // Session management
   const { session, startSession, isLoading: isSessionLoading, error: sessionError } = useStorySession();
@@ -95,19 +100,12 @@ const StoryRunnerPage: React.FC = () => {
   if (sessionError && (sessionError.includes('402') || sessionError.includes('PAYMENT') || sessionError.includes('INSUFFICIENT_CREDITS'))) {
     return (
       <div className="flex flex-1 min-h-0 flex-col bg-secondary">
-        <StoryPaymentPrompt
-          onAddCredits={() => {
-            // Navigate to packages page for credits purchase using shared helper
-            handleAddBalanceNavigation(navigate, 'story-runner');
-          }}
-          onTryAgain={() => {
-            if (storySlug && characterSlug && selectedToneStyle && selectedTimeFlavor) {
-              startSession().catch(error => {
-                console.error('Failed to retry session:', error);
-              });
-            }
-          }}
-        />
+        <div className="flex flex-col items-start justify-center h-full text-left">
+          <CreditsPurchaseSection 
+            variant="story-paused"
+            onPurchase={handlePurchase}
+          />
+        </div>
       </div>
     );
   }
