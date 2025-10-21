@@ -22,6 +22,7 @@ import IconSettings from 'virtual:icons/tabler/settings';
 import IconFlag from 'virtual:icons/tabler/flag';
 import IconGoogle from 'virtual:icons/simple-icons/google';
 import GetTheAppModal from '../components/ui/modals/GetTheAppModal';
+import PackagesModal from '../components/ui/modals/PackagesModal';
 import SearchModal from '../components/ui/modals/SearchModal';
 import StorySettingsModal from '../components/ui/modals/StorySettingsModal';
 import ReportIssueModal from '../components/ui/modals/ReportIssueModal';
@@ -51,6 +52,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   );
   const [isTypeMenuOpen, setIsTypeMenuOpen] = useState(false);
   const [isGetAppModalOpen, setIsGetAppModalOpen] = useState(false);
+  const [isPackagesModalOpen, setIsPackagesModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isStorySettingsModalOpen, setIsStorySettingsModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -188,6 +190,9 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const openGetAppModal = () => setIsGetAppModalOpen(true);
   const closeGetAppModal = () => setIsGetAppModalOpen(false);
 
+  const openPackagesModal = () => setIsPackagesModalOpen(true);
+  const closePackagesModal = () => setIsPackagesModalOpen(false);
+
   const openSearchModal = () => setIsSearchModalOpen(true);
   const closeSearchModal = () => setIsSearchModalOpen(false);
 
@@ -219,8 +224,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
     else if (isPlayOnboardPage) context = 'onboard';
     else if (isStoryRunnerPage) context = 'story-runner';
     
-    // Always navigate to packages page for credits purchase
-    handleAddBalanceNavigation(navigate, context);
+    console.log("[CREDITS_UI][HEADER] Add Balance clicked — navigating to /app/packages");
+    navigate("/app/packages");
   };
 
   // AccordionSection component for collapsible sidebar sections
@@ -1224,6 +1229,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
       </div>
       </div>
       <GetTheAppModal open={isGetAppModalOpen} onClose={closeGetAppModal} />
+      <PackagesModal isOpen={isPackagesModalOpen} onClose={closePackagesModal} />
       <SearchModal open={isSearchModalOpen} onClose={closeSearchModal} />
       <StorySettingsModal open={isStorySettingsModalOpen} onClose={() => setIsStorySettingsModalOpen(false)} />
       <ReportIssueModal open={isReportModalOpen} onClose={closeReportModal} />
