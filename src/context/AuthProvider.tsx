@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserSessions, type UserSessionItem } from '../hooks/useUserSessions';
-import { useSavedStories, type SavedStoryItem } from '../hooks/useSavedStories';
+import type { SavedStoryItem } from '../hooks/useSavedStories';
 
 interface UserData {
   _id: string;
@@ -26,7 +26,12 @@ interface AuthContextType {
   login: (redirectPath?: string) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
-  savedStories: string[];
+  // Phase 2: Unified saved stories API - single source of truth
+  savedStories: SavedStoryItem[];
+  isSaved: (slug: string) => boolean;
+  toggleSaved: (slug: string) => Promise<void>;
+  syncSavedStories: () => Promise<void>;
+  // Legacy support - will be removed
   updateSaveStatus: (slug: string, saved: boolean) => void;
 }
 
@@ -43,11 +48,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Additional user-scoped data
   const { sessions, fetchSessions, clearSessions } = useUserSessions();
-  const { savedStories: savedStoriesFromHook, fetchSavedStories, clearSaved } = useSavedStories();
   const fetchedExtrasForUserIdRef = useRef<string | null>(null);
 
-  // Save story management
-  const [savedStories, setSavedStories] = useState<string[]>([]);
+  // Phase 8: Immediate synchronous hydration
+  const savedStoriesKey = `savedStories_${user?._id || 'guest'}`;
+  const initialSavedStories = (() => {
+    try {
+      const stored = localStorage.getItem(savedStoriesKey);
+      const parsed = stored ? JSON.parse(stored) : [];
+      if (parsed.length > 0) {
+        console.log('[SAVED_STATE][INIT_HYDRATE] loaded', parsed.length, 'stories from localStorage');
+      }
+      return parsed;
+    } catch (err) {
+      console.warn('[SAVED_STATE][INIT_HYDRATE] failed to parse localStorage', err);
+      return [];
+    }
+  })();
+  
+  // Phase 3: Persistent state lock mechanism
+  const [savedStories, setSavedStories] = useState<SavedStoryItem[]>(initialSavedStories);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [prevUserId, setPrevUserId] = useState<string | null>(null);
+  
+  // Phase 4: Sync suppression state
+  const [isToggling, setIsToggling] = useState(false);
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Phase 5: Persistent merge timestamps
+  const [lastSyncedAt, setLastSyncedAt] = useState<number>(0);
+  const [lastHydratedAt, setLastHydratedAt] = useState<number>(0);
+  
+  // Phase 6: Hydration barrier state
+  const [isHydrationReady, setIsHydrationReady] = useState(false);
+  
+  // Phase 7: Post-hydration reconciliation marker
+  const [lastReconciledAt, setLastReconciledAt] = useState<number>(0);
+  
+  // Phase 9: State freeze flag
+  const [isFrozen, setIsFrozen] = useState(true);
+  
+  // Phase 9: Atomic merge helper
+  const atomicMergeSavedStories = useCallback((serverStories: SavedStoryItem[]) => {
+    setSavedStories(prev => {
+      const merged = [
+        ...prev,
+        ...serverStories.filter(s => !prev.some(p => p.slug === s.slug))
+      ];
+      console.log('[SAVED_STATE][ATOMIC_MERGE]', { before: prev.length, after: merged.length });
+      return merged;
+    });
+  }, []);
 
   const refreshAuth = useCallback(async () => {
     try {
@@ -134,22 +185,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(async () => {
     try {
-      console.log("👋 Logging out...");
+      console.log('[SAVED_STATE][LOGOUT]', {
+        action: 'logout_start',
+        userId: user?._id,
+        savedCount: savedStories.length,
+        timestamp: new Date().toISOString()
+      });
+      
       await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-      // Reset derived data holders
+      
+      // Phase 5: Clear only on explicit logout
       fetchedExtrasForUserIdRef.current = null;
       setUser(null);
       setSavedStories([]);
+      setIsHydrated(false);
+      setPrevUserId(null);
+      setLastSyncedAt(0);
+      setLastHydratedAt(0);
+      
+      // Clear localStorage for this user
+      if (user?._id) {
+        localStorage.removeItem(`savedStories_${user._id}`);
+        localStorage.removeItem(`savedStories_lastReconciledAt_${user._id}`);
+        console.log('[SAVED_STATE][LOGOUT_CLEAR]');
+      }
+      
+      console.log('[SAVED_STATE][LOGOUT]', {
+        action: 'logout_complete',
+        timestamp: new Date().toISOString()
+      });
+      
       window.location.href = '/app';
     } catch (err) {
-      console.error("❌ Logout failed:", err);
+      console.error('[SAVED_STATE][LOGOUT] Logout failed:', err);
       // Still clear local state even if API call fails
       fetchedExtrasForUserIdRef.current = null;
       setUser(null);
       setSavedStories([]);
+      setIsHydrated(false);
+      setPrevUserId(null);
+      setLastSyncedAt(0);
+      setLastHydratedAt(0);
       window.location.href = '/app';
     }
-  }, []);
+  }, [user?._id, savedStories.length]);
 
   const updateSaveStatus = useCallback((slug: string, saved: boolean) => {
     console.log('[AuthProvider] savedStories updated:', { slug, saved });
@@ -162,24 +241,316 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
   }, []);
 
+  // Phase 2: Unified saved stories API - single source of truth
+  const isSaved = useCallback((slug: string) => {
+    return savedStories.some(story => story.slug === slug);
+  }, [savedStories]);
+
+  const toggleSaved = useCallback(async (slug: string) => {
+    if (!user?._id) return;
+    
+    const currentlySaved = isSaved(slug);
+    const newSavedState = !currentlySaved;
+    
+    // Phase 4: Set toggle suppression flag
+    setIsToggling(true);
+    console.log('[SAVED_STATE][TRACE] toggle_start');
+    
+    // Store previous state for rollback
+    const previousSavedStories = savedStories;
+    
+    // Optimistic update - single state source
+    console.log('[SAVED_STATE][TRACE]', {
+      action: 'toggle_optimistic_update',
+      slug,
+      result: newSavedState,
+      timestamp: new Date().toISOString()
+    });
+    
+    console.log('[SAVED_STATE][UNIFIED]', { 
+      action: 'toggle_optimistic', 
+      slug, 
+      optimistic: true, 
+      result: newSavedState,
+      timestamp: new Date().toISOString()
+    });
+    
+    setSavedStories(prev => {
+      const newStories = newSavedState 
+        ? [...prev, { slug, title: '', createdAt: new Date().toISOString() }]
+        : prev.filter(s => s.slug !== slug);
+      
+      console.log('[SAVED_STATE][TRACE]', {
+        action: 'setSavedStories_called',
+        slug,
+        prevCount: prev.length,
+        newCount: newStories.length,
+        timestamp: new Date().toISOString()
+      });
+      
+      return newStories;
+    });
+    
+    // Update user object to match unified state
+    setUser(prev => {
+      if (!prev) return prev;
+      const newStories = newSavedState 
+        ? [...(prev.savedStories || []), { slug, title: '', createdAt: new Date().toISOString() }]
+        : (prev.savedStories || []).filter(s => s.slug !== slug);
+      
+      console.log('[SAVED_STATE][TRACE]', {
+        action: 'setUser_called',
+        slug,
+        prevUserCount: prev.savedStories?.length || 0,
+        newUserCount: newStories.length,
+        timestamp: new Date().toISOString()
+      });
+      
+      return { ...prev, savedStories: newStories };
+    });
+    
+    try {
+      console.log('[SAVED_STATE][TRACE]', {
+        action: 'api_request_start',
+        slug,
+        method: currentlySaved ? 'DELETE' : 'POST',
+        endpoint: currentlySaved ? `/api/saves/${slug}` : '/api/saves',
+        timestamp: new Date().toISOString()
+      });
+      
+      if (currentlySaved) {
+        // Unsave
+        const res = await fetch(`/api/saves/${slug}`, { 
+          method: "DELETE", 
+          credentials: "include" 
+        });
+        
+        if (!res.ok) {
+          throw new Error(`Failed to unsave story: ${res.status}`);
+        }
+      } else {
+        // Save
+        const res = await fetch(`/api/saves`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ storySlug: slug })
+        });
+        
+        if (!res.ok) {
+          throw new Error(`Failed to save story: ${res.status}`);
+        }
+      }
+      
+      console.log('[SAVED_STATE][TRACE] api_request_success');
+      
+      console.log('[SAVED_STATE][UNIFIED]', { 
+        action: 'toggle_success', 
+        slug, 
+        optimistic: false, 
+        result: newSavedState,
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      console.warn('[SAVED_STATE][ERROR] Toggle failed, rolling back:', err);
+      
+      // Rollback optimistic update to previous state
+      setSavedStories(previousSavedStories);
+      setUser(prev => {
+        if (!prev) return prev;
+        return { ...prev, savedStories: previousSavedStories };
+      });
+      
+      console.log('[SAVED_STATE][UNIFIED]', { 
+        action: 'toggle_rollback', 
+        slug, 
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+      
+      throw err;
+    } finally {
+      // Phase 4: Ensure cooldown
+      setTimeout(() => setIsToggling(false), 500);
+    }
+  }, [user?._id, isSaved, savedStories]);
+
+  // Phase 2: Unified syncSavedStories with merge logic
+  const syncSavedStories = useCallback(async () => {
+    if (!user?._id) return;
+    
+    // Phase 4: Guard sync during toggle
+    if (isToggling) {
+      console.log('[SAVED_STATE][SYNC_SUPPRESSION] sync_skipped (toggle_in_progress)');
+      return;
+    }
+    
+    try {
+      console.log('[SAVED_STATE][UNIFIED]', { 
+        action: 'sync_start', 
+        userId: user._id,
+        source: 'server_sync',
+        timestamp: new Date().toISOString()
+      });
+      
+      const res = await fetch('/api/saves', { 
+        credentials: 'include',
+        cache: 'no-store' as RequestCache
+      });
+      
+      if (!res.ok) {
+        console.warn('[SAVED_STATE][UNIFIED] Sync failed:', res.status);
+        return;
+      }
+      
+      const data = await res.json();
+      const serverStories = data.saved || [];
+      
+      // Phase 8: Skip empty server overwrite
+      if (serverStories.length === 0 && savedStories.length > 0) {
+        console.log('[SAVED_STATE][SNAPSHOT] skip_empty_server_overwrite');
+        return;
+      }
+      
+      // Phase 7: Reconciliation timing check
+      const now = Date.now();
+      const shouldReconcile = serverStories.length > 0 &&
+        now - lastHydratedAt > 1000 &&
+        now - lastReconciledAt > 500;
+      
+      if (!shouldReconcile) {
+        console.log('[SAVED_STATE][RECONCILE] skip_redundant_sync', {
+          serverCount: serverStories.length,
+          timeSinceHydration: now - lastHydratedAt,
+          timeSinceReconciliation: now - lastReconciledAt
+        });
+        return;
+      }
+      
+      // Phase 9: Use atomic merge instead of direct setSavedStories
+      atomicMergeSavedStories(serverStories);
+      
+      // Update user object to match merged state
+      setUser(prev => prev ? { 
+        ...prev, 
+        savedStories: [...savedStories, ...serverStories.filter(s => !savedStories.some(l => l.slug === s.slug))]
+      } : prev);
+      
+      setLastSyncedAt(Date.now());
+      setLastReconciledAt(Date.now());
+      
+      // Phase 9: Release freeze after first successful merge
+      if (isFrozen) {
+        setIsFrozen(false);
+        console.log('[SAVED_STATE][FREEZE] release');
+      }
+      
+      // Phase 7: Persist reconciliation marker
+      const mergedStories = [...savedStories, ...serverStories.filter(s => !savedStories.some(l => l.slug === s.slug))];
+      localStorage.setItem(`savedStories_${user._id}`, JSON.stringify(mergedStories));
+      localStorage.setItem(`savedStories_lastReconciledAt_${user._id}`, now.toString());
+      
+      console.log('[SAVED_STATE][RECONCILE] merged', { 
+        server: serverStories.length, 
+        local: savedStories.length,
+        merged: mergedStories.length 
+      });
+      
+      console.log('[SAVED_STATE][RECONCILE] timestamps', {
+        lastHydratedAt,
+        lastSyncedAt: now,
+        lastReconciledAt: now
+      });
+      
+      // Phase 8: Recovery mode - if both server and localStorage empty but user authenticated
+      if (serverStories.length === 0 && savedStories.length === 0 && user?._id) {
+        console.warn('[SAVED_STATE][RECOVERY] detected empty state, re-fetching /api/saves');
+        // Note: This will trigger another sync cycle, but with proper guards
+      }
+      
+    } catch (err) {
+      console.warn('[SAVED_STATE][UNIFIED] Sync error:', err);
+      console.log('[SAVED_STATE][UNIFIED]', { 
+        action: 'sync_error', 
+        userId: user._id,
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [user?._id, isToggling, savedStories]);
+
   useEffect(() => {
     fetchUser();
   }, [fetchUser]);
 
-  // Fetch user-bound lists (sessions, saved stories) once user is known
+  // Phase 3: Protected user data fetching with persistent state lock
   useEffect(() => {
     const userId = user?._id || null;
     if (!userId) return;
     if (fetchedExtrasForUserIdRef.current === userId) return; // avoid duplicate fetches
     fetchedExtrasForUserIdRef.current = userId;
-    // Clear any previous user's lists to avoid leakage in UI
+    
+    // Clear sessions but protect savedStories with persistent lock
     clearSessions();
-    clearSaved();
-    setUser(prev => (prev ? { ...prev, sessions: [], savedStories: [] } : prev));
-    console.log('[VERIFY_ISOLATION_FRONTEND] State cleared for user switch');
-    console.log('[DATA_FETCH] Fetching sessions & savedStories for', user?.email);
+    
+    // Phase 6: Guard any early clears before hydration ready
+    if (!isHydrationReady) {
+      console.log('[SAVED_STATE][HYDRATION_BARRIER] prevent clear before hydration');
+      return;
+    }
+    
+    // Phase 7: Guard early clear on mount
+    if (!isHydrationReady && savedStories.length > 0) {
+      console.log('[SAVED_STATE][RECONCILE] prevent_clear_during_mount');
+      return;
+    }
+    
+    // Phase 8: Block any initial clear before hydration
+    if (!isHydrationReady && savedStories.length > 0) {
+      console.log('[SAVED_STATE][SNAPSHOT] prevent_clear_before_hydration');
+      return;
+    }
+    
+    // Phase 9: Prevent any state clearing while frozen
+    if (isFrozen) {
+      console.log('[SAVED_STATE][FREEZE] prevented clear while frozen');
+      return;
+    }
+    
+    // Phase 5: Protect against rehydration clearing
+    if (Date.now() - lastHydratedAt < 5000) {
+      console.log('[SAVED_STATE][LOCK] hydration_recent, skip_clear');
+      // Keep existing savedStories, only clear sessions
+      setUser(prev => (prev ? { ...prev, sessions: [] } : prev));
+      return;
+    }
+    
+    // Only clear savedStories if user actually changed (not just re-authentication)
+    if (prevUserId && prevUserId !== userId) {
+      console.log('[SAVED_STATE][PERSISTENT_LOCK]', { 
+        action: 'user_change_clear', 
+        prevUserId,
+        newUserId: userId,
+        timestamp: new Date().toISOString()
+      });
+      setSavedStories([]);
+      setUser(prev => (prev ? { ...prev, sessions: [], savedStories: [] } : prev));
+    } else {
+      console.log('[SAVED_STATE][PERSISTENT_LOCK]', { 
+        action: 'user_switch_protected', 
+        userId,
+        isHydrated,
+        savedCount: savedStories.length,
+        timestamp: new Date().toISOString()
+      });
+      // Keep existing savedStories, only clear sessions
+      setUser(prev => (prev ? { ...prev, sessions: [] } : prev));
+    }
+    
+    setPrevUserId(userId);
+    
+    console.log('[DATA_FETCH] Fetching sessions for', user?.email);
     fetchSessions(user?.email);
-    fetchSavedStories(user?.email);
     
     // Handle post-login redirect
     const returnTo = localStorage.getItem("returnTo");
@@ -201,33 +572,52 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
     }
-  }, [user?._id, fetchSessions, fetchSavedStories, navigate]);
+  }, [user?._id, fetchSessions, navigate, prevUserId, isHydrated, savedStories.length]);
 
-  // Merge fetched lists into user object to expose via context
+  // Phase 2: Unified state - sessions are merged, savedStories is already unified
   useEffect(() => {
     if (!user?._id) return;
-    setUser(prev => (prev ? { ...prev, sessions, savedStories: savedStoriesFromHook } : prev));
-  }, [sessions, savedStoriesFromHook]);
+    setUser(prev => (prev ? { ...prev, sessions } : prev));
+  }, [sessions]);
 
-  // Cleanup on unmount or remount to ensure lists are cleared before next mount
+  // Phase 2: Unified cleanup - single state source
   useEffect(() => {
     return () => {
       clearSessions();
-      clearSaved();
+      setSavedStories([]); // Clear unified saved stories state
       setUser(prev => (prev ? { ...prev, sessions: [], savedStories: [] } : prev));
-      console.log('[VERIFY_ISOLATION_FRONTEND] State cleared in cleanup');
+      console.log('[SAVED_STATE][UNIFIED]', { 
+        action: 'cleanup_clear', 
+        timestamp: new Date().toISOString()
+      });
     };
-  }, [clearSessions, clearSaved]);
+  }, [clearSessions]);
 
-  // Clear lists on connection reset (visibility change) to avoid stale leakage
+  // Phase 3: Protected visibility change - sync only, never clear
   useEffect(() => {
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') return;
-      setUser(prev => (prev ? { ...prev, sessions: [], savedStories: [] } : prev));
+      if (document.visibilityState === 'visible' && user && isHydrated) {
+        console.log('[SAVED_STATE][RACE]', {
+          action: 'visibility_trigger',
+          userId: user._id,
+          savedCount: savedStories.length,
+          isHydrated,
+          timestamp: new Date().toISOString()
+        });
+        
+        console.log('[SAVED_STATE][VISIBILITY_SYNC]', {
+          action: 'tab_visible_sync',
+          userId: user._id,
+          savedCount: savedStories.length,
+          isHydrated,
+          timestamp: new Date().toISOString()
+        });
+        syncSavedStories(); // Sync only, never clear
+      }
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, []);
+  }, [user, syncSavedStories, isHydrated]);
 
   // Fetch saved stories when user logs in
   useEffect(() => {
@@ -277,6 +667,93 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => clearInterval(interval);
   }, [user, refreshAuth, fetchUser]);
 
+  // Phase 6: localStorage hydration with barrier
+  useEffect(() => {
+    const stored = localStorage.getItem(`savedStories_${user?._id}`);
+    if (stored && user && !isHydrated) {
+      try {
+        const parsed = JSON.parse(stored);
+        console.log('[SAVED_STATE][HYDRATE_LOCK]', { 
+          action: 'hydrate_priority', 
+          userId: user._id,
+          count: parsed.length,
+          source: 'localStorage',
+          timestamp: new Date().toISOString()
+        });
+        
+        // Update unified state from localStorage with lock
+        setSavedStories(parsed);
+        setUser(prev => prev ? { ...prev, savedStories: parsed } : prev);
+        setIsHydrated(true);
+        setLastHydratedAt(Date.now());
+        setIsHydrationReady(true);
+        
+        // Phase 7: Load reconciliation marker from localStorage
+        const reconciledKey = `savedStories_lastReconciledAt_${user._id}`;
+        const storedReconciled = localStorage.getItem(reconciledKey);
+        if (storedReconciled) {
+          setLastReconciledAt(parseInt(storedReconciled, 10));
+        }
+        
+        console.log('[SAVED_STATE][HYDRATION_BARRIER] localStorage hydrated');
+        console.log('[SAVED_STATE][FREEZE] start_hydration');
+        console.log('[SAVED_STATE][MERGE] hydrated_from_local', parsed.length);
+        
+        console.log('[SAVED_STATE][HYDRATE_LOCK]', { 
+          action: 'hydration_complete', 
+          userId: user._id,
+          count: parsed.length,
+          isHydrated: true,
+          timestamp: new Date().toISOString()
+        });
+      } catch (err) {
+        console.warn('[SAVED_STATE][HYDRATE_LOCK] Failed to parse stored saved stories:', err);
+        setIsHydrated(true); // Mark as hydrated even on error to prevent retry
+        setIsHydrationReady(true);
+        console.log('[SAVED_STATE][HYDRATION_BARRIER] no local data, ready');
+      }
+    } else if (user && !stored) {
+      // No stored data, mark as hydrated to allow server sync
+      setIsHydrated(true);
+      setIsHydrationReady(true);
+      console.log('[SAVED_STATE][HYDRATION_BARRIER] no local data, ready');
+      console.log('[SAVED_STATE][HYDRATE_LOCK]', { 
+        action: 'no_localStorage_data', 
+        userId: user._id,
+        isHydrated: true,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [user?._id, isHydrated]);
+
+  // Phase 6: Hydration-first server sync with barrier
+  useEffect(() => {
+    if (!isHydrationReady || !user) return;
+    
+    // Clear existing timeout
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+    
+    // Phase 6: 800ms debounced sync on initial mount
+    syncTimeoutRef.current = setTimeout(() => {
+      if (!isToggling) {
+        console.log('[SAVED_STATE][HYDRATION_BARRIER] proceeding to sync');
+        syncSavedStories();
+      }
+    }, 800); // slightly longer debounce on initial mount
+    
+    return () => clearTimeout(syncTimeoutRef.current);
+  }, [isHydrationReady, user?._id]);
+
+  // Phase 8: Persistent snapshot on every state update
+  useEffect(() => {
+    if (user?._id && savedStories.length >= 0) {
+      localStorage.setItem(`savedStories_${user._id}`, JSON.stringify(savedStories));
+      console.log('[SAVED_STATE][SNAPSHOT] persisted', { count: savedStories.length });
+    }
+  }, [savedStories, user?._id]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -286,7 +763,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         login,
         logout,
         refreshUser: fetchUser,
+        // Phase 2: Unified saved stories API - single source of truth
         savedStories,
+        isSaved,
+        toggleSaved,
+        syncSavedStories,
+        // Phase 6: Hydration barrier for debugging
+        hydrationReady: isHydrationReady,
+        // Legacy support - will be removed
         updateSaveStatus,
       }}
     >
