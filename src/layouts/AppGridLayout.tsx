@@ -112,6 +112,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
 
   // Check if we're on the packages page
   const isPackagesPage = location.pathname.includes('/packages');
+  // Check if we're on the transactions page
+  const isTransactionsPage = location.pathname.includes('/transactions');
 
   // Route debug and redirect fix for /packages misnavigation
   useEffect(() => {
@@ -129,6 +131,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
       if (isPlayOnboardPage) return "The World Is Waiting For You";
       if (isStoryRunnerPage) return "In the Scene";
       if (isStoryDetailsPage) return "Step Into The Story";
+      if (isTransactionsPage) return "Credit Journal";
       if (location.pathname.includes('/packages')) return "Buy Credits";
       return "Choose A Story";
     };
@@ -1047,6 +1050,12 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                         </button>
                         <button
                           className="font-mono text-caption text-text-secondary hover:text-text-secondary hover:opacity-50 rounded-md transition-colors cursor-pointer py-spacing-xs px-spacing-sm w-full text-left"
+                          onClick={() => navigate('/app/transactions')}
+                        >
+                          Credit Journal
+                        </button>
+                        <button
+                          className="font-mono text-caption text-text-secondary hover:text-text-secondary hover:opacity-50 rounded-md transition-colors cursor-pointer py-spacing-xs px-spacing-sm w-full text-left"
                           onClick={logout}
                         >
                           Log out
@@ -1172,7 +1181,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
             {/* Divider after header */}
 
             {/* SubNavigation - only show on main feed page */}
-            {!isStoryDetailsPage && !hideSubNavigation && !isPackagesPage && (
+            {!isStoryDetailsPage && !hideSubNavigation && !isPackagesPage && !isTransactionsPage && (
               <section className="px-spacing-md py-spacing-sm mt-spacing-lg">
               <div className="flex items-center justify-between gap-spacing-md">
                 {/* Left: Dropdown + Scrollable categories */}

@@ -7,6 +7,7 @@ import { PlayPage } from './PlayPage';
 import { StoriesFeedPage } from '../pages/StoriesFeedPage';
 import { StoryDetailsPage } from '../pages/StoryDetailsPage';
 import { PackagesPage } from '../pages/PackagesPage';
+import TransactionHistoryPage from '../pages/TransactionHistoryPage';
 import PlayOnboardPage from '../pages/PlayOnboardPage';
 import StoryRunnerPage from '../pages/StoryRunnerPage';
 const StyleGuide = React.lazy(() => import('../pages/StyleGuide'));
@@ -27,6 +28,7 @@ export const AppPublic: React.FC = () => {
           <Route index element={<StoriesFeedPage />} />
           <Route path="stories/:slug" element={<StoryDetailsPage />} />
           <Route path="packages" element={<PackagesPage />} />
+          <Route path="transactions" element={<TransactionHistoryPage />} />
           <Route path="play/onboard/:storySlug/:characterSlug" element={<PlayOnboardPage />} />
           <Route path="play/run/:storySlug/:characterSlug" element={<StoryRunnerPage />} />
         </Route>
