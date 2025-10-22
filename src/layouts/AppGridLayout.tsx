@@ -41,7 +41,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { user, login, logout } = useAuth();
+  const { user, savedStories, login, logout } = useAuth();
   
   // DATA_FLOW_DEBUG: Log user data in AppGridLayout
   console.log('[DATA_FLOW_DEBUG][SIDEBAR] User data in AppGridLayout:', {
@@ -492,8 +492,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
       console.log('[VISUAL_DEBUG][STATIC_SECTIONS] Recent and Saved sections are now static (no accordion animations)');
       console.log('[VISUAL_DEBUG][STATIC_SECTIONS] User data:', {
         hasUser: !!user,
-        hasSavedStories: !!user?.savedStories,
-        savedStoriesLength: user?.savedStories?.length || 0,
+        hasSavedStories: !!savedStories,
+        savedStoriesLength: savedStories?.length || 0,
         hasSessions: !!user?.sessions,
         sessionsLength: user?.sessions?.length || 0
       });
@@ -501,7 +501,21 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
 
     const timeoutId = setTimeout(runSimpleDiagnostic, 100);
     return () => clearTimeout(timeoutId);
-  }, [user?.savedStories?.length, user?.sessions?.length]);
+  }, [savedStories?.length, user?.sessions?.length]);
+
+  // Phase 3: Confirm sidebar re-render when context changes
+  useEffect(() => {
+    console.log('[DEBUG][SIDEBAR_RERENDER]', {
+      hasUser: !!user,
+      savedCount: savedStories?.length || 0,
+      firstTitle: savedStories?.[0]?.title || savedStories?.[0]?.slug || null
+    });
+  }, [user, savedStories]);
+
+  // Phase 4: Explicit log on dependency change
+  useEffect(() => {
+    console.log('[SIDEBAR_RERENDER][useEffect_triggered]', savedStories);
+  }, [savedStories]);
 
 
   // Handle kebab dropdown click outside and escape key
@@ -931,16 +945,16 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                         <span className="font-mono text-label text-text-primary">Saved</span>
                       </div>
                       <div className="mt-spacing-xs space-y-spacing-xs">
-                        {user.savedStories?.length ? (
+                        {savedStories?.length ? (
                           <div className="flex flex-col gap-spacing-xs">
                             {(() => {
                               // DATA_FLOW_DEBUG: Log savedStories mapping with detailed structure
                               console.log('[DATA_FLOW_DEBUG][SIDEBAR_RENDER] Saved stories mapping:', {
                                 hasUser: !!user,
-                                hasSavedStories: !!user?.savedStories,
-                                savedStoriesLength: user?.savedStories?.length || 0,
-                                savedStoriesData: user?.savedStories,
-                                savedStoriesStructure: user?.savedStories?.map(s => ({
+                                hasSavedStories: !!savedStories,
+                                savedStoriesLength: savedStories?.length || 0,
+                                savedStoriesData: savedStories,
+                                savedStoriesStructure: savedStories?.map(s => ({
                                   id: (s as any)._id || s.slug,
                                   slug: s.slug,
                                   title: s.title,
@@ -955,25 +969,26 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                               });
                               return null;
                             })()}
-                            {user.savedStories.map((s: any) => (
+                            {(() => { console.log('[DEBUG][SIDEBAR_MAP] rendering', savedStories.length, 'items'); return null; })()}
+                            {(() => { console.log('[SIDEBAR_RENDER] Rendering', savedStories.length, 'items'); return null; })()}
+                            {savedStories.map((s: any) => (
                               <button
-                                key={s.slug || s._id}
-                                className="font-mono text-label text-text-primary hover:text-accent/80 transition-colors duration-200 ease-in-out cursor-pointer py-spacing-xs w-full text-left rounded-md"
+                                key={s.slug}
+                                className="font-mono text-label text-ui-label hover:text-text-primary transition-colors duration-200 ease-in-out cursor-pointer py-spacing-xs w-full text-left rounded-md"
                                 onClick={() => {
-                                  const storyId = s.slug || s._id;
-                                  console.log("[SIDEBAR][NAV] Navigating to story:", s.title, storyId);
-                                  navigate(`/app/stories/${storyId}`);
+                                  console.log("[SIDEBAR][NAV] Navigating to story:", s.title, s.slug);
+                                  navigate(`/app/stories/${s.slug}`);
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
-                                    const storyId = s.slug || s._id;
-                                    console.log("[SIDEBAR][NAV] Navigating to story:", s.title, storyId);
-                                    navigate(`/app/stories/${storyId}`);
+                                    console.log("[SIDEBAR][NAV] Navigating to story:", s.title, s.slug);
+                                    navigate(`/app/stories/${s.slug}`);
                                   }
                                 }}
                                 title={`View ${s.title}`}
                               >
+                                {(() => { console.log("[VISUAL_CHECK] Saved item text:", s.title); return null; })()}
                                 {s.title}
                               </button>
                             ))}

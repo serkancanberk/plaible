@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
+import React, { createContext, useState, useEffect, useCallback, ReactNode, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserSessions, type UserSessionItem } from '../hooks/useUserSessions';
 import type { SavedStoryItem } from '../hooks/useSavedStories';
@@ -243,10 +243,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateSaveStatus = useCallback((slug: string, saved: boolean) => {
     console.log('[AuthProvider] savedStories updated:', { slug, saved });
     setSavedStories(prev => {
-      const newList = saved 
-        ? [...prev, slug] 
-        : prev.filter(s => s !== slug);
-      console.log('[AuthProvider] savedStories updated:', newList);
+      const exists = prev.some(s => s.slug === slug);
+      const newList = saved
+        ? (exists ? prev : [...prev, { slug, title: '', createdAt: new Date().toISOString() }])
+        : prev.filter(s => s.slug !== slug);
+      console.log('[AuthProvider] savedStories updated (objects):', newList);
       return newList;
     });
   }, []);
@@ -285,6 +286,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       timestamp: new Date().toISOString()
     });
     
+    console.log('[DEBUG][SAVED_SYNC][before_set]', {
+      length: savedStories.length,
+      first: savedStories[0]?.title || savedStories[0]?.slug || null,
+      data: JSON.stringify(savedStories)
+    });
     setSavedStories(prev => {
       const newStories = newSavedState 
         ? [...prev, { slug, title: '', createdAt: new Date().toISOString() }]
@@ -297,9 +303,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         newCount: newStories.length,
         timestamp: new Date().toISOString()
       });
-      
-      return newStories;
+      console.log('[FORCE_RENDER][savedStories_updated]', newStories.length);
+      console.log('[DEBUG][SAVED_SYNC][in_set]', {
+        prevLength: prev.length,
+        nextLength: newStories.length,
+        nextFirst: newStories[0]?.title || newStories[0]?.slug || null,
+        nextData: JSON.stringify(newStories)
+      });
+      // Force shallow clone to guarantee change detection
+      return [...newStories];
     });
+    setTimeout(() => {
+      console.log('[DEBUG][SAVED_SYNC][after_set]', {
+        length: savedStories.length,
+        first: savedStories[0]?.title || savedStories[0]?.slug || null,
+        data: JSON.stringify(savedStories)
+      });
+    }, 0);
     
     // Update user object to match unified state
     setUser(prev => {
@@ -316,7 +336,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         timestamp: new Date().toISOString()
       });
       
-      return { ...prev, savedStories: newStories };
+      console.log('[FORCE_RENDER][user_savedStories_updated]', newStories.length);
+      return { ...prev, savedStories: [...newStories] };
     });
     
     try {
@@ -414,7 +435,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       
       const data = await res.json();
-      const serverStories = data.saved || [];
+      const serverStories = Array.isArray(data?.items) ? data.items : (Array.isArray(data?.saved) ? data.saved : []);
+      console.log('[SYNC] Reloaded saved stories:', serverStories.length, serverStories[0]);
+      console.log('[DEBUG][SAVED_SYNC][sync_before_merge]', {
+        localLength: savedStories.length,
+        serverLength: serverStories.length
+      });
       
       // DATA_FLOW_DEBUG: Log API response structure
       console.log('[DATA_FLOW_DEBUG][CONTEXT_INJECTION] API response received:', {
@@ -454,8 +480,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
       
-      // Phase 9: Use atomic merge instead of direct setSavedStories
-      atomicMergeSavedStories(serverStories);
+      // Phase 9: Compute merged and update both states with fresh references
+      const mergedNow = [
+        ...savedStories,
+        ...serverStories.filter(s => !savedStories.some(l => l.slug === s.slug))
+      ];
+      setSavedStories(() => {
+        console.log('[FORCE_RENDER][savedStories_updated]', mergedNow.length);
+        return [...mergedNow];
+      });
       
       // DATA_FLOW_DEBUG: Log before setUser call
       console.log('[DATA_FLOW_DEBUG][CONTEXT_INJECTION] Before setUser call:', {
@@ -466,12 +499,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         timestamp: new Date().toISOString()
       });
       
-      // Update user object to match merged state
+      // Update user object to match merged state with fresh reference
       setUser(prev => {
         const updatedUser = prev ? { 
           ...prev, 
-          savedStories: [...savedStories, ...serverStories.filter(s => !savedStories.some(l => l.slug === s.slug))]
+          savedStories: [...mergedNow]
         } : prev;
+        if (updatedUser) {
+          console.log('[FORCE_RENDER][user_savedStories_updated]', updatedUser.savedStories?.length || 0);
+        }
         
         // DATA_FLOW_DEBUG: Log after setUser call
         console.log('[DATA_FLOW_DEBUG][CONTEXT_INJECTION] After setUser call:', {
@@ -505,7 +541,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       
       // Phase 7: Persist reconciliation marker
-      const mergedStories = [...savedStories, ...serverStories.filter(s => !savedStories.some(l => l.slug === s.slug))];
+      const mergedStories = mergedNow;
       localStorage.setItem(`savedStories_${user._id}`, JSON.stringify(mergedStories));
       localStorage.setItem(`savedStories_lastReconciledAt_${user._id}`, now.toString());
       
@@ -710,9 +746,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         
         const data = await res.json();
-        const storySlugs = data.saved?.map((story: any) => story.slug) || [];
-        console.log('[AuthProvider] savedStories updated:', storySlugs);
-        setSavedStories(storySlugs);
+        const items = Array.isArray(data?.items) ? data.items : (Array.isArray(data?.saved) ? data.saved : []);
+        console.log('[SYNC] Reloaded saved stories:', items.length, items[0]);
+        console.log('[AuthProvider] savedStories updated (objects):', items);
+        setSavedStories(items);
+        setUser(prev => (prev ? { ...prev, savedStories: items } : prev));
       } catch (err) {
         console.error('[AuthProvider] Failed to fetch saved stories:', err);
       }
@@ -833,7 +871,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [savedStories, user?._id]);
 
   // DATA_FLOW_DEBUG: Log context provider value
-  const contextValue = {
+  const contextValue = useMemo(() => ({
     user,
     isLoading,
     isAuthenticated: !!user,
@@ -849,7 +887,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     hydrationReady: isHydrationReady,
     // Legacy support - will be removed
     updateSaveStatus,
-  };
+  }), [user, savedStories, isLoading, fetchUser, login, logout, isSaved, toggleSaved, syncSavedStories, isHydrationReady, updateSaveStatus]);
   
   console.log('[DATA_FLOW_DEBUG][CONTEXT_INJECTION] Context provider value:', {
     hasUser: !!contextValue.user,
