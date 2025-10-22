@@ -518,6 +518,12 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   }, [savedStories]);
 
 
+  // Header wallet indicator sync log
+  useEffect(() => {
+    console.log('[CREDITS_UI][HEADER_SYNC] Wallet balance changed:', user?.wallet?.balance);
+  }, [user?.wallet?.balance]);
+
+
   // Handle kebab dropdown click outside and escape key
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

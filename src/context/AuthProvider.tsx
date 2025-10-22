@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useCallback, ReactNode, useR
 import { useNavigate } from 'react-router-dom';
 import { useUserSessions, type UserSessionItem } from '../hooks/useUserSessions';
 import type { SavedStoryItem } from '../hooks/useSavedStories';
+import { useToast } from '../components/ui/Toast';
 
 interface UserData {
   _id: string;
@@ -33,6 +34,10 @@ interface AuthContextType {
   syncSavedStories: () => Promise<void>;
   // Legacy support - will be removed
   updateSaveStatus: (slug: string, saved: boolean) => void;
+  // Credits helper
+  addCredits: (amount: number) => Promise<void>;
+  // Toast helper (optional expose for consumers)
+  showToast?: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -45,6 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { showToast, ToastComponent } = useToast();
 
   // Additional user-scoped data
   const { sessions, fetchSessions, clearSessions } = useUserSessions();
@@ -239,6 +245,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       window.location.href = '/app';
     }
   }, [user?._id, savedStories.length]);
+
+  // Frontend-only credits addition helper (Phase 1)
+  const addCredits = useCallback(async (amount: number) => {
+    if (!user?._id) {
+      console.warn('[CREDITS_UI] No user logged in.');
+      return;
+    }
+
+    const prevBalance = user.wallet.balance;
+    const optimistic = prevBalance + amount;
+
+    // optimistic update
+    setUser(prev => prev ? { ...prev, wallet: { ...prev.wallet, balance: optimistic } } : prev);
+
+    try {
+      const res = await fetch('/api/wallet/topup', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data?.ok) throw new Error(data?.error || 'Top-up failed');
+
+      const newBalance = (typeof data?.balance === 'number') ? data.balance : optimistic;
+      setUser(prev => prev ? { ...prev, wallet: { ...prev.wallet, balance: newBalance } } : prev);
+
+      console.log(`[CREDITS_UI] ✅ Added +${amount} credits (new balance: ${newBalance})`);
+      console.log('[CREDITS_UI][HEADER_SYNC] Context updated — new wallet balance:', newBalance);
+      showToast?.(`Added +${amount} credits!`, 'success');
+    } catch (err: any) {
+      console.error('[CREDITS_UI][ERROR]', err);
+      // rollback
+      setUser(prev => prev ? { ...prev, wallet: { ...prev.wallet, balance: prevBalance } } : prev);
+      showToast?.('Failed to add credits. Please try again.', 'error');
+    }
+  }, [user, showToast]);
 
   const updateSaveStatus = useCallback((slug: string, saved: boolean) => {
     console.log('[AuthProvider] savedStories updated:', { slug, saved });
@@ -887,7 +931,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     hydrationReady: isHydrationReady,
     // Legacy support - will be removed
     updateSaveStatus,
-  }), [user, savedStories, isLoading, fetchUser, login, logout, isSaved, toggleSaved, syncSavedStories, isHydrationReady, updateSaveStatus]);
+    // Credits helper
+    addCredits,
+    // Toast helper expose
+    showToast,
+  }), [user, savedStories, isLoading, fetchUser, login, logout, isSaved, toggleSaved, syncSavedStories, isHydrationReady, updateSaveStatus, addCredits, showToast]);
   
   console.log('[DATA_FLOW_DEBUG][CONTEXT_INJECTION] Context provider value:', {
     hasUser: !!contextValue.user,
@@ -908,8 +956,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   });
 
   return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
+    <>
+      <AuthContext.Provider value={contextValue}>
+        {children}
+      </AuthContext.Provider>
+      {ToastComponent}
+    </>
   );
 };

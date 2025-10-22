@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import C2AButton from '../C2AButton';
 import { Package } from '../../hooks/usePackages';
 import { useAuth } from '../../hooks/useAuth';
@@ -14,10 +14,20 @@ export default function PackageCard({
   onPurchase,
   className,
 }: PackageCardProps) {
-  const { user } = useAuth();
-  const handlePurchase = () => {
-    if (onPurchase) {
-      onPurchase(packageData._id);
+  const { user, addCredits, showToast } = useAuth() as any;
+  const [loading, setLoading] = useState(false);
+
+  const handlePurchase = async () => {
+    if (!user) {
+      console.warn('[CREDITS_UI] Visitor tried to buy package');
+      showToast?.('Please log in to purchase credits.', 'info');
+      return;
+    }
+    try {
+      setLoading(true);
+      await addCredits?.(packageData.totalCredits);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -85,10 +95,11 @@ export default function PackageCard({
           variant="primary"
           typography="caption"
           fullWidth
+          disabled={loading}
           onClick={handlePurchase}
         >
           {/* 👀 Visitor CTA label */}
-          {user ? 'Buy Now' : 'Sign Up or Login First'}
+          {loading ? 'Processing...' : (user ? 'Buy Now' : 'Sign Up or Login First')}
         </C2AButton>
       </div>
     </div>
