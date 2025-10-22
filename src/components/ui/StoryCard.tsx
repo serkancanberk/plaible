@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import C2AButton from '../C2AButton';
 import { useSaveStory } from '../../hooks/useSaveStory';
+import { useAuth } from '../../hooks/useAuth';
 import type { DBStoryAssets, DBStoryStats } from '../../types/story';
 
 // YouTube utility functions (copied from admin components)
@@ -66,6 +67,7 @@ export default function StoryCard({
 }: StoryCardProps) {
   // Save story functionality
   const { isSaved, loading, toggleSave, ToastComponent } = useSaveStory(slug);
+  const { user } = useAuth();
 
   // Debug: Log props.assets received by StoryCard
   console.log('[StoryCard -> props.assets]', {
@@ -464,25 +466,28 @@ export default function StoryCard({
             </span>
           ) : null}
           {/* Save toggle */}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleSave();
-            }}
-            disabled={loading}
-            className="font-mono text-caption text-text-tertiary flex items-center gap-2 hover:text-text-tertiary/50 transition-all duration-150 disabled:opacity-50"
-            title={isSaved ? "Remove from saved stories" : "Save this story"}
-          >
-            <span 
-              aria-hidden="true" 
-              className="transition-transform duration-200"
+          {/* 👀 Hidden for visitors (requires auth) */}
+          {user && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleSave();
+              }}
+              disabled={loading}
+              className="font-mono text-caption text-text-tertiary flex items-center gap-2 hover:text-text-tertiary/50 transition-all duration-150 disabled:opacity-50"
+              title={isSaved ? "Remove from saved stories" : "Save this story"}
             >
-              🔖
-            </span>
-            <span className="sr-only">{isSaved ? "Saved:" : "Save:"}</span>
-            <span className="text-text-tertiary hover:text-text-tertiary/50 transition-all duration-150 disabled:opacity-50">{isSaved ? "Saved" : "Save"}</span>
-          </button>
+              <span 
+                aria-hidden="true" 
+                className="transition-transform duration-200"
+              >
+                🔖
+              </span>
+              <span className="sr-only">{isSaved ? "Saved:" : "Save:"}</span>
+              <span className="text-text-tertiary hover:text-text-tertiary/50 transition-all duration-150 disabled:opacity-50">{isSaved ? "Saved" : "Save"}</span>
+            </button>
+          )}
           {/* Share link - Visual test only */}
           <span
             className="inline-flex items-center gap-spacing-xs text-text-tertiary hover:text-text-tertiary/50 cursor-pointer transition-colors duration-150"

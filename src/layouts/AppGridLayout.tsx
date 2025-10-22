@@ -43,6 +43,16 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { user, login, logout } = useAuth();
   
+  // DATA_FLOW_DEBUG: Log user data in AppGridLayout
+  console.log('[DATA_FLOW_DEBUG][SIDEBAR] User data in AppGridLayout:', {
+    hasUser: !!user,
+    userId: user?._id,
+    hasSavedStories: !!user?.savedStories,
+    savedStoriesLength: user?.savedStories?.length || 0,
+    savedStoriesStructure: user?.savedStories,
+    timestamp: new Date().toISOString()
+  });
+  
   // Initialize from URL params
   const [selectedMain, setSelectedMain] = useState<'books' | 'stories' | 'biographies'>(
     (searchParams.get('category') as 'books' | 'stories' | 'biographies') || 'books'
@@ -61,8 +71,8 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   
-  // Accordion state - only one section can be open at a time
-  const [expandedSection, setExpandedSection] = useState<'recent' | 'saved' | 'user' | null>('recent');
+  // Accordion state - only user section can be open (Recent and Saved are now static)
+  const [expandedSection, setExpandedSection] = useState<'user' | null>('user');
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const mobileCarouselRef = useRef<HTMLDivElement | null>(null);
   const mobileDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -228,9 +238,9 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
     navigate("/app/packages");
   };
 
-  // AccordionSection component for collapsible sidebar sections
+  // AccordionSection component for collapsible sidebar sections (only User section now)
   const AccordionSection: React.FC<{
-    sectionName: 'recent' | 'saved' | 'user';
+    sectionName: 'user';
     title: string;
     icon: React.ReactNode;
     children: React.ReactNode;
@@ -266,31 +276,19 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
           <span className="font-mono text-label text-text-primary flex-1 text-left">
             {title}
           </span>
-          <motion.div
-            animate={{ rotate: isExpanded ? 90 : 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
-            className="w-4 h-4 flex items-center justify-center"
-          >
-            <IconChevronRight className="w-4 h-4" />
-          </motion.div>
+          <div className="w-4 h-4 flex items-center justify-center">
+            <IconChevronRight className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+          </div>
         </button>
         
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              id={`accordion-content-${sectionName}`}
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: 'easeInOut' }}
-              className="overflow-hidden"
-            >
-              <div className="mt-spacing-xs space-x-spacing-xs space-y-spacing-xs">
-                {children}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {isExpanded && (
+          <div
+            id={`accordion-content-${sectionName}`}
+            className="mt-spacing-xs space-y-spacing-xs"
+          >
+            {children}
+          </div>
+        )}
       </div>
     );
   };
@@ -487,6 +485,24 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
   useEffect(() => {
     console.log('[useEffect:selectedMain changed]', selectedMain);
   }, [selectedMain]);
+
+  // Simplified visual diagnostic for static sections
+  useEffect(() => {
+    const runSimpleDiagnostic = () => {
+      console.log('[VISUAL_DEBUG][STATIC_SECTIONS] Recent and Saved sections are now static (no accordion animations)');
+      console.log('[VISUAL_DEBUG][STATIC_SECTIONS] User data:', {
+        hasUser: !!user,
+        hasSavedStories: !!user?.savedStories,
+        savedStoriesLength: user?.savedStories?.length || 0,
+        hasSessions: !!user?.sessions,
+        sessionsLength: user?.sessions?.length || 0
+      });
+    };
+
+    const timeoutId = setTimeout(runSimpleDiagnostic, 100);
+    return () => clearTimeout(timeoutId);
+  }, [user?.savedStories?.length, user?.sessions?.length]);
+
 
   // Handle kebab dropdown click outside and escape key
   useEffect(() => {
@@ -721,6 +737,23 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
             sidebarCollapsed ? 'w-20 lg:w-20' : 'w-64 lg:w-64',
             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           ].join(' ')}
+          ref={(el) => {
+            if (el) {
+              const computedStyle = window.getComputedStyle(el);
+              console.log('[VISUAL_DIAGNOSTIC][SIDEBAR_CONTAINER]', {
+                backgroundColor: computedStyle.backgroundColor,
+                color: computedStyle.color,
+                opacity: computedStyle.opacity,
+                visibility: computedStyle.visibility,
+                display: computedStyle.display,
+                zIndex: computedStyle.zIndex,
+                position: computedStyle.position,
+                transform: computedStyle.transform,
+                height: computedStyle.height,
+                width: computedStyle.width
+              });
+            }
+          }}
         >
           <div className="h-full flex flex-col text-primary font-mono px-spacing-md py-spacing-md">
             {sidebarCollapsed ? (
@@ -853,32 +886,27 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                   />
                 </div>
 
-                {/* Bottom zone: Recent, Saved, User */}
-                <div className="flex-1 flex flex-col justify-end">
-                  {/* Debug sidebar state */}
-                  <span className="sr-only">
-                    {(() => {
-                      console.log("[SIDEBAR_STATE]", user ? "Authenticated user → showing Recent/Saved" : "Visitor → hiding Recent/Saved");
-                      return '';
-                    })()}
-                  </span>
-
-                  {user ? (
-                    <>
-                      <span className="sr-only">
-                        {(() => {
-                          if (!(user.sessions?.length) && !(user.savedStories?.length)) {
-                            console.log("[SIDEBAR_STATE] Auth user with empty recent/saved lists.");
-                          }
-                          return '';
-                        })()}
-                      </span>
-                      {/* Recent section */}
-                      <AccordionSection
-                        sectionName="recent"
-                        title="Recent"
-                        icon={<IconClock className="w-4 h-4" />}
-                      >
+                {/* Recent and Saved sections - moved from bottom zone */}
+                {user ? (
+                  <>
+                    <span className="sr-only">
+                      {(() => {
+                        if (!(user.sessions?.length) && !(user.savedStories?.length)) {
+                          console.log("[SIDEBAR_STATE] Auth user with empty recent/saved lists.");
+                        }
+                        return '';
+                      })()}
+                    </span>
+                    
+                    {/* Recent section - Static */}
+                    <div className="mt-spacing-lg">
+                      <div className="flex items-center gap-spacing-sm text-text-primary">
+                        <span className="w-8 h-8 flex items-center justify-center rounded-full border border-primary text-primary">
+                          <IconClock className="w-4 h-4" />
+                        </span>
+                        <span className="font-mono text-label text-text-primary">Recent</span>
+                      </div>
+                      <div className="mt-spacing-xs space-y-spacing-xs">
                         {user.sessions?.length ? (
                           user.sessions.map((s: any) => (
                             <NavItem
@@ -891,16 +919,42 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                         ) : (
                           <span className="font-mono text-caption text-ui-muted mt-spacing-xs ml-spacing-sm">No story yet here.</span>
                         )}
-                      </AccordionSection>
+                      </div>
+                    </div>
 
-                      {/* Saved section */}
-                      <AccordionSection
-                        sectionName="saved"
-                        title="Saved"
-                        icon={<IconBookmark className="w-4 h-4" />}
-                      >
+                    {/* Saved section - Static */}
+                    <div className="mt-spacing-lg">
+                      <div className="flex items-center gap-spacing-sm text-text-primary">
+                        <span className="w-8 h-8 flex items-center justify-center rounded-full border border-primary text-primary">
+                          <IconBookmark className="w-4 h-4" />
+                        </span>
+                        <span className="font-mono text-label text-text-primary">Saved</span>
+                      </div>
+                      <div className="mt-spacing-xs space-y-spacing-xs">
                         {user.savedStories?.length ? (
                           <div className="flex flex-col gap-spacing-xs">
+                            {(() => {
+                              // DATA_FLOW_DEBUG: Log savedStories mapping with detailed structure
+                              console.log('[DATA_FLOW_DEBUG][SIDEBAR_RENDER] Saved stories mapping:', {
+                                hasUser: !!user,
+                                hasSavedStories: !!user?.savedStories,
+                                savedStoriesLength: user?.savedStories?.length || 0,
+                                savedStoriesData: user?.savedStories,
+                                savedStoriesStructure: user?.savedStories?.map(s => ({
+                                  id: (s as any)._id || s.slug,
+                                  slug: s.slug,
+                                  title: s.title,
+                                  createdAt: s.createdAt,
+                                  hasTitle: !!s.title,
+                                  hasSlug: !!s.slug,
+                                  hasId: !!((s as any)._id || s.slug),
+                                  titleLength: s.title?.length || 0,
+                                  slugLength: s.slug?.length || 0
+                                })),
+                                timestamp: new Date().toISOString()
+                              });
+                              return null;
+                            })()}
                             {user.savedStories.map((s: any) => (
                               <button
                                 key={s.slug || s._id}
@@ -927,9 +981,20 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                         ) : (
                           <span className="font-mono text-caption text-ui-muted mt-spacing-xs ml-spacing-sm">No story yet here.</span>
                         )}
-                      </AccordionSection>
-                    </>
-                  ) : null}
+                      </div>
+                    </div>
+                  </>
+                ) : null}
+
+                {/* Bottom zone: User only */}
+                <div className="flex-1 flex flex-col justify-end">
+                  {/* Debug sidebar state */}
+                  <span className="sr-only">
+                    {(() => {
+                      console.log("[SIDEBAR_STATE]", user ? "Authenticated user → showing Recent/Saved" : "Visitor → hiding Recent/Saved");
+                      return '';
+                    })()}
+                  </span>
 
                   {/* User profile */}
                   {user ? (
@@ -1050,16 +1115,19 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                                   setIsKebabOpen(false);
                                 }}
                               />
-                              <NavItem
-                                variant="text-secondary"
-                                label="Story Settings"
-                                className="w-full px-spacing-lg text-right whitespace-nowrap"
-                                onClick={() => {
-                                  console.log('[kebab] Story Settings');
-                                  setIsStorySettingsModalOpen(true);
-                                  setIsKebabOpen(false);
-                                }}
-                              />
+                              {/* 👀 Hidden for visitors (requires auth) */}
+                              {user && (
+                                <NavItem
+                                  variant="text-secondary"
+                                  label="Story Settings"
+                                  className="w-full px-spacing-lg text-right whitespace-nowrap"
+                                  onClick={() => {
+                                    console.log('[kebab] Story Settings');
+                                    setIsStorySettingsModalOpen(true);
+                                    setIsKebabOpen(false);
+                                  }}
+                                />
+                              )}
                               <NavItem
                                 variant="text-secondary"
                                 label="Report An Issue"

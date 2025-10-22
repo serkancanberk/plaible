@@ -212,17 +212,20 @@ const PlayOnboardPage: React.FC = () => {
                       in the <span className="text-accent">{selectedSettings.theme} theme</span>, 
                       set in <span className="text-accent">{selectedSettings.time} time</span>.
                     </p>
-                    <p>
-                      Want to change 
-                      <button
-                        onClick={() => setShowCharacterModal(true)}
-                        className="ml-1 font-sans text-accent text-caption underline hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
-                      >character</button> or 
-                      <button
-                        onClick={() => setSettingsModalOpen(true)}
-                        className="ml-1 font-sans text-accent text-caption underline hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
-                      >story settings</button> before starting?
-                    </p>
+                    {/* 👀 Hidden for visitors (requires auth) */}
+                    {user && (
+                      <p>
+                        Want to change 
+                        <button
+                          onClick={() => setShowCharacterModal(true)}
+                          className="ml-1 font-sans text-accent text-caption underline hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
+                        >character</button> or 
+                        <button
+                          onClick={() => setSettingsModalOpen(true)}
+                          className="ml-1 font-sans text-accent text-caption underline hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
+                        >story settings</button> before starting?
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

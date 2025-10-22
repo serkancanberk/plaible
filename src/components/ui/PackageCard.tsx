@@ -1,6 +1,7 @@
 import React from 'react';
 import C2AButton from '../C2AButton';
 import { Package } from '../../hooks/usePackages';
+import { useAuth } from '../../hooks/useAuth';
 
 export interface PackageCardProps {
   package: Package;
@@ -13,6 +14,7 @@ export default function PackageCard({
   onPurchase,
   className,
 }: PackageCardProps) {
+  const { user } = useAuth();
   const handlePurchase = () => {
     if (onPurchase) {
       onPurchase(packageData._id);
@@ -85,7 +87,8 @@ export default function PackageCard({
           fullWidth
           onClick={handlePurchase}
         >
-          Buy Now
+          {/* 👀 Visitor CTA label */}
+          {user ? 'Buy Now' : 'Sign Up or Login First'}
         </C2AButton>
       </div>
     </div>

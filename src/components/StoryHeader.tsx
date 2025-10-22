@@ -2,11 +2,13 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useStoryBySlug } from '../hooks/useStoryBySlug';
 import { useSaveStory } from '../hooks/useSaveStory';
+import { useAuth } from '../hooks/useAuth';
 
 export const StoryHeader: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: story, loading, error } = useStoryBySlug(slug);
   const { isSaved, loading: saveLoading, toggleSave, ToastComponent } = useSaveStory(slug || '');
+  const { user } = useAuth();
 
   if (loading) return <p className="text-body text-text-tertiary">Loading story...</p>;
   if (error) return <p className="text-body text-text-tertiary">Error loading story.</p>;
@@ -60,19 +62,22 @@ export const StoryHeader: React.FC = () => {
           </div>
 
           {/* Save toggle */}
-          <button
-            onClick={toggleSave}
-            disabled={saveLoading}
-            className="font-mono text-caption text-text-tertiary flex items-center gap-2 hover:text-text-tertiary/50 transition-all duration-150 disabled:opacity-50"
-            title={isSaved ? "Remove from saved stories" : "Save this story"}
-          >
-            <span className="transition-transform duration-200">
-              🔖
-            </span>
-            <span className="font-mono text-caption text-text-tertiary hover:text-text-tertiary/50 transition-all duration-150 disabled:opacity-50">
-              {isSaved ? "Saved" : "Save"}
-            </span>
-          </button>
+          {/* 👀 Hidden for visitors (requires auth) */}
+          {user && (
+            <button
+              onClick={toggleSave}
+              disabled={saveLoading}
+              className="font-mono text-caption text-text-tertiary flex items-center gap-2 hover:text-text-tertiary/50 transition-all duration-150 disabled:opacity-50"
+              title={isSaved ? "Remove from saved stories" : "Save this story"}
+            >
+              <span className="transition-transform duration-200">
+                🔖
+              </span>
+              <span className="font-mono text-caption text-text-tertiary hover:text-text-tertiary/50 transition-all duration-150 disabled:opacity-50">
+                {isSaved ? "Saved" : "Save"}
+              </span>
+            </button>
+          )}
 
           <span
             className="font-mono text-caption text-text-tertiary flex items-center gap-2 hover:text-text-tertiary/50 transition-colors duration-150 cursor-pointer"

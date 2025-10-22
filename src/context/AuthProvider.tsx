@@ -155,6 +155,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         identity: data.identity
       });
       
+      // DATA_FLOW_DEBUG: Log user data structure and savedStories
+      console.log('[DATA_FLOW_DEBUG][PROVIDER] User data loaded:', {
+        hasUser: !!data,
+        userId: data._id,
+        hasSavedStories: !!data.savedStories,
+        savedStoriesLength: data.savedStories?.length || 0,
+        savedStoriesStructure: data.savedStories,
+        timestamp: new Date().toISOString()
+      });
+      
       setUser(data);
     } catch {
       setUser(null);
@@ -406,6 +416,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const data = await res.json();
       const serverStories = data.saved || [];
       
+      // DATA_FLOW_DEBUG: Log API response structure
+      console.log('[DATA_FLOW_DEBUG][CONTEXT_INJECTION] API response received:', {
+        rawResponse: data,
+        serverStories: serverStories,
+        serverStoriesLength: serverStories.length,
+        serverStoriesStructure: serverStories.map(s => ({
+          id: s.id,
+          slug: s.slug,
+          title: s.title,
+          createdAt: s.createdAt,
+          hasTitle: !!s.title,
+          hasSlug: !!s.slug,
+          hasId: !!s.id
+        })),
+        timestamp: new Date().toISOString()
+      });
+      
       // Phase 8: Skip empty server overwrite
       if (serverStories.length === 0 && savedStories.length > 0) {
         console.log('[SAVED_STATE][SNAPSHOT] skip_empty_server_overwrite');
@@ -430,11 +457,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Phase 9: Use atomic merge instead of direct setSavedStories
       atomicMergeSavedStories(serverStories);
       
+      // DATA_FLOW_DEBUG: Log before setUser call
+      console.log('[DATA_FLOW_DEBUG][CONTEXT_INJECTION] Before setUser call:', {
+        currentSavedStories: savedStories,
+        serverStories: serverStories,
+        mergedStories: [...savedStories, ...serverStories.filter(s => !savedStories.some(l => l.slug === s.slug))],
+        currentUser: user,
+        timestamp: new Date().toISOString()
+      });
+      
       // Update user object to match merged state
-      setUser(prev => prev ? { 
-        ...prev, 
-        savedStories: [...savedStories, ...serverStories.filter(s => !savedStories.some(l => l.slug === s.slug))]
-      } : prev);
+      setUser(prev => {
+        const updatedUser = prev ? { 
+          ...prev, 
+          savedStories: [...savedStories, ...serverStories.filter(s => !savedStories.some(l => l.slug === s.slug))]
+        } : prev;
+        
+        // DATA_FLOW_DEBUG: Log after setUser call
+        console.log('[DATA_FLOW_DEBUG][CONTEXT_INJECTION] After setUser call:', {
+          hasUser: !!updatedUser,
+          userId: updatedUser?._id,
+          hasSavedStories: !!updatedUser?.savedStories,
+          savedStoriesLength: updatedUser?.savedStories?.length || 0,
+          savedStoriesData: updatedUser?.savedStories,
+          savedStoriesStructure: updatedUser?.savedStories?.map(s => ({
+            id: s.id,
+            slug: s.slug,
+            title: s.title,
+            createdAt: s.createdAt,
+            hasTitle: !!s.title,
+            hasSlug: !!s.slug,
+            hasId: !!s.id
+          })),
+          timestamp: new Date().toISOString()
+        });
+        
+        return updatedUser;
+      });
       
       setLastSyncedAt(Date.now());
       setLastReconciledAt(Date.now());
@@ -505,11 +564,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return;
     }
     
-    // Phase 8: Block any initial clear before hydration
-    if (!isHydrationReady && savedStories.length > 0) {
-      console.log('[SAVED_STATE][SNAPSHOT] prevent_clear_before_hydration');
-      return;
-    }
+  // Phase 8: Block any initial clear before hydration
+  if (!isHydrationReady && savedStories.length > 0) {
+    console.log('[SAVED_STATE][SNAPSHOT] prevent_clear_before_hydration');
+    return;
+  }
+  
+  // DATA_FLOW_DEBUG: Log hydration and reconciliation states
+  console.log('[DATA_FLOW_DEBUG][PROVIDER] Hydration and reconciliation states:', {
+    isHydrationReady,
+    isFrozen,
+    savedStoriesLength: savedStories.length,
+    lastHydratedAt,
+    lastSyncedAt,
+    lastReconciledAt,
+    timestamp: new Date().toISOString()
+  });
     
     // Phase 9: Prevent any state clearing while frozen
     if (isFrozen) {
@@ -751,29 +821,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (user?._id && savedStories.length >= 0) {
       localStorage.setItem(`savedStories_${user._id}`, JSON.stringify(savedStories));
       console.log('[SAVED_STATE][SNAPSHOT] persisted', { count: savedStories.length });
+      
+      // DATA_FLOW_DEBUG: Log savedStories state updates
+      console.log('[DATA_FLOW_DEBUG][PROVIDER] savedStories state updated:', {
+        savedStoriesLength: savedStories.length,
+        savedStoriesData: savedStories,
+        userId: user._id,
+        timestamp: new Date().toISOString()
+      });
     }
   }, [savedStories, user?._id]);
 
+  // DATA_FLOW_DEBUG: Log context provider value
+  const contextValue = {
+    user,
+    isLoading,
+    isAuthenticated: !!user,
+    login,
+    logout,
+    refreshUser: fetchUser,
+    // Phase 2: Unified saved stories API - single source of truth
+    savedStories,
+    isSaved,
+    toggleSaved,
+    syncSavedStories,
+    // Phase 6: Hydration barrier for debugging
+    hydrationReady: isHydrationReady,
+    // Legacy support - will be removed
+    updateSaveStatus,
+  };
+  
+  console.log('[DATA_FLOW_DEBUG][CONTEXT_INJECTION] Context provider value:', {
+    hasUser: !!contextValue.user,
+    userId: contextValue.user?._id,
+    hasSavedStories: !!contextValue.user?.savedStories,
+    savedStoriesLength: contextValue.user?.savedStories?.length || 0,
+    savedStoriesData: contextValue.user?.savedStories,
+    savedStoriesStructure: contextValue.user?.savedStories?.map(s => ({
+      id: s.id,
+      slug: s.slug,
+      title: s.title,
+      createdAt: s.createdAt,
+      hasTitle: !!s.title,
+      hasSlug: !!s.slug,
+      hasId: !!s.id
+    })),
+    timestamp: new Date().toISOString()
+  });
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        isAuthenticated: !!user,
-        login,
-        logout,
-        refreshUser: fetchUser,
-        // Phase 2: Unified saved stories API - single source of truth
-        savedStories,
-        isSaved,
-        toggleSaved,
-        syncSavedStories,
-        // Phase 6: Hydration barrier for debugging
-        hydrationReady: isHydrationReady,
-        // Legacy support - will be removed
-        updateSaveStatus,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
