@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 
 const analyticsDailySchema = new Schema(
   {
-    date: { type: String, required: true, unique: true, index: true }, // YYYY-MM-DD format
+    date: { type: String, required: true, unique: true }, // YYYY-MM-DD format
     dau: { type: Number, default: 0 }, // Daily Active Users
     sessionsStarted: { type: Number, default: 0 },
     turns: { type: Number, default: 0 },
@@ -29,7 +29,8 @@ const analyticsDailySchema = new Schema(
   { timestamps: true }
 );
 
-// Index for efficient querying by date range
+// Index for efficient querying by date range (single source of truth)
 analyticsDailySchema.index({ date: 1 });
+console.log('[CLEANUP] Duplicate index on "date" removed');
 
 export const AnalyticsDaily = mongoose.models.AnalyticsDaily || mongoose.model("AnalyticsDaily", analyticsDailySchema);

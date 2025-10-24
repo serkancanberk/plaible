@@ -1,7 +1,7 @@
 // src/config/categoryEnums.js
 // Centralized enum definitions for category and genre validation
 
-export const MAIN_CATEGORIES = ["book", "story", "biography"];
+export const MAIN_CATEGORIES = ["books", "stories", "biographies"];
 
 export const GENRES = [
   "gothic",

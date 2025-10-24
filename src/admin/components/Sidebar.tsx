@@ -10,9 +10,12 @@ const menuItems = [
   { path: '/users', label: 'Users', icon: '👥' },
   { path: '/stories', label: 'Stories', icon: '📚' },
   { path: '/feedbacks', label: 'Feedbacks', icon: '💬' },
+  { path: '/package-manager', label: 'Package Manager', icon: '📦' },
   { path: '/wallet-analytics', label: 'Wallet Analytics', icon: '💰' },
   { path: '/category-manager', label: 'Category Manager', icon: '🏷️' },
+  { path: '/story-settings', label: 'Story Settings', icon: '⚙️' },
   { path: '/storyrunner', label: 'StoryRunner AI', icon: '🎭' },
+  { path: '/reportmanager', label: 'Report Manager', icon: '📋' },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {

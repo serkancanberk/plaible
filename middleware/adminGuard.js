@@ -7,6 +7,10 @@ import { User } from "../models/User.js";
  */
 export default async function adminGuard(req, res, next) {
   try {
+    console.log("DEBUG adminGuard -> cookies:", req.cookies);
+    console.log("DEBUG adminGuard -> req.user:", req.user);
+    console.log("DEBUG adminGuard -> req.userId:", req.userId);
+    
     if (!req.userId) {
       console.log("Admin guard: No userId found");
       return res.status(401).json({ error: "UNAUTHENTICATED" });
@@ -43,6 +47,7 @@ export default async function adminGuard(req, res, next) {
 
     // Store user info for potential use in routes
     req.adminUser = user;
+    console.log("DEBUG adminGuard -> req.adminUser set to:", req.adminUser);
     next();
   } catch (error) {
     console.error("Admin guard error:", error);

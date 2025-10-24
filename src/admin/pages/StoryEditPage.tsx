@@ -14,6 +14,7 @@ import { PricingEditor } from '../components/storyEdit/PricingEditor';
 import { TagsEditor } from '../components/storyEdit/TagsEditor';
 import { FunFactsEditor } from '../components/storyEdit/FunFactsEditor';
 import { ReengagementEditor } from '../components/storyEdit/ReengagementEditor';
+import { RelatedStoriesManager } from '../components/storyEdit/RelatedStoriesManager';
 
 export const StoryEditPage: React.FC = () => {
   const { storyId } = useParams<{ storyId: string }>();
@@ -190,6 +191,7 @@ export const StoryEditPage: React.FC = () => {
     { id: 'tags', label: 'Tags', icon: '🏷️' },
     { id: 'funfacts', label: 'Fun Facts', icon: '🤓' },
     { id: 'reengagement', label: 'Re-engagement', icon: '🔁' },
+    { id: 'related', label: 'Related Stories', icon: '🔗' },
   ];
 
   if (loading) {
@@ -344,6 +346,9 @@ export const StoryEditPage: React.FC = () => {
                 )}
                 {activeTab === 'reengagement' && (
                   <ReengagementEditor story={story} onUpdate={handleStoryUpdate} />
+                )}
+                {activeTab === 'related' && (
+                  <RelatedStoriesManager story={story} onUpdate={handleStoryUpdate} />
                 )}
               </div>
             </div>

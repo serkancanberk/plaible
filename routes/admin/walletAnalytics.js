@@ -86,7 +86,14 @@ router.get("/total", async (req, res) => {
  *     security:
  *       - cookieAuth: []
  *     parameters:
- *       - in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 10 }, description: Number of top users to return
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of top users to return
  *     responses:
  *       200:
  *         description: Top users retrieved successfully
@@ -153,10 +160,30 @@ router.get("/distribution", async (req, res) => {
  *     security:
  *       - cookieAuth: []
  *     parameters:
- *       - in: query, name: startDate, schema: { type: string, format: date }, description: Start date for filtering (YYYY-MM-DD)
- *       - in: query, name: endDate, schema: { type: string, format: date }, description: End date for filtering (YYYY-MM-DD)
- *       - in: query, name: type, schema: { type: string, enum: [credit, debit] }, description: Filter by transaction type
- *       - in: query, name: source, schema: { type: string, enum: [admin, purchase, ai, topup, play, refund, adjustment] }, description: Filter by transaction source
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date for filtering (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date for filtering (YYYY-MM-DD)
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [credit, debit]
+ *         description: Filter by transaction type
+ *       - in: query
+ *         name: source
+ *         schema:
+ *           type: string
+ *           enum: [admin, purchase, ai, topup, play, refund, adjustment]
+ *         description: Filter by transaction source
  *     responses:
  *       200:
  *         description: Transaction statistics retrieved successfully
@@ -253,7 +280,12 @@ router.get("/transactions/stats", async (req, res) => {
  *     security:
  *       - cookieAuth: []
  *     parameters:
- *       - in: query, name: date, schema: { type: string, format: date }, description: Date for summary (YYYY-MM-DD, defaults to today)
+ *       - in: query
+ *         name: date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Date for summary (YYYY-MM-DD, defaults to today)
  *     responses:
  *       200:
  *         description: Daily summary retrieved successfully
@@ -370,12 +402,45 @@ router.get("/transactions/daily", async (req, res) => {
  *     security:
  *       - cookieAuth: []
  *     parameters:
- *       - in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 50 }, description: Number of transactions to return
- *       - in: query, name: offset, schema: { type: integer, minimum: 0, default: 0 }, description: Number of transactions to skip
- *       - in: query, name: startDate, schema: { type: string, format: date }, description: Start date for filtering (YYYY-MM-DD)
- *       - in: query, name: endDate, schema: { type: string, format: date }, description: End date for filtering (YYYY-MM-DD)
- *       - in: query, name: type, schema: { type: string, enum: [credit, debit] }, description: Filter by transaction type
- *       - in: query, name: source, schema: { type: string, enum: [admin, purchase, ai, topup, play, refund, adjustment] }, description: Filter by transaction source
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 50
+ *         description: Number of transactions to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           default: 0
+ *         description: Number of transactions to skip
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date for filtering (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date for filtering (YYYY-MM-DD)
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [credit, debit]
+ *         description: Filter by transaction type
+ *       - in: query
+ *         name: source
+ *         schema:
+ *           type: string
+ *           enum: [admin, purchase, ai, topup, play, refund, adjustment]
+ *         description: Filter by transaction source
  *     responses:
  *       200:
  *         description: Transaction logs retrieved successfully
@@ -466,11 +531,39 @@ router.get("/transactions/logs", async (req, res) => {
  *     security:
  *       - cookieAuth: []
  *     parameters:
- *       - in: path, name: userId, required: true, schema: { type: string }, description: User ID
- *       - in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 50 }, description: Number of transactions to return
- *       - in: query, name: offset, schema: { type: integer, minimum: 0, default: 0 }, description: Number of transactions to skip
- *       - in: query, name: type, schema: { type: string, enum: [credit, debit] }, description: Filter by transaction type
- *       - in: query, name: source, schema: { type: string, enum: [admin, purchase, ai, topup, play, refund, adjustment] }, description: Filter by transaction source
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 50
+ *         description: Number of transactions to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           default: 0
+ *         description: Number of transactions to skip
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [credit, debit]
+ *         description: Filter by transaction type
+ *       - in: query
+ *         name: source
+ *         schema:
+ *           type: string
+ *           enum: [admin, purchase, ai, topup, play, refund, adjustment]
+ *         description: Filter by transaction source
  *     responses:
  *       200:
  *         description: User transaction history retrieved successfully

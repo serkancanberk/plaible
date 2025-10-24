@@ -7,6 +7,7 @@ import { WalletTransaction } from "../models/WalletTransaction.js";
 import { selectProvider, generateStart, generateTurn } from "../services/llmProvider.js";
 import { moderateUserInput } from "../services/moderation.js";
 import { logStoryRunnerEvent, eventTypes } from "../services/eventLog.js";
+import { StorySettings } from "../models/StorySettings.js";
 import { emit } from "../middleware/memorySSE.js";
 
 // Lightweight validators and helpers (mirror sessions router style)
@@ -156,13 +157,21 @@ const router = Router();
 // POST /api/storyrunner/start
 router.post("/start", async (req, res) => {
   try {
+    console.log("🔹 Incoming payload:", req.body);
+    console.log("🔹 Resolved user:", req.userId);
+    
     if (!req.userId) return err(res, 401, "UNAUTHENTICATED");
 
     const body = req.body || {};
     const storySlug = toSlug(body.storySlug);
     const characterId = isNonEmptyString(body.characterId) ? body.characterId.trim() : "";
     const roleIdsRaw = body.roleIds;
+    let toneStyleId = isNonEmptyString(body.toneStyleId) ? body.toneStyleId.trim() : "";
+    let timeFlavorId = isNonEmptyString(body.timeFlavorId) ? body.timeFlavorId.trim() : "";
     const resume = body.resume === true;
+    
+    console.log("🔹 Processed storySlug:", storySlug);
+    console.log("🔹 Processed characterId:", characterId);
 
     if (!isNonEmptyString(storySlug)) return err(res, 400, "BAD_REQUEST", "storySlug");
     if (!isNonEmptyString(characterId)) return err(res, 400, "BAD_REQUEST", "characterId");
@@ -171,10 +180,21 @@ router.post("/start", async (req, res) => {
     }
 
     const story = await Story.findOne({ slug: storySlug, isActive: true }).lean();
-    if (!story) return err(res, 404, "NOT_FOUND");
+    console.log("🔹 Story lookup result:", story?.title, "Characters count:", story?.characters?.length);
+    if (!story) return res.status(404).json({ error: "STORY_NOT_FOUND", message: "Story not found" });
 
     const character = (story.characters || []).find(c => c.id === characterId);
-    if (!character) return err(res, 400, "BAD_REQUEST", "characterId");
+    console.log("🔹 Character lookup result:", character);
+    if (!character) return res.status(404).json({ error: "CHARACTER_NOT_FOUND", message: "Character not found" });
+    
+    // Defensive checks for required data
+    if (!story.content && !story.storyrunner?.storyPrompt) {
+      console.warn("⚠️ Story missing content and storyPrompt");
+    }
+    
+    if (!character.personality && !character.summary) {
+      console.warn("⚠️ Character missing personality and summary");
+    }
 
     let roleIds = [];
     if (Array.isArray(roleIdsRaw)) {
@@ -252,46 +272,178 @@ router.post("/start", async (req, res) => {
     }).lean();
     if (!existingTx) {
       try {
+        console.log("🔹 Creating wallet deduction transaction:", {
+          userId: req.userId,
+          cost,
+          storyId: story._id,
+          chapter: 1
+        });
+        
         await WalletTransaction.createDeduct(req.userId, cost, story._id, 1, "deduct:chapter");
+        console.log("✅ Wallet deduction transaction created successfully");
       } catch (e) {
+        console.error("❌ WalletTransaction.createDeduct error:", e);
+        console.error("❌ Error details:", {
+          message: e.message,
+          code: e.code,
+          name: e.name
+        });
+        
         if (e && e.code === 11000) {
           alreadyCharged = true;
+          console.log("🔄 Duplicate transaction detected, skipping charge");
         } else {
-          throw e;
+          return res.status(500).json({ 
+            error: "WALLET_TRANSACTION_ERROR", 
+            message: e.message || "Failed to process wallet transaction",
+            details: "Unable to deduct credits for story session"
+          });
         }
       }
     } else {
       alreadyCharged = true;
+      console.log("🔄 Existing transaction found, skipping charge");
     }
     if (!alreadyCharged) {
       await User.findByIdAndUpdate(req.userId, { $inc: { "wallet.balance": -cost } });
     }
 
-    // Create session
-    const sess = await Session.create({
-      userId: new mongoose.Types.ObjectId(String(req.userId)),
-      storyId: story._id,
-      characterId,
-      roleIds: Array.isArray(roleIds) ? roleIds : [],
-      progress: {
-        chapter: 1,
-        chapterCountApprox: Number.isInteger(story?.pricing?.estimatedChapterCount) && story.pricing.estimatedChapterCount > 0
-          ? story.pricing.estimatedChapterCount
-          : 10,
-        completed: false,
-      },
-      log: [],
-      mirror: { roleAlignment: null, relationships: [], criticalBeats: [], hint: null, progressNote: null },
-      finale: { requested: false, requestedAt: null },
-      rating: { stars: null, text: null },
-    });
+    // Check for existing session before creating new one
+    let sess = await Session.findOne({ 
+      userId: req.userId, 
+      storyId: story._id 
+    }).lean();
+    
+    if (sess) {
+      console.log(`🔁 Existing session found, reusing: ${sess._id}`);
+      
+      // Return existing session with current scene
+      const lastScene = (sess.log || []).slice().reverse().find(e => e.role === "storyrunner");
+      const scene = lastScene ? { text: lastScene.text || lastScene.content || "", choices: lastScene.choices || [] } : { text: "", choices: [] };
+      
+      const latest = await User.findById(req.userId, "wallet.balance").lean();
+      const latestBalance = latest?.wallet?.balance ?? 0;
+      
+      return ok(res, {
+        sessionId: String(sess._id),
+        story: { 
+          title: story.title, 
+          slug: story.slug,
+          character: {
+            id: character.id,
+            slug: character.slug || character.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown',
+            name: character.name || 'Unknown Character',
+            displayName: character.displayName || character.name || 'Unknown Character',
+            assets: character.assets || {}
+          }
+        },
+        scene: { text: scene.text, choices: scene.choices },
+        progress: sess.progress,
+        wallet: { balance: latestBalance },
+      });
+    }
+    
+    // Validate tone/time against StorySettings catalog; fallback to 'original'
+    try {
+      if (!toneStyleId || !(await StorySettings.isValidToneStyle(toneStyleId))) toneStyleId = 'original';
+      if (!timeFlavorId || !(await StorySettings.isValidTimeFlavor(timeFlavorId))) timeFlavorId = 'original';
+      console.log('[SESSION_SETTINGS_VALIDATED]', toneStyleId, timeFlavorId);
+    } catch (e) {
+      console.warn('[SESSION_SETTINGS_VALIDATION_ERROR]', e?.message);
+      if (!toneStyleId) toneStyleId = 'original';
+      if (!timeFlavorId) timeFlavorId = 'original';
+    }
+
+    // Create new session
+    console.log("🔹 Creating new session for user:", req.userId, "story:", story._id);
+    
+    try {
+      sess = await Session.create({
+        userId: new mongoose.Types.ObjectId(String(req.userId)),
+        storyId: story._id,
+        characterId,
+        roleIds: Array.isArray(roleIds) ? roleIds : [],
+        settings: {
+          toneStyleId: toneStyleId || undefined,
+          timeFlavorId: timeFlavorId || undefined,
+        },
+        progress: {
+          chapter: 1,
+          chapterCountApprox: Number.isInteger(story?.pricing?.estimatedChapterCount) && story.pricing.estimatedChapterCount > 0
+            ? story.pricing.estimatedChapterCount
+            : 10,
+          completed: false,
+        },
+        log: [],
+        mirror: { roleAlignment: null, relationships: [], criticalBeats: [], hint: null, progressNote: null },
+        finale: { requested: false, requestedAt: null },
+        rating: { stars: null, text: null },
+      });
+      
+      console.log(`✅ New session created: ${sess._id}`);
+    } catch (error) {
+      console.error("❌ Session creation error:", error);
+      
+      // Handle duplicate key error (E11000)
+      if (error.code === 11000) {
+        console.log("🔄 Duplicate session detected, finding existing session");
+        
+        // Find the existing session
+        const existingSess = await Session.findOne({ 
+          userId: req.userId, 
+          storyId: story._id 
+        }).lean();
+        
+        if (existingSess) {
+          console.log(`🔁 Using existing session: ${existingSess._id}`);
+          
+          // Return existing session with current scene
+          const lastScene = (existingSess.log || []).slice().reverse().find(e => e.role === "storyrunner");
+          const scene = lastScene ? { text: lastScene.text || lastScene.content || "", choices: lastScene.choices || [] } : { text: "", choices: [] };
+          
+          const latest = await User.findById(req.userId, "wallet.balance").lean();
+          const latestBalance = latest?.wallet?.balance ?? 0;
+          
+          return ok(res, {
+            sessionId: String(existingSess._id),
+            story: { 
+              title: story.title, 
+              slug: story.slug,
+              character: {
+                id: character.id,
+                slug: character.slug || character.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown',
+                name: character.name || 'Unknown Character',
+                displayName: character.displayName || character.name || 'Unknown Character',
+                assets: character.assets || {}
+              }
+            },
+            scene: { text: scene.text, choices: scene.choices },
+            progress: existingSess.progress,
+            wallet: { balance: latestBalance },
+          });
+        }
+      }
+      
+      // If not a duplicate key error or no existing session found, re-throw
+      throw error;
+    }
 
     // Build initial scene via LLM provider
+    console.log("🔹 About to call generateStart with:", {
+      storyTitle: story.title,
+      characterId,
+      roleIds: Array.isArray(roleIds) ? roleIds : [],
+      storyContent: story.content ? "exists" : "missing",
+      characterPersonality: character.personality ? "exists" : "missing"
+    });
+    
     const scene = await generateStart({
       story,
       characterId,
       roleIds: Array.isArray(roleIds) ? roleIds : [],
     });
+    
+    console.log("🔹 generateStart result:", { textLength: scene?.text?.length, choicesCount: scene?.choices?.length });
 
     sess.log.push({ role: "storyrunner", content: scene.text, choices: scene.choices, ts: new Date() });
     await sess.save();
@@ -319,15 +471,50 @@ router.post("/start", async (req, res) => {
       console.warn('[SSE] Failed to emit start event:', error);
     }
 
-    return ok(res, {
+    const responsePayload = {
       sessionId: String(sess._id),
-      story: { title: story.title, slug: story.slug },
+      story: { 
+        title: story.title, 
+        slug: story.slug,
+        character: {
+          id: character.id,
+          slug: character.slug || character.name?.toLowerCase().replace(/\s+/g, '-') || 'unknown',
+          name: character.name || 'Unknown Character',
+          displayName: character.displayName || character.name || 'Unknown Character',
+          assets: character.assets || {}
+        }
+      },
       scene: { text: scene.text, choices: scene.choices },
       progress: sess.progress,
+      settings: {
+        toneStyle: sess?.settings?.toneStyleId || toneStyleId || null,
+        timeFlavor: sess?.settings?.timeFlavorId || timeFlavorId || null,
+      },
       wallet: { balance: latestBalance },
-    });
+    };
+
+    console.log('[SESSION_PERSISTED]', String(sess._id), story.title, 'user=', String(req.userId));
+    console.log('[SESSION_SETTINGS]', { toneStyleId: sess?.settings?.toneStyleId, timeFlavorId: sess?.settings?.timeFlavorId });
+    return ok(res, responsePayload);
   } catch (e) {
-    return err(res, 500, "SERVER_ERROR");
+    console.error("❌ StoryRunner startSession error:", e);
+    console.error("❌ Error stack:", e.stack);
+    console.error("❌ Error message:", e.message);
+    
+    // Return more specific error information
+    if (e.message && e.message.includes("Cannot read properties of undefined")) {
+      return res.status(500).json({ 
+        error: "MISSING_DATA", 
+        message: e.message,
+        details: "Required story or character data is missing"
+      });
+    }
+    
+    return res.status(500).json({ 
+      error: "SERVER_ERROR", 
+      message: e.message || "Internal server error",
+      details: "An unexpected error occurred in the story runner"
+    });
   }
 });
 
@@ -535,12 +722,32 @@ router.post("/turn", async (req, res) => {
       }
 
       try {
+        console.log("🔹 Creating wallet deduction transaction for chapter advance:", {
+          userId: req.userId,
+          cost,
+          storyId: sess.storyId,
+          chapter: nextChapter
+        });
+        
         await WalletTransaction.createDeduct(req.userId, cost, sess.storyId, nextChapter, "deduct:chapter");
+        console.log("✅ Wallet deduction transaction created successfully for chapter advance");
       } catch (e) {
+        console.error("❌ WalletTransaction.createDeduct error (chapter advance):", e);
+        console.error("❌ Error details:", {
+          message: e.message,
+          code: e.code,
+          name: e.name
+        });
+        
         if (e && e.code === 11000) {
+          console.log("🔄 Duplicate transaction detected for chapter advance, skipping charge");
           // already deducted for this chapter
         } else {
-          throw e;
+          return res.status(500).json({ 
+            error: "WALLET_TRANSACTION_ERROR", 
+            message: e.message || "Failed to process wallet transaction for chapter advance",
+            details: "Unable to deduct credits for story chapter"
+          });
         }
       }
 
@@ -614,6 +821,110 @@ router.post("/turn", async (req, res) => {
     return ok(res, response);
   } catch (e) {
     return err(res, 500, "SERVER_ERROR");
+  }
+});
+
+/**
+ * @swagger
+ * /api/storyrunner/session/{sessionId}/messages:
+ *   get:
+ *     tags: [StoryRunner]
+ *     summary: Get messages for a story session
+ *     description: Retrieves all messages/log entries for a specific story session
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The session ID to fetch messages for
+ *     responses:
+ *       200:
+ *         description: Messages retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 sessionId:
+ *                   type: string
+ *                 messages:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       role:
+ *                         type: string
+ *                         enum: [user, storyrunner]
+ *                       content:
+ *                         type: string
+ *                       choices:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       ts:
+ *                         type: string
+ *                         format: date-time
+ *       404:
+ *         description: Session not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "SESSION_NOT_FOUND"
+ *                 message:
+ *                   type: string
+ *                   example: "The requested story session does not exist."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "SERVER_ERROR"
+ *                 message:
+ *                   type: string
+ *                   example: "Internal Server Error"
+ */
+// GET /api/storyrunner/session/:sessionId/messages
+router.get('/session/:sessionId/messages', async (req, res) => {
+  try {
+    const sessionId = req.params.sessionId;
+    console.log(`📨 Fetching messages for session: ${sessionId}`);
+    
+    const sess = await Session.findById(sessionId).lean();
+
+    if (!sess) {
+      console.warn(`⚠️ No session found for ID: ${sessionId}`);
+      return res.status(404).json({
+        error: 'SESSION_NOT_FOUND',
+        message: 'The requested story session does not exist.'
+      });
+    }
+
+    // Default to empty log if missing
+    const messages = Array.isArray(sess.log) ? sess.log : [];
+
+    console.log(`📨 Returning ${messages.length} messages for session ${sessionId}`);
+
+    return res.status(200).json({
+      sessionId,
+      messages
+    });
+  } catch (error) {
+    console.error('❌ Error fetching session messages:', error);
+    return res.status(500).json({
+      error: 'SERVER_ERROR',
+      message: error.message || 'Internal Server Error'
+    });
   }
 });
 

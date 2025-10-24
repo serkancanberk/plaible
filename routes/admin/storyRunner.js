@@ -4,6 +4,8 @@
 import express from 'express';
 import { StorySettings } from '../../models/StorySettings.js';
 import { UserStorySession } from '../../models/UserStorySession.js';
+import { Session } from '../../models/Session.js';
+import mongoose from 'mongoose';
 import { Chapter } from '../../models/Chapter.js';
 
 const router = express.Router();
@@ -112,25 +114,74 @@ router.get('/sessions', async (req, res) => {
   try {
     const { userId, storyId, status, limit = 10, offset = 0 } = req.query;
 
-    // Build filter object
+    // Build filter object targeting live Session model
     const filter = {};
-    if (userId) filter.userId = userId;
-    if (storyId) filter.storyId = storyId;
-    if (status) filter.status = status;
+    if (userId) {
+      // Session.userId is ObjectId
+      try {
+        filter.userId = new mongoose.Types.ObjectId(String(userId));
+      } catch {
+        filter.userId = String(userId);
+      }
+    }
+    if (storyId) filter.storyId = String(storyId);
+    if (status === 'active') filter['progress.completed'] = false;
+    if (status === 'completed') filter['progress.completed'] = true;
 
-    // Get sessions with pagination
-    const sessions = await UserStorySession.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(parseInt(limit))
-      .skip(parseInt(offset));
+    // Pagination and sorting — latest first by updatedAt
+    const lim = parseInt(String(limit), 10) || 10;
+    const off = parseInt(String(offset), 10) || 0;
 
-    // Get total count
-    const totalCount = await UserStorySession.countDocuments(filter);
+    const sessions = await Session.find(filter, { userId: 1, storyId: 1, settings: 1, progress: 1, createdAt: 1, updatedAt: 1 })
+      .sort({ updatedAt: -1 })
+      .skip(off)
+      .limit(lim)
+      .lean();
 
+    const totalCount = await Session.countDocuments(filter);
+
+    console.log('[ADMIN_SESSIONS] modelSource=Session count=', sessions.length);
+
+    // Join users for display names/emails
+    const userIds = [...new Set(sessions.map(s => String(s.userId)))];
+    const users = userIds.length ? await mongoose.model('User').find(
+      { _id: { $in: userIds } },
+      { email: 1, 'identity.displayName': 1, 'identity.firstName': 1, 'identity.lastName': 1 }
+    ).lean() : [];
+    // Build user map with read-only fallback for displayName
+    const userMap = new Map(users.map(u => {
+      let displayName = u?.identity?.displayName || '';
+      const email = u?.email || '';
+      if (!displayName && email) {
+        try {
+          const { deriveDisplayNameFromEmail } = require('../../src/services/userDisplayName.js');
+          displayName = deriveDisplayNameFromEmail(email);
+        } catch {}
+      }
+      return [String(u._id), { displayName, email }];
+    }));
+
+    const mapped = sessions.map((s) => {
+      s.settings = s.settings || { toneStyleId: 'original', timeFlavorId: 'original' };
+      const status = s?.progress?.completed ? 'finished' : 'active';
+      const currentChapter = s?.progress?.chapter ?? 1;
+      return {
+        ...s,
+        displayId: `sess_${String(s._id).slice(-6)}`,
+        user: userMap.get(String(s.userId)) || { displayName: '', email: '' },
+        status,
+        currentChapter,
+        sessionStartedAt: s?.createdAt,
+        lastActivityAt: s?.updatedAt,
+      };
+    });
+
+    console.log('[ADMIN_API] Story Settings included in admin sessions payload');
     res.json({
       ok: true,
-      sessions: sessions,
-      totalCount: totalCount
+      modelSource: 'Session',
+      sessions: mapped,
+      totalCount
     });
   } catch (error) {
     console.error('Error fetching story sessions:', error);

@@ -2,7 +2,8 @@ import React from 'react';
 
 export const LoginScreen: React.FC = () => {
   const handleLogin = () => {
-    window.location.href = '/api/auth/google';
+    const redirectUrl = `http://localhost:5174/admin.html`;
+    window.location.href = `/api/auth/google?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
   return (

@@ -35,7 +35,20 @@ passport.use(
         const lastName = name.familyName || "";
         const displayName = profile?.displayName || [firstName, lastName].filter(Boolean).join(" ");
         const photos = profile?.photos || [];
-        const profilePictureUrl = photos[0]?.value || null;
+        let profilePictureUrl = photos[0]?.value || null;
+        
+        // Request higher resolution profile image from Google
+        if (profilePictureUrl) {
+          profilePictureUrl = profilePictureUrl.replace(/s\d+-c/, "s256-c");
+          console.log('[OAUTH] Adjusted profile image URL:', profilePictureUrl);
+        }
+        
+        console.log('[GOOGLE_OAUTH] Profile data:', {
+          email: email,
+          displayName: displayName,
+          profilePictureUrl: profilePictureUrl,
+          photosCount: photos.length
+        });
 
         // Upsert by googleId; fallback to email
         let user = null;
@@ -61,6 +74,14 @@ passport.use(
             displayName: (displayName || email || "anonymous").toLowerCase().replace(/\s+/g, ""),
             isVerified: true,
           });
+          if (!user.storySettings) {
+            user.storySettings = {
+              preferredToneStyle: 'original',
+              preferredTimeFlavor: 'original',
+              lastUpdated: new Date()
+            };
+            console.log('[USER_SETTINGS_INIT] Default StorySettings assigned for user', user._id || '(new)');
+          }
         } else {
           // Merge latest profile
           user.googleId = user.googleId || googleId;
@@ -71,9 +92,39 @@ passport.use(
             lastName: lastName || user.identity?.lastName || "",
             displayName: displayName || user.identity?.displayName || user.displayName || user.fullName,
           };
+          if (!user.storySettings) {
+            user.storySettings = {
+              preferredToneStyle: 'original',
+              preferredTimeFlavor: 'original',
+              lastUpdated: new Date()
+            };
+            console.log('[USER_SETTINGS_INIT] Default StorySettings assigned for user', user._id || '(existing)');
+          }
+        }
+
+        // Ensure human-readable identity.displayName is set
+        try {
+          if ((!user.identity || !user.identity.displayName) && email) {
+            const { deriveDisplayNameFromEmail } = await import('../src/services/userDisplayName.js');
+            const derivedName = deriveDisplayNameFromEmail(email);
+            user.identity = {
+              ...(user.identity || {}),
+              displayName: derivedName,
+              firstName: user.identity?.firstName || firstName || "",
+              lastName: user.identity?.lastName || lastName || "",
+            };
+            console.log('[USER_AUTONAME] Generated displayName="%s" for user %s', derivedName, user._id || '(new)');
+          }
+        } catch (e) {
+          console.warn('[USER_AUTONAME] derive failed:', e?.message);
         }
 
         await user.save();
+        console.log('[GOOGLE_OAUTH] User saved:', {
+          email: user.email,
+          profilePictureUrl: user.profilePictureUrl,
+          id: user._id
+        });
         return done(null, user);
       } catch (err) {
         return done(err);
@@ -81,6 +132,26 @@ passport.use(
     }
   )
 );
+
+// Serialize user for session (if using sessions)
+passport.serializeUser((user, done) => {
+  console.log("DEBUG serializeUser called with user:", user ? { id: user._id, email: user.email } : null);
+  done(null, user._id);
+});
+
+// Deserialize user from session (if using sessions)
+passport.deserializeUser((id, done) => {
+  console.log("DEBUG deserializeUser called with id:", id);
+  User.findById(id)
+    .then(user => {
+      console.log("DEBUG deserializeUser resolved user:", user ? { id: user._id, email: user.email, role: user.role } : null);
+      done(null, user);
+    })
+    .catch(err => {
+      console.error("DEBUG deserializeUser error:", err);
+      done(err);
+    });
+});
 
 export default passport;
 

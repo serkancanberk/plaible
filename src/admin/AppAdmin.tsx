@@ -10,10 +10,13 @@ import { StoriesPage } from './pages/StoriesPage';
 import { StoryEditPage } from './pages/StoryEditPage';
 import { FeedbacksPage } from './pages/FeedbacksPage';
 import { WalletAnalyticsPage } from './pages/WalletAnalyticsPage';
+import { PackageManagerPage } from './pages/PackageManagerPage';
 import { CategoryManagerPage } from './pages/CategoryManagerPage';
 import { StoryRunnerPage } from './pages/StoryRunnerPage';
 import { StoryPromptEditPage } from './pages/StoryPromptEditPage';
 import { NewStoryWizardPage } from './pages/NewStoryWizardPage';
+import { StorySettingsPage } from './pages/StorySettingsPage';
+import { ReportManagerPage } from './pages/ReportManagerPage';
 
 export const AppAdmin: React.FC = () => {
   return (
@@ -33,11 +36,14 @@ export const AppAdmin: React.FC = () => {
                   <Route path="/stories" element={<StoriesPage />} />
                   <Route path="/stories/edit/:storyId" element={<StoryEditPage />} />
                   <Route path="/feedbacks" element={<FeedbacksPage />} />
+                  <Route path="/package-manager" element={<PackageManagerPage />} />
                   <Route path="/wallet-analytics" element={<WalletAnalyticsPage />} />
                   <Route path="/category-manager" element={<CategoryManagerPage />} />
                   <Route path="/storyrunner" element={<StoryRunnerPage />} />
                   <Route path="/storyrunner/prompts/edit/:storyId" element={<StoryPromptEditPage />} />
                   <Route path="/storyrunner/stories/new" element={<NewStoryWizardPage />} />
+                  <Route path="/story-settings" element={<StorySettingsPage />} />
+                  <Route path="/reportmanager" element={<ReportManagerPage />} />
                   <Route path="*" element={<Navigate to="/users" replace />} />
                 </Routes>
               </main>

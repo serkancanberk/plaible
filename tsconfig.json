@@ -20,6 +20,7 @@
     "src",
     "types",
     "vite.config.ts",
+    "vite.config.admin.ts",
     "admin.html"
   ],
   "exclude": [

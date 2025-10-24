@@ -2,13 +2,19 @@ import { Router } from "express";
 import passport from "passport";
 import "../auth/passport.js";
 import { signJwt, verifyJwt } from "../auth/config.js";
+import { User } from "../models/User.js";
+import { RefreshToken } from "../models/RefreshToken.js";
+import passportCore from "passport";
+
+// Environment variables
 const FE_ORIGIN = process.env.FE_ORIGIN || "/";
 const NODE_ENV = process.env.NODE_ENV || "development";
 const isProduction = NODE_ENV === "production";
 const FORCE_SECURE_COOKIE = String(process.env.FORCE_SECURE_COOKIE || "").toLowerCase() === "true";
-import { User } from "../models/User.js";
-import { RefreshToken } from "../models/RefreshToken.js";
-import passportCore from "passport";
+
+// Frontend URLs from environment
+const PUBLIC_FRONTEND_URL = process.env.PUBLIC_FRONTEND_URL || "http://localhost:5173";
+const ADMIN_FRONTEND_URL = process.env.ADMIN_FRONTEND_URL || "http://localhost:5174/admin.html#/users";
 
 const router = Router();
 
@@ -40,6 +46,12 @@ router.get("/google", (req, res, next) => {
   if (process.env.NODE_ENV === "development" && process.env.AUTH_DEBUG === "1") {
     console.log("[auth] HIT /api/auth/google");
   }
+  
+  // Store redirect URL for after authentication
+  const redirectUrl = req.query.redirect || '/app';
+  req.session = req.session || {};
+  req.session.oauthRedirect = redirectUrl;
+  
   const forceConsent =
     String(process.env.GOOGLE_FORCE_CONSENT || "").toLowerCase() === "true" ||
     req.query.force === "1";
@@ -47,7 +59,7 @@ router.get("/google", (req, res, next) => {
     scope: ["profile", "email"],
   };
   if (forceConsent) {
-    // Force Google’s consent screen every time
+    // Force Google's consent screen every time
     opts.prompt = "consent";
     // Optional: get refresh token in real app flows
     // opts.accessType = "offline";
@@ -63,71 +75,130 @@ router.get(
   async (req, res) => {
     try {
       const user = req.user;
-      const userEmail = user.email?.toLowerCase();
-      const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
-      
-      // Check if this is an admin user
-      const isAdmin = adminEmail && userEmail === adminEmail;
-      
-      if (isAdmin) {
-        // Issue admin JWT cookie for admin dashboard
-        const adminToken = signJwt({ 
-          sub: user._id.toString(),
-          email: user.email,
-          name: user.identity?.displayName || user.fullName,
-          role: 'admin'
-        }, { expiresIn: '1h' });
-        
-        // Create refresh token
-        const userAgent = req.get('User-Agent') || '';
-        const ipAddress = req.ip || req.connection.remoteAddress || '';
-        const refreshTokenDoc = await RefreshToken.createToken(
-          user._id, 
-          user.email, 
-          userAgent, 
-          ipAddress
-        );
-        
-        const adminCookieOpts = {
-          httpOnly: true,
-          sameSite: isProduction ? "strict" : "lax",
-          secure: isProduction || FORCE_SECURE_COOKIE,
-          maxAge: 60 * 60 * 1000, // 1 hour
-          path: "/",
-        };
-        
-        const refreshCookieOpts = {
-          httpOnly: true,
-          sameSite: isProduction ? "strict" : "lax",
-          secure: isProduction || FORCE_SECURE_COOKIE,
-          maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-          path: "/",
-        };
-        
-        res.cookie("admin_token", adminToken, adminCookieOpts);
-        res.cookie("admin_refresh_token", refreshTokenDoc.token, refreshCookieOpts);
-        
-        console.log("Admin login successful:", user.email);
-        return res.redirect(FE_ORIGIN);
-      } else {
-        // Regular user - issue regular JWT cookie
-        const token = signJwt({ sub: user._id.toString() });
-        const cookieOpts = {
-          httpOnly: true,
-          sameSite: isProduction ? "lax" : "lax",
-          secure: isProduction || FORCE_SECURE_COOKIE,
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-          path: "/",
-        };
-        res.cookie("plaible_jwt", token, cookieOpts);
-        return res.redirect(FE_ORIGIN);
+      // Backfill identity.displayName if still missing after OAuth upsert
+      try {
+        const latest = await User.findById(user?._id);
+        if (latest && (!latest.identity || !latest.identity.displayName) && latest.email) {
+          const { deriveDisplayNameFromEmail } = await import('../src/services/userDisplayName.js');
+          const derived = deriveDisplayNameFromEmail(latest.email);
+          latest.identity = { ...(latest.identity || {}), displayName: derived };
+          await latest.save();
+          console.log('[USER_AUTONAME] Backfilled displayName="%s" for user %s', derived, latest._id.toString());
+        }
+      } catch (e) {
+        console.warn('[USER_AUTONAME] backfill in callback failed:', e?.message);
       }
-    } catch (e) {
-      console.error("JWT issue in callback", e);
-      return res.redirect("/api/auth/failure");
+      const isAdmin = Array.isArray(user.roles) && user.roles.includes('admin');
+      const storedRedirect = req.session?.oauthRedirect;
+      const PUBLIC_FRONTEND_URL =
+        process.env.PUBLIC_FRONTEND_URL || 'http://localhost:5173';
+      const ADMIN_FRONTEND_URL =
+        process.env.ADMIN_FRONTEND_URL || 'http://localhost:5174/admin.html#/users';
+
+      console.log('============================');
+      console.log('🎯 [OAUTH CALLBACK TRIGGERED]');
+      console.log('User:', user.email);
+      console.log('Roles:', user.roles);
+      console.log('Stored Redirect:', storedRedirect);
+      console.log('============================');
+
+      // clear session redirect
+      if (req.session) delete req.session.oauthRedirect;
+
+      // generate JWT for user
+      const token = signJwt({ 
+        sub: user._id.toString(),
+        email: user.email,
+        name: user.identity?.displayName || user.fullName,
+        role: isAdmin ? 'admin' : 'user'
+      }, { expiresIn: isAdmin ? '1h' : '7d' });
+
+      // generate refresh token (longer lifespan)
+      const refreshToken = signJwt({ 
+        sub: user._id.toString(),
+        email: user.email,
+        type: 'refresh'
+      }, { expiresIn: '30d' });
+
+      // set appropriate cookie
+      if (isAdmin) {
+        res.cookie('admin_token', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 60 * 60 * 1000, // 1 hour
+        });
+
+        console.log('✅ Redirecting admin user to:', ADMIN_FRONTEND_URL);
+        return res.redirect(ADMIN_FRONTEND_URL);
+      } else {
+        res.cookie('plaible_jwt', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+
+        // Set refresh token cookie (30 days)
+        res.cookie('refreshToken', refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        });
+
+        const redirectPath =
+          storedRedirect && storedRedirect.startsWith('/app')
+            ? storedRedirect
+            : '/app';
+        const redirectUrl = `${PUBLIC_FRONTEND_URL}${redirectPath}`;
+
+        console.log('🌍 Redirecting public user to:', redirectUrl);
+        return res.redirect(redirectUrl);
+      }
+    } catch (error) {
+      console.error('❌ [OAUTH CALLBACK ERROR]', error);
+      return res.redirect('/api/auth/failure');
     }
   }
 );
+
+// Refresh authentication token
+router.get("/refresh", async (req, res) => {
+  try {
+    const { refreshToken } = req.cookies;
+    if (!refreshToken) {
+      return res.status(401).json({ error: "No refresh token" });
+    }
+
+    // Verify refresh token
+    const payload = verifyJwt(refreshToken);
+    const user = await User.findById(payload.sub || payload.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Generate new access token
+    const newAccessToken = signJwt({ 
+      sub: user._id.toString(),
+      email: user.email,
+      name: user.identity?.displayName || user.fullName,
+      role: Array.isArray(user.roles) && user.roles.includes('admin') ? 'admin' : 'user'
+    }, { expiresIn: '7d' });
+
+    // Set new access token cookie
+    res.cookie("plaible_jwt", newAccessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    console.log('[AUTH_REFRESH] Token refreshed successfully for user:', user.email);
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("[AUTH_REFRESH_ERROR]", err.message);
+    return res.status(401).json({ error: "Invalid or expired refresh token" });
+  }
+});
 
 // Current user
 router.get("/me", async (req, res) => {
@@ -137,7 +208,20 @@ router.get("/me", async (req, res) => {
     const decoded = verifyJwt(token);
     const userId = decoded?.sub || decoded?.uid;
     if (!userId) return res.status(401).json({ error: "INVALID_TOKEN" });
-    const user = await User.findById(userId).lean();
+    // Optional backfill of identity.displayName if missing
+    let user = await User.findById(userId);
+    if (user && (!user.identity || !user.identity.displayName) && user.email) {
+      try {
+        const { deriveDisplayNameFromEmail } = await import('../src/services/userDisplayName.js');
+        const derived = deriveDisplayNameFromEmail(user.email);
+        user.identity = { ...(user.identity || {}), displayName: derived };
+        await user.save();
+        console.log('[USER_AUTONAME] Backfilled displayName="%s" for user %s', derived, user._id.toString());
+      } catch (e) {
+        console.warn('[USER_AUTONAME] backfill in /me failed:', e?.message);
+      }
+    }
+    user = user?.toObject ? user.toObject() : user;
     if (!user) return res.status(404).json({ error: "USER_NOT_FOUND" });
     const safe = {
       _id: user._id,
@@ -146,6 +230,13 @@ router.get("/me", async (req, res) => {
       identity: user.identity || { displayName: user.displayName },
       wallet: { balance: user.wallet?.balance ?? 0 },
     };
+    
+    console.log('[AUTH_ME] Returning user data:', {
+      email: safe.email,
+      profilePictureUrl: safe.profilePictureUrl,
+      hasProfilePicture: !!safe.profilePictureUrl
+    });
+    
     res.json(safe);
   } catch (err) {
     return res.status(401).json({ error: "INVALID_TOKEN" });
@@ -153,7 +244,7 @@ router.get("/me", async (req, res) => {
 });
 
 // Admin authentication check
-router.get("/admin/check", (req, res) => {
+router.get("/admin/check", async (req, res) => {
   const adminToken = req.cookies?.admin_token;
   if (!adminToken) {
     return res.status(401).json({ error: "UNAUTHENTICATED" });
@@ -168,12 +259,19 @@ router.get("/admin/check", (req, res) => {
       return res.status(403).json({ error: "FORBIDDEN" });
     }
     
+    // Fetch full user data including profilePictureUrl
+    const user = await User.findOne({ email: decoded.email }).lean();
+    if (!user) {
+      return res.status(404).json({ error: "USER_NOT_FOUND" });
+    }
+    
     res.json({
       ok: true,
       user: {
         email: decoded.email,
         name: decoded.name,
-        role: decoded.role
+        role: decoded.role,
+        profilePictureUrl: user.profilePictureUrl
       }
     });
   } catch (err) {
@@ -242,29 +340,52 @@ router.post("/admin/refresh", async (req, res) => {
 
 // Logout
 router.post("/logout", async (req, res) => {
-  const cookieOpts = {
-    httpOnly: true,
-    sameSite: isProduction ? "strict" : "lax",
-    secure: isProduction || FORCE_SECURE_COOKIE,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: "/",
-  };
-  
-  // Revoke admin refresh token if present
-  const adminRefreshToken = req.cookies?.admin_refresh_token;
-  if (adminRefreshToken) {
-    try {
-      await RefreshToken.revokeToken(adminRefreshToken);
-      console.log("Admin refresh token revoked on logout");
-    } catch (error) {
-      console.error("Error revoking admin refresh token:", error);
+  try {
+    console.log('👋 User logout initiated');
+    
+    const cookieOpts = {
+      httpOnly: true,
+      sameSite: isProduction ? "strict" : "lax",
+      secure: isProduction || FORCE_SECURE_COOKIE,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/",
+    };
+    
+    // Revoke admin refresh token if present
+    const adminRefreshToken = req.cookies?.admin_refresh_token;
+    if (adminRefreshToken) {
+      try {
+        await RefreshToken.revokeToken(adminRefreshToken);
+        console.log("Admin refresh token revoked on logout");
+      } catch (error) {
+        console.error("Error revoking admin refresh token:", error);
+      }
     }
+    
+    // Clear all auth cookies
+    res.clearCookie("plaible_jwt", { ...cookieOpts });
+    res.clearCookie("admin_token", { ...cookieOpts });
+    res.clearCookie("admin_refresh_token", { ...cookieOpts });
+    res.clearCookie("refreshToken", { ...cookieOpts });
+    res.clearCookie("connect.sid", { httpOnly: true, sameSite: 'lax' });
+    
+    // Clear session if it exists
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Session destroy error:", err);
+        } else {
+          console.log("Session cleared successfully");
+        }
+      });
+    }
+    
+    console.log('✅ User logged out successfully');
+    return res.status(200).json({ message: 'Logout successful' });
+  } catch (err) {
+    console.error('❌ Logout error:', err);
+    return res.status(500).json({ message: 'Logout failed' });
   }
-  
-  res.clearCookie("plaible_jwt", { ...cookieOpts });
-  res.clearCookie("admin_token", { ...cookieOpts });
-  res.clearCookie("admin_refresh_token", { ...cookieOpts });
-  return res.json({ ok: true });
 });
 
 // GET alias for logout (dev convenience)
@@ -291,6 +412,7 @@ router.get('/logout', async (req, res) => {
   res.clearCookie('plaible_jwt', { ...cookieOpts });
   res.clearCookie('admin_token', { ...cookieOpts });
   res.clearCookie('admin_refresh_token', { ...cookieOpts });
+  res.clearCookie('refreshToken', { ...cookieOpts });
   return res.json({ ok: true });
 });
 

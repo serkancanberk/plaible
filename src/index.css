@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300..700&display=swap');
+
+/* Tailwind base (if Tailwind is added later or via CDN) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: Geist, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+}
+
+/* Utility alias for mono-subheading using Tailwind's @apply with existing tokens */
+.mono-subheading {
+  @apply text-subheading font-mono;
+}
+
+.text-link-mono-accent {
+  @apply inline-flex items-center text-left w-full;
+  @apply font-mono font-normal text-body text-accent;
+  @apply underline underline-offset-4;
+  @apply transition duration-200 hover:brightness-110;
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent;
+}
+
+/* Landing tabs - tokenized styles */
+.tab-base {
+  @apply text-label pb-2 transition-colors duration-200;
+}
+
+.tab-inactive {
+  @apply text-text-secondary hover:text-text-primary;
+}
+
+.tab-active {
+  @apply text-accent border-b-2 border-accent;
+}
+
+.tab-focus {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent;
+}
+
+/* Cross-browser scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+/* 3D Transform utilities for CharacterCard flip animation */
+.preserve-3d {
+  perspective: 1200px;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+

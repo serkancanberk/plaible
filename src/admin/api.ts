@@ -15,6 +15,7 @@ export interface AdminUser {
   email: string;
   name: string;
   role: string;
+  profilePictureUrl?: string;
 }
 
 // Check authentication status
@@ -288,6 +289,12 @@ export const adminApi = {
   updateStory: (id: string, data: unknown) =>
     api.put<{ ok: boolean }>(`/admin/stories/${id}`, data),
 
+  updateStoryRelated: (id: string, data: { relatedStoryIds: string[]; featured?: boolean }) =>
+    api.patch<{ ok: boolean; message?: string; mutualSync?: { added: string[]; removed: string[]; affectedStories?: number }; invalidIds?: string[]; inactiveIds?: string[] }>(
+      `/admin/stories/${id}/related`,
+      data
+    ),
+
   createStoryWithGeneration: (data: { title: string; authorName: string; publishedYear: number; mainCategory: string }) =>
     api.post<{ ok: boolean; storyId: string; error?: string }>('/admin/stories', { ...data, autoGenerate: true }),
 
@@ -368,9 +375,56 @@ export const adminApi = {
 
   updateBrief: (data: { title?: string; whatIsPlaible: string; howToPlay: string; storyrunnerRole: string }) =>
     api.put<{ ok: boolean; brief: Brief }>('/admin/brief', data),
+
+  // Packages
+  packages: {
+    getAll: () =>
+      api.get<{ ok: boolean; packages: Package[] }>('/api/packages/admin'),
+    
+    create: (data: CreatePackageData) =>
+      api.post<{ ok: boolean; package: Package }>('/api/packages', data),
+    
+    update: (id: string, data: UpdatePackageData) =>
+      api.patch<{ ok: boolean; package: Package }>(`/api/packages/${id}`, data),
+    
+    delete: (id: string) =>
+      api.delete<{ ok: boolean }>(`/api/packages/${id}`),
+  },
 };
 
 // Types
+export interface Package {
+  _id: string;
+  name: string;
+  credits: number;
+  price: number;
+  bonus: number;
+  description?: string;
+  isPopular: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  totalCredits: number;
+  pricePerCredit: string;
+  bonusPercentage: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePackageData {
+  name: string;
+  credits: number;
+  price: number;
+  bonus?: number;
+  description?: string;
+  isPopular?: boolean;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface UpdatePackageData extends Partial<CreatePackageData> {
+  isActive?: boolean;
+}
+
 export interface User {
   _id: string;
   email: string;
@@ -388,12 +442,15 @@ export interface User {
 export interface Character {
   id: string;
   name: string;
+  displayName?: string;
   summary: string;
   hooks: string[];
   assets: {
     images: string[];
     videos: string[];
   };
+  helloMessage?: string;
+  onboardingText?: string;
 }
 
 export interface Role {
@@ -506,6 +563,7 @@ export interface Story {
   feedbacks: Feedback[];
   pricing: Pricing;
   relatedStoryIds: string[];
+  featured?: boolean;
   reengagementTemplates: ReengagementTemplate[];
   storyrunner: Storyrunner;
   createdAt: string;

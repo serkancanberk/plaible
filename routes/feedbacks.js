@@ -142,9 +142,26 @@ router.post("/", async (req, res) => {
  *     summary: Get feedbacks for a story
  *     description: Retrieve paginated list of visible feedbacks for a story
  *     parameters:
- *       - in: path, name: slug, required: true, schema: { type: string }, description: Story slug
- *       - in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 20 }, description: Number of results per page
- *       - in: query, name: cursor, schema: { type: string, format: date-time }, description: Pagination cursor (ISO date)
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Story slug
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Number of results per page
+ *       - in: query
+ *         name: cursor
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Pagination cursor (ISO date)
  *     responses:
  *       200:
  *         description: Feedbacks retrieved successfully
@@ -163,7 +180,7 @@ router.post("/", async (req, res) => {
 publicFeedbacksRouter.get("/story/:slug", async (req, res) => {
   try {
     const { slug } = req.params;
-    const { limit, cursor } = req.query;
+    const { limit, cursor, stars } = req.query;
 
     const pageSize = Math.min(Math.max(Number(limit) || 20, 1), 100);
 
@@ -173,36 +190,75 @@ publicFeedbacksRouter.get("/story/:slug", async (req, res) => {
       return res.json({ ok: true, items: [], nextCursor: null });
     }
 
-    // 2) Filtre kur
-    const filter = { storyId: story._id, status: "visible" };
-    if (cursor) {
-      const c = new Date(cursor);
-      if (!isNaN(c.getTime())) {
-        filter.createdAt = { $lt: c };
-      }
-    }
+    // 2) Build aggregation pipeline
+    const pipeline = [
+      {
+        $match: {
+          storyId: story._id,
+          status: "visible",
+          ...(cursor ? { createdAt: { $lt: new Date(cursor) } } : {}),
+          ...(stars ? { stars: Number(stars) } : {})
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+          pipeline: [
+            {
+              $project: {
+                fullName: 1,
+                displayName: 1,
+                profilePictureUrl: 1,
+                location: 1
+              }
+            }
+          ]
+        }
+      },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } }, // Handle missing user data gracefully
+      {
+        $addFields: {
+          weeksAgo: {
+            $floor: {
+              $divide: [
+                { $subtract: [new Date(), "$createdAt"] },
+                7 * 24 * 60 * 60 * 1000  // milliseconds in a week
+              ]
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          stars: 1,
+          text: 1,
+          createdAt: 1,
+          weeksAgo: 1,
+          user: {
+            username: "$user.displayName",
+            fullName: "$user.fullName",
+            profilePictureUrl: "$user.profilePictureUrl",
+            city: "$user.location"
+          }
+        }
+      },
+      { $sort: { createdAt: -1 } },
+      { $limit: pageSize + 1 }
+    ];
 
-    // 3) Sorgu (desc)
-    const docs = await Feedback.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(pageSize + 1)
-      .lean();
+    // 3) Execute aggregation
+    const docs = await Feedback.aggregate(pipeline);
 
     const hasMore = docs.length > pageSize;
-    if (hasMore) docs.pop();
-
-    // 4) Public DTO map (eski şemayı koruyacak şekilde basit alanlar)
-    const items = docs.map(f => ({
-      _id: String(f._id),
-      userId: String(f.userId),
-      storyId: f.storyId,          // Story._id (string)
-      stars: f.stars,
-      text: f.text,
-      createdAt: f.createdAt,
-    }));
+    const items = docs.slice(0, pageSize);
 
     const nextCursor = hasMore ? items[items.length - 1]?.createdAt?.toISOString?.() || null : null;
 
+    // 4) Return enhanced response with user data and weeksAgo
     return res.json({ ok: true, items, nextCursor });
   } catch (err) {
     console.error("[public feedbacks list] error:", err);

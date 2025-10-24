@@ -24,8 +24,8 @@ export interface CategoryConfigItem {
 
 export const categoryConfig: CategoryConfigItem[] = [
   {
-    "label": { "en": "Book", "tr": "Kitap" },
-    "value": "book",
+    "label": { "en": "Books", "tr": "Kitaplar" },
+    "value": "books",
     "subCategories": [
       {
         "label": { "en": "Classic Novels", "tr": "Klasik Romanlar" },
@@ -123,8 +123,8 @@ export const categoryConfig: CategoryConfigItem[] = [
     ]
   },
   {
-    "label": { "en": "Story", "tr": "Hikaye" },
-    "value": "story",
+    "label": { "en": "Stories", "tr": "Hikayeler" },
+    "value": "stories",
     "subCategories": [
       {
         "label": { "en": "Short Fiction", "tr": "Kısa Kurgu" },
@@ -183,8 +183,8 @@ export const categoryConfig: CategoryConfigItem[] = [
     ]
   },
   {
-    "label": { "en": "Biography", "tr": "Biyografi" },
-    "value": "biography",
+    "label": { "en": "Biographies", "tr": "Biyografiler" },
+    "value": "biographies",
     "subCategories": [
       {
         "label": { "en": "Historical Figures", "tr": "Tarihi Şahsiyetler" },

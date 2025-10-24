@@ -41,9 +41,29 @@ const userSchema = new Schema(
     roles: { type: [String], default: ["user"], index: true },
     status: { type: String, enum: ["active", "disabled", "deleted"], default: "active", index: true },
     deletedAt: { type: Date },
+    storySettings: {
+      preferredToneStyle: { type: String, default: null },
+      preferredTimeFlavor: { type: String, default: null },
+      lastUpdated: { type: Date, default: Date.now }
+    },
   },
   { timestamps: true }
 );
+
+// Phase 4.C: Deep trace save hooks
+userSchema.pre('save', function(next) {
+  try {
+    console.log('[PHASE4C_BE] PRE-SAVE', this.constructor.modelName, this._id?.toString?.(), this.modifiedPaths?.());
+    console.log('[PHASE4D_MONGO] pre(\'save\')', this.constructor.modelName, 'id=', this._id?.toString?.(), 'changes=', this.modifiedPaths?.());
+  } catch {}
+  next();
+});
+userSchema.post('save', function(doc) {
+  try {
+    console.log('[PHASE4C_BE] POST-SAVE', this.constructor.modelName, doc?._id?.toString?.());
+    console.log('[PHASE4D_MONGO] post(\'save\')', this.constructor.modelName, 'id=', doc?._id?.toString?.());
+  } catch {}
+});
 
 userSchema.methods.applyTransaction = async function ({ amount, type = "debit", source = "play", note = "", metadata = {} } = {}) {
   if (typeof amount !== "number" || amount <= 0) {
@@ -90,3 +110,14 @@ userSchema.methods.applyTransaction = async function ({ amount, type = "debit", 
 };
 
 export const User = mongoose.models.User || mongoose.model("User", userSchema); 
+
+// Phase 4.D: Trace updateOne for User model
+try {
+  const originalUpdateOne = User.updateOne.bind(User);
+  User.updateOne = async function(filter, update, options) {
+    try { console.log('[PHASE4D_MONGO] updateOne()', 'User', 'filter=', filter, 'update=', update); } catch {}
+    const res = await originalUpdateOne(filter, update, options);
+    try { console.log('[PHASE4D_MONGO] updateOne() result', res); } catch {}
+    return res;
+  };
+} catch {}

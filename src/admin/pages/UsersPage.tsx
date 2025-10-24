@@ -202,6 +202,17 @@ export const UsersPage: React.FC = () => {
       ),
     },
     {
+      key: 'storySettings',
+      label: 'Story Settings',
+      render: (_: any, user: User) => {
+        const s = (user as any).storySettings || null;
+        if (!s) return '—';
+        const time = s.preferredTimeFlavor || 'original';
+        const theme = s.preferredToneStyle || 'original';
+        return `Time: ${time}, Theme: ${theme}`;
+      },
+    },
+    {
       key: 'createdAt',
       label: 'Created',
       render: (date: string) => new Date(date).toLocaleDateString(),
@@ -300,6 +311,7 @@ export const UsersPage: React.FC = () => {
 
   return (
     <div className="p-6">
+      {(() => { console.log('[ADMIN_UI] Story Settings column active in Users table'); return null; })()}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold text-gray-900">Users</h1>

@@ -26,7 +26,7 @@ router.post("/", async (req, res) => {
     // Load a lightweight projection from Story
     const story = await Story.findOne(
       { slug: storySlug },
-      { _id: 1, slug: 1, title: 1, "assets.images": { $slice: 1 } }
+      { _id: 1, slug: 1, title: 1, "assets.images": 1 }
     ).lean();
 
     if (!story) return err(res, "NOT_FOUND", 404, { field: "storySlug" });
@@ -115,6 +115,10 @@ router.delete("/:slug", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     if (!req.userId) return err(res, "UNAUTHENTICATED", 401);
+    res.set("Cache-Control", "no-store");
+    res.removeHeader("ETag");
+    const cookieName = req.selectedTokenName || (req.cookies?.plaible_jwt ? 'plaible_jwt' : (req.cookies?.admin_token ? 'admin_token' : 'unknown'));
+    console.log(`[VERIFY_ISOLATION] route=/api/saves userId=${String(req.userId)} cookie=${cookieName}`);
     let limit = parseInt(String(req.query.limit ?? "20"), 10);
     if (Number.isNaN(limit) || limit <= 0) limit = 20;
     if (limit > 50) limit = 50;
@@ -131,6 +135,11 @@ router.get("/", async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit + 1)
       .lean();
+
+    console.log('[SAVES_LIST]', {
+      userId: String(req.userId),
+      count: docs.length
+    });
 
     const hasMore = docs.length > limit;
     const items = (hasMore ? docs.slice(0, limit) : docs).map(d => ({
