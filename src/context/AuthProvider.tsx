@@ -27,6 +27,7 @@ interface AuthContextType {
   login: (redirectPath?: string) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  refreshSessions?: () => Promise<void>;
   // Phase 2: Unified saved stories API - single source of truth
   savedStories: SavedStoryItem[];
   isSaved: (slug: string) => boolean;
@@ -426,7 +427,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         result: newSavedState,
         timestamp: new Date().toISOString()
       });
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[SAVED_STATE][ERROR] Toggle failed, rolling back:', err);
       
       // Rollback optimistic update to previous state
@@ -439,7 +440,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('[SAVED_STATE][UNIFIED]', { 
         action: 'toggle_rollback', 
         slug, 
-        error: err.message,
+        error: err?.message,
         timestamp: new Date().toISOString()
       });
       
@@ -491,7 +492,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         rawResponse: data,
         serverStories: serverStories,
         serverStoriesLength: serverStories.length,
-        serverStoriesStructure: serverStories.map(s => ({
+        serverStoriesStructure: serverStories.map((s: any) => ({
           id: s.id,
           slug: s.slug,
           title: s.title,
@@ -527,7 +528,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Phase 9: Compute merged and update both states with fresh references
       const mergedNow = [
         ...savedStories,
-        ...serverStories.filter(s => !savedStories.some(l => l.slug === s.slug))
+        ...serverStories.filter((s: any) => !savedStories.some(l => l.slug === s.slug))
       ];
       setSavedStories(() => {
         console.log('[FORCE_RENDER][savedStories_updated]', mergedNow.length);
@@ -535,10 +536,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
       
       // DATA_FLOW_DEBUG: Log before setUser call
-      console.log('[DATA_FLOW_DEBUG][CONTEXT_INJECTION] Before setUser call:', {
+        console.log('[DATA_FLOW_DEBUG][CONTEXT_INJECTION] Before setUser call:', {
         currentSavedStories: savedStories,
         serverStories: serverStories,
-        mergedStories: [...savedStories, ...serverStories.filter(s => !savedStories.some(l => l.slug === s.slug))],
+          mergedStories: [...savedStories, ...serverStories.filter((s: any) => !savedStories.some(l => l.slug === s.slug))],
         currentUser: user,
         timestamp: new Date().toISOString()
       });
@@ -560,7 +561,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           hasSavedStories: !!updatedUser?.savedStories,
           savedStoriesLength: updatedUser?.savedStories?.length || 0,
           savedStoriesData: updatedUser?.savedStories,
-          savedStoriesStructure: updatedUser?.savedStories?.map(s => ({
+          savedStoriesStructure: updatedUser?.savedStories?.map((s: any) => ({
             id: s.id,
             slug: s.slug,
             title: s.title,
@@ -607,12 +608,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Note: This will trigger another sync cycle, but with proper guards
       }
       
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[SAVED_STATE][UNIFIED] Sync error:', err);
       console.log('[SAVED_STATE][UNIFIED]', { 
         action: 'sync_error', 
         userId: user._id,
-        error: err.message,
+        error: err?.message,
         timestamp: new Date().toISOString()
       });
     }
@@ -627,58 +628,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const userId = user?._id || null;
     if (!userId) return;
     if (fetchedExtrasForUserIdRef.current === userId) return; // avoid duplicate fetches
-    fetchedExtrasForUserIdRef.current = userId;
-    
+
+    // Phase 6: Guard any early fetches before hydration ready or right after hydration
+    if (!isHydrationReady) {
+      console.log('[HYDRATION_GUARD] Not ready, skipping immediate sessions fetch');
+      return;
+    }
+
+    const sinceHydrationMs = Date.now() - lastHydratedAt;
+    const minDelayMs = 5000;
+    const remaining = sinceHydrationMs < minDelayMs ? (minDelayMs - sinceHydrationMs) : 0;
+
     // Clear sessions but protect savedStories with persistent lock
     clearSessions();
-    
-    // Phase 6: Guard any early clears before hydration ready
-    if (!isHydrationReady) {
-      console.log('[SAVED_STATE][HYDRATION_BARRIER] prevent clear before hydration');
-      return;
-    }
-    
-    // Phase 7: Guard early clear on mount
-    if (!isHydrationReady && savedStories.length > 0) {
-      console.log('[SAVED_STATE][RECONCILE] prevent_clear_during_mount');
-      return;
-    }
-    
-  // Phase 8: Block any initial clear before hydration
-  if (!isHydrationReady && savedStories.length > 0) {
-    console.log('[SAVED_STATE][SNAPSHOT] prevent_clear_before_hydration');
-    return;
-  }
-  
-  // DATA_FLOW_DEBUG: Log hydration and reconciliation states
-  console.log('[DATA_FLOW_DEBUG][PROVIDER] Hydration and reconciliation states:', {
-    isHydrationReady,
-    isFrozen,
-    savedStoriesLength: savedStories.length,
-    lastHydratedAt,
-    lastSyncedAt,
-    lastReconciledAt,
-    timestamp: new Date().toISOString()
-  });
-    
-    // Phase 9: Prevent any state clearing while frozen
-    if (isFrozen) {
-      console.log('[SAVED_STATE][FREEZE] prevented clear while frozen');
-      return;
-    }
-    
-    // Phase 5: Protect against rehydration clearing
-    if (Date.now() - lastHydratedAt < 5000) {
-      console.log('[SAVED_STATE][LOCK] hydration_recent, skip_clear');
-      // Keep existing savedStories, only clear sessions
-      setUser(prev => (prev ? { ...prev, sessions: [] } : prev));
-      return;
-    }
-    
-    // Only clear savedStories if user actually changed (not just re-authentication)
+
     if (prevUserId && prevUserId !== userId) {
-      console.log('[SAVED_STATE][PERSISTENT_LOCK]', { 
-        action: 'user_change_clear', 
+      console.log('[SAVED_STATE][PERSISTENT_LOCK]', {
+        action: 'user_change_clear',
         prevUserId,
         newUserId: userId,
         timestamp: new Date().toISOString()
@@ -686,22 +652,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setSavedStories([]);
       setUser(prev => (prev ? { ...prev, sessions: [], savedStories: [] } : prev));
     } else {
-      console.log('[SAVED_STATE][PERSISTENT_LOCK]', { 
-        action: 'user_switch_protected', 
+      console.log('[SAVED_STATE][PERSISTENT_LOCK]', {
+        action: 'user_switch_protected',
         userId,
         isHydrated,
         savedCount: savedStories.length,
         timestamp: new Date().toISOString()
       });
-      // Keep existing savedStories, only clear sessions
       setUser(prev => (prev ? { ...prev, sessions: [] } : prev));
     }
-    
+
     setPrevUserId(userId);
-    
-    console.log('[DATA_FETCH] Fetching sessions for', user?.email);
-    fetchSessions(user?.email);
-    
+
+    const scheduleOrFetch = () => {
+      console.log('[AUTH_FLOW] Calling fetchSessions() for userId', userId);
+      fetchedExtrasForUserIdRef.current = userId; // set when we actually start the fetch
+      fetchSessions(user?.email)
+        .then(() => {
+          console.log('[AUTH_FLOW] fetchSessions completed, injecting into user.sessions');
+          console.log('[RECENT_REFRESHED]', user?.email);
+        })
+        .catch(() => {})
+        .finally(() => {});
+    };
+
+    if (remaining > 0) {
+      console.log('[HYDRATION_GUARD] scheduling sessions fetch in', remaining, 'ms');
+      const t = setTimeout(scheduleOrFetch, remaining);
+      return () => clearTimeout(t);
+    } else {
+      scheduleOrFetch();
+    }
+
     // Handle post-login redirect
     const returnTo = localStorage.getItem("returnTo");
     const pendingStory = localStorage.getItem("pendingStory");
@@ -722,13 +704,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
     }
-  }, [user?._id, fetchSessions, navigate, prevUserId, isHydrated, savedStories.length]);
+  }, [user?._id, fetchSessions, navigate, prevUserId, isHydrated, savedStories.length, isHydrationReady, lastHydratedAt]);
 
   // Phase 2: Unified state - sessions are merged, savedStories is already unified
   useEffect(() => {
     if (!user?._id) return;
     setUser(prev => (prev ? { ...prev, sessions } : prev));
-  }, [sessions]);
+    try {
+      console.log('[RECENT_REFRESHED] user.sessions length=', sessions?.length || 0);
+    } catch {}
+  }, [sessions, user?._id]);
 
   // Phase 2: Unified cleanup - single state source
   useEffect(() => {
@@ -884,7 +869,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     // Clear existing timeout
     if (syncTimeoutRef.current) {
-      clearTimeout(syncTimeoutRef.current);
+      clearTimeout(syncTimeoutRef.current as unknown as number);
     }
     
     // Phase 6: 800ms debounced sync on initial mount
@@ -895,7 +880,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     }, 800); // slightly longer debounce on initial mount
     
-    return () => clearTimeout(syncTimeoutRef.current);
+    return () => clearTimeout(syncTimeoutRef.current as unknown as number);
   }, [isHydrationReady, user?._id]);
 
   // Phase 8: Persistent snapshot on every state update
@@ -922,6 +907,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     logout,
     refreshUser: fetchUser,
+    refreshSessions: async () => { try { await fetchSessions(user?.email); } catch { /* noop */ } },
     // Phase 2: Unified saved stories API - single source of truth
     savedStories,
     isSaved,
@@ -936,6 +922,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Toast helper expose
     showToast,
   }), [user, savedStories, isLoading, fetchUser, login, logout, isSaved, toggleSaved, syncSavedStories, isHydrationReady, updateSaveStatus, addCredits, showToast]);
+
+  // Dev-only manual trigger for diagnosing fetch visibility
+  try {
+    (window as any).debugFetchSessions = fetchSessions;
+  } catch {}
   
   console.log('[DATA_FLOW_DEBUG][CONTEXT_INJECTION] Context provider value:', {
     hasUser: !!contextValue.user,
@@ -943,7 +934,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     hasSavedStories: !!contextValue.user?.savedStories,
     savedStoriesLength: contextValue.user?.savedStories?.length || 0,
     savedStoriesData: contextValue.user?.savedStories,
-    savedStoriesStructure: contextValue.user?.savedStories?.map(s => ({
+    savedStoriesStructure: contextValue.user?.savedStories?.map((s: any) => ({
       id: s.id,
       slug: s.slug,
       title: s.title,

@@ -26,27 +26,37 @@ interface ChatContainerProps {
   isLoading?: boolean;
   onChoiceSelect?: (choice: string, index: number) => void;
   className?: string;
+  onContainerRef?: (el: HTMLDivElement | null) => void;
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({
   messages,
   isLoading = false,
   onChoiceSelect,
-  className = ''
+  className = '',
+  onContainerRef
 }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Expose container element to parent for scroll-based behaviors
+  useEffect(() => {
+    if (onContainerRef) onContainerRef(containerRef.current);
+    return () => {
+      if (onContainerRef) onContainerRef(null);
+    };
+  }, [onContainerRef]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
   }, [messages, isLoading]);
 
   return (
     <div 
       className={`flex-1 overflow-y-auto bg-secondary px-spacing-md py-spacing-sm ${className}`}
-      ref={scrollRef}
+      ref={containerRef}
     >
       <div className="space-y-spacing-sm max-w-4xl mx-auto">
         {messages.length === 0 && !isLoading && (

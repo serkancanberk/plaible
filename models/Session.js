@@ -46,6 +46,10 @@ const sessionSchema = new Schema(
     storyId: { type: String, required: true },
     characterId: { type: String, required: true },
     roleIds: { type: [String], default: [] },
+    settings: {
+      toneStyleId: { type: String },
+      timeFlavorId: { type: String },
+    },
     progress: {
       chapter: { type: Number, default: 1 },
       chapterCountApprox: { type: Number, default: 10 },
@@ -70,7 +74,33 @@ sessionSchema.pre("save", function (next) {
   next();
 });
 
+// Phase 4.C: Deep trace save hooks
+sessionSchema.pre('save', function(next) {
+  try {
+    console.log('[PHASE4C_BE] PRE-SAVE', this.constructor.modelName, this._id?.toString?.(), this.modifiedPaths?.());
+    console.log('[PHASE4D_MONGO] pre(\'save\')', this.constructor.modelName, 'id=', this._id?.toString?.(), 'changes=', this.modifiedPaths?.());
+  } catch {}
+  next();
+});
+sessionSchema.post('save', function(doc) {
+  try {
+    console.log('[PHASE4C_BE] POST-SAVE', this.constructor.modelName, doc?._id?.toString?.());
+    console.log('[PHASE4D_MONGO] post(\'save\')', this.constructor.modelName, 'id=', doc?._id?.toString?.());
+  } catch {}
+});
+
 export const Session = mongoose.models?.Session || model("Session", sessionSchema);
+
+// Phase 4.D: Trace updateOne for Session model
+try {
+  const originalUpdateOne = Session.updateOne.bind(Session);
+  Session.updateOne = async function(filter, update, options) {
+    try { console.log('[PHASE4D_MONGO] updateOne()', 'Session', 'filter=', filter, 'update=', update); } catch {}
+    const res = await originalUpdateOne(filter, update, options);
+    try { console.log('[PHASE4D_MONGO] updateOne() result', res); } catch {}
+    return res;
+  };
+} catch {}
 
 // Ensure single ACTIVE session per (userId, storyId)
 sessionSchema.index(

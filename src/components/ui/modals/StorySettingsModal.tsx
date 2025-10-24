@@ -88,6 +88,7 @@ const StorySettingsModal: React.FC<StorySettingsModalProps> = ({ open, onClose, 
       if (selectedFlavor) setSelectedTimeFlavor(selectedFlavor);
       
       try {
+        console.log('[PHASE4B_UI] Save clicked → calling savePreferences()');
         await savePreferences();
         
         // Trigger callback AFTER async save completes with latest state values

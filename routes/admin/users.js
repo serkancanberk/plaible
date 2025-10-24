@@ -76,7 +76,7 @@ router.get("/", async (req, res) => {
 
     // Query with offset and limit
     const users = await User.find(filter)
-      .select('_id email identity.displayName displayName fullName roles status wallet.balance createdAt')
+      .select('_id email identity.displayName identity.firstName identity.lastName displayName fullName roles status wallet.balance storySettings createdAt')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(pageSize)
@@ -90,9 +90,12 @@ router.get("/", async (req, res) => {
       roles: user.roles || ['user'],
       status: user.status || 'active',
       balance: (user.wallet && typeof user.wallet.balance === 'number') ? user.wallet.balance : 0,
+      storySettings: user.storySettings || null,
       createdAt: user.createdAt
     }));
 
+    console.log('[PHASE4B_BE] Admin /users returning storySettings for', users.length, 'users');
+    console.log('[ADMIN_API] storySettings included in /api/admin/users response');
     return ok(res, { items: transformedItems, totalCount });
   } catch (error) {
     console.error("Admin users list error:", error);

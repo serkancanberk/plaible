@@ -29,6 +29,7 @@ import ReportIssueModal from '../components/ui/modals/ReportIssueModal';
 import { StorySettingsProvider } from '../components/ui/storySettings/StorySettingsProvider';
 import { useAuth } from '../hooks/useAuth';
 import { handleAddBalanceNavigation } from '../utils/navigation';
+import { formatUserName } from '../utils/formatUserName';
 import IconSparkles from 'virtual:icons/tabler/sparkles';
 
 type AppGridLayoutProps = {
@@ -491,6 +492,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
 
   // Simplified visual diagnostic for static sections
   useEffect(() => {
+    console.log('[USER_FORMAT] Unified user name presentation active');
     const runSimpleDiagnostic = () => {
       console.log('[VISUAL_DEBUG][STATIC_SECTIONS] Recent and Saved sections are now static (no accordion animations)');
       console.log('[VISUAL_DEBUG][STATIC_SECTIONS] User data:', {
@@ -936,6 +938,7 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                               key={s._id}
                               variant="text"
                               label={`${s.story?.title || ''}, Chapter ${s.progress?.chapter ?? 1}`}
+                              active={location.pathname.includes(`/app/play/run/${s.story?.slug || ''}`)}
                               onClick={() => navigate(`/app/play/run/${s.story?.slug || ''}`)}
                             />
                           ))
@@ -1024,12 +1027,12 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
                   {user ? (
                     <AccordionSection
                       sectionName="user"
-                      title={user.identity?.displayName || user.email || 'User'}
+                      title={formatUserName(user)}
                       icon={
                         user.profilePictureUrl ? (
                           <img
                             src={user.profilePictureUrl}
-                            alt={user.identity?.displayName || user.email || 'User'}
+                            alt={formatUserName(user)}
                             className="w-8 h-8 rounded-full object-cover"
                           />
                         ) : (
@@ -1088,95 +1091,97 @@ export const AppGridLayout: React.FC<AppGridLayoutProps> = ({ children }) => {
           {/* Sticky header remains as-is below */}
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="mx-auto w-full md:max-w-3xl lg:max-w-5xl flex flex-col">
-            {/* Header */}
-            <header className="sticky top-0 z-30 border-b border-text-secondary/30 bg-secondary">
-              <div className="flex items-center justify-between px-spacing-md pt-spacing-2xl pb-spacing-sm">
-                {/* Title */}
-                <div className="text-heading font-serif text-accent">
-                  {getHeaderConfig().title}
-                </div>
+            {/* Header - hidden on StoryRunner page */}
+            {!isStoryRunnerPage && (
+              <header className="sticky top-0 z-30 border-b border-text-secondary/30 bg-secondary">
+                <div className="flex items-center justify-between px-spacing-md pt-spacing-2xl pb-spacing-sm">
+                  {/* Title */}
+                  <div className="text-heading font-serif text-accent">
+                    {getHeaderConfig().title}
+                  </div>
 
-                {/* Action Buttons */}
-                <div className="flex items-center gap-spacing-md">
-                  {/* Sidebar toggle (only visible on <lg) */}
-                  <button
-                    aria-label="Toggle sidebar"
-                    onClick={toggleSidebar}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-secondary text-text-primary hover:bg-primary/10 lg:hidden"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                  </button>
-                  
-                  {/* Dynamic Actions */}
-                  <div className="hidden lg:flex items-center gap-spacing-xl">
-                    {getHeaderConfig().actions.map((action) => (
-                      <NavItem
-                        key={action.type}
-                        variant="icon+text-secondary"
-                        label={action.label}
-                        icon={
-                          <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
-                            <action.icon className="w-4 h-4" />
-                          </span>
-                        }
-                        onClick={action.onClick}
-                      />
-                    ))}
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-spacing-md">
+                    {/* Sidebar toggle (only visible on <lg) */}
+                    <button
+                      aria-label="Toggle sidebar"
+                      onClick={toggleSidebar}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-secondary text-text-primary hover:bg-primary/10 lg:hidden"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                      </svg>
+                    </button>
                     
-                    {/* Kebab Menu (only for menu action) */}
-                    {getHeaderConfig().actions.find(action => action.type === 'menu') && (
-                      <div ref={kebabRef} className="relative">
-                        {isKebabOpen && (
-                          <div className="absolute right-0 mt-spacing-xs z-50 bg-primary rounded-card shadow-card min-w-[260px] py-spacing-lg px-spacing-sm">
-                            {(() => {
-                              console.log('[UI_TWEAK][KebabMenu] Kebab menu rendered with updated styling');
-                              return null;
-                            })()}
-                            <div className="flex flex-col space-y-spacing-lg text-right">
-                              <NavItem
-                                variant="text-secondary"
-                                label="Get the Plaible App"
-                                className="w-full px-spacing-lg text-right whitespace-nowrap"
-                                onClick={() => {
-                                  console.log('[kebab] Download');
-                                  openGetAppModal();
-                                  setIsKebabOpen(false);
-                                }}
-                              />
-                              {/* 👀 Hidden for visitors (requires auth) */}
-                              {user && (
+                    {/* Dynamic Actions */}
+                    <div className="hidden lg:flex items-center gap-spacing-xl">
+                      {getHeaderConfig().actions.map((action) => (
+                        <NavItem
+                          key={action.type}
+                          variant="icon+text-secondary"
+                          label={action.label}
+                          icon={
+                            <span className="w-8 h-8 flex items-center justify-center rounded-full bg-primary hover:opacity-80">
+                              <action.icon className="w-4 h-4" />
+                            </span>
+                          }
+                          onClick={action.onClick}
+                        />
+                      ))}
+                      
+                      {/* Kebab Menu (only for menu action) */}
+                      {getHeaderConfig().actions.find(action => action.type === 'menu') && (
+                        <div ref={kebabRef} className="relative">
+                          {isKebabOpen && (
+                            <div className="absolute right-0 mt-spacing-xs z-50 bg-primary rounded-card shadow-card min-w-[260px] py-spacing-lg px-spacing-sm">
+                              {(() => {
+                                console.log('[UI_TWEAK][KebabMenu] Kebab menu rendered with updated styling');
+                                return null;
+                              })()}
+                              <div className="flex flex-col space-y-spacing-lg text-right">
                                 <NavItem
                                   variant="text-secondary"
-                                  label="Story Settings"
+                                  label="Get the Plaible App"
                                   className="w-full px-spacing-lg text-right whitespace-nowrap"
                                   onClick={() => {
-                                    console.log('[kebab] Story Settings');
-                                    setIsStorySettingsModalOpen(true);
+                                    console.log('[kebab] Download');
+                                    openGetAppModal();
                                     setIsKebabOpen(false);
                                   }}
                                 />
-                              )}
-                              <NavItem
-                                variant="text-secondary"
-                                label="Report An Issue"
-                                className="w-full px-spacing-lg text-right whitespace-nowrap"
-                                onClick={() => {
-                                  console.log('[kebab] Report');
-                                  openReportModal();
-                                  setIsKebabOpen(false);
-                                }}
-                              />
+                                {/* 👀 Hidden for visitors (requires auth) */}
+                                {user && (
+                                  <NavItem
+                                    variant="text-secondary"
+                                    label="Story Settings"
+                                    className="w-full px-spacing-lg text-right whitespace-nowrap"
+                                    onClick={() => {
+                                      console.log('[kebab] Story Settings');
+                                      setIsStorySettingsModalOpen(true);
+                                      setIsKebabOpen(false);
+                                    }}
+                                  />
+                                )}
+                                <NavItem
+                                  variant="text-secondary"
+                                  label="Report An Issue"
+                                  className="w-full px-spacing-lg text-right whitespace-nowrap"
+                                  onClick={() => {
+                                    console.log('[kebab] Report');
+                                    openReportModal();
+                                    setIsKebabOpen(false);
+                                  }}
+                                />
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </header>
+              </header>
+            )}
 
             {/* Divider after header */}
 

@@ -368,7 +368,7 @@ router.get("/", async (req, res) => {
     }
 
     const sessions = await Session
-      .find(query, { storyId: 1, progress: 1, updatedAt: 1 })
+      .find(query, { storyId: 1, progress: 1, updatedAt: 1, settings: 1 })
       .sort({ _id: -1 })
       .limit(limit)
       .lean();
@@ -391,11 +391,29 @@ router.get("/", async (req, res) => {
     ).lean();
     const storyMap = new Map(stories.map(st => [String(st._id), { title: st.title, slug: st.slug }]));
 
+    const userDoc = await User.findById(req.userId, { email: 1, 'identity.displayName': 1, 'identity.firstName': 1, 'identity.lastName': 1 }).lean();
+    let displayName = userDoc?.identity?.displayName || '';
+    const email = userDoc?.email || '';
+    if (!displayName && email) {
+      try {
+        const { deriveDisplayNameFromEmail } = await import('../src/services/userDisplayName.js');
+        displayName = deriveDisplayNameFromEmail(email);
+      } catch {}
+    }
+    const userInfo = {
+      id: String(req.userId),
+      displayName,
+      email
+    };
+
     const items = sessions.map(s => ({
       _id: String(s._id),
+      displayId: `sess_${String(s._id).slice(-6)}`,
       story: storyMap.get(String(s.storyId)) || { title: "", slug: "" },
       progress: s.progress,
-      updatedAt: s.updatedAt
+      settings: s.settings ? { toneStyleId: s.settings.toneStyleId || null, timeFlavorId: s.settings.timeFlavorId || null } : undefined,
+      updatedAt: s.updatedAt,
+      user: userInfo
     }));
 
     const nextCursor = sessions.length === limit ? String(sessions[sessions.length - 1]._id) : undefined;

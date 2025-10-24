@@ -193,27 +193,27 @@ export const StorySettingsProvider: React.FC<StorySettingsProviderProps> = ({ ch
       preferredTimeFlavor: selectedTimeFlavor.id
     };
 
-    // Always save to localStorage first (immediate persistence)
-    saveToLocalStorage(preferences);
-    setSavedPreferences(preferences);
-
-    // Try to save to backend (optional, non-blocking)
     try {
-      const response = await fetchJson<{ ok: boolean; preferences: UserPreferences }>('/api/story-settings/user', {
-        method: 'PATCH',
-        body: JSON.stringify(preferences)
-      });
+      console.log('[PHASE5C_FE] PATCH /api/story-settings/user payload:', preferences);
+      const response = await fetchJson<{ ok: boolean; preferences: UserPreferences }>(
+        '/api/story-settings/user',
+        {
+          method: 'PATCH',
+          body: JSON.stringify(preferences),
+        }
+      );
+      console.log('[PHASE5C_FE] PATCH response:', response);
 
-      if (response.ok) {
-        // Update with backend response if successful
+      if (response?.ok) {
+        saveToLocalStorage(response.preferences);
         setSavedPreferences(response.preferences);
-        console.log('Preferences saved to backend successfully');
+        console.log('[PHASE5C_FE] Backend confirmed, preferences persisted.');
       } else {
-        console.warn('Backend save failed, but preferences saved locally');
+        console.warn('[PHASE5C_FE] Backend rejected save, no local update.');
       }
     } catch (err) {
-      // Backend save failed, but localStorage save succeeded
-      console.warn('Backend save failed, but preferences saved locally:', err);
+      console.error('[PHASE5C_FE] savePreferences failed:', err);
+      alert('Failed to save story settings. Please try again.');
     } finally {
       setIsSaving(false);
     }

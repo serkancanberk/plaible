@@ -7,6 +7,7 @@ import { WalletTransaction } from "../models/WalletTransaction.js";
 import { selectProvider, generateStart, generateTurn } from "../services/llmProvider.js";
 import { moderateUserInput } from "../services/moderation.js";
 import { logStoryRunnerEvent, eventTypes } from "../services/eventLog.js";
+import { StorySettings } from "../models/StorySettings.js";
 import { emit } from "../middleware/memorySSE.js";
 
 // Lightweight validators and helpers (mirror sessions router style)
@@ -165,6 +166,8 @@ router.post("/start", async (req, res) => {
     const storySlug = toSlug(body.storySlug);
     const characterId = isNonEmptyString(body.characterId) ? body.characterId.trim() : "";
     const roleIdsRaw = body.roleIds;
+    let toneStyleId = isNonEmptyString(body.toneStyleId) ? body.toneStyleId.trim() : "";
+    let timeFlavorId = isNonEmptyString(body.timeFlavorId) ? body.timeFlavorId.trim() : "";
     const resume = body.resume === true;
     
     console.log("🔹 Processed storySlug:", storySlug);
@@ -340,6 +343,17 @@ router.post("/start", async (req, res) => {
       });
     }
     
+    // Validate tone/time against StorySettings catalog; fallback to 'original'
+    try {
+      if (!toneStyleId || !(await StorySettings.isValidToneStyle(toneStyleId))) toneStyleId = 'original';
+      if (!timeFlavorId || !(await StorySettings.isValidTimeFlavor(timeFlavorId))) timeFlavorId = 'original';
+      console.log('[SESSION_SETTINGS_VALIDATED]', toneStyleId, timeFlavorId);
+    } catch (e) {
+      console.warn('[SESSION_SETTINGS_VALIDATION_ERROR]', e?.message);
+      if (!toneStyleId) toneStyleId = 'original';
+      if (!timeFlavorId) timeFlavorId = 'original';
+    }
+
     // Create new session
     console.log("🔹 Creating new session for user:", req.userId, "story:", story._id);
     
@@ -349,6 +363,10 @@ router.post("/start", async (req, res) => {
         storyId: story._id,
         characterId,
         roleIds: Array.isArray(roleIds) ? roleIds : [],
+        settings: {
+          toneStyleId: toneStyleId || undefined,
+          timeFlavorId: timeFlavorId || undefined,
+        },
         progress: {
           chapter: 1,
           chapterCountApprox: Number.isInteger(story?.pricing?.estimatedChapterCount) && story.pricing.estimatedChapterCount > 0
@@ -453,7 +471,7 @@ router.post("/start", async (req, res) => {
       console.warn('[SSE] Failed to emit start event:', error);
     }
 
-    return ok(res, {
+    const responsePayload = {
       sessionId: String(sess._id),
       story: { 
         title: story.title, 
@@ -468,8 +486,16 @@ router.post("/start", async (req, res) => {
       },
       scene: { text: scene.text, choices: scene.choices },
       progress: sess.progress,
+      settings: {
+        toneStyle: sess?.settings?.toneStyleId || toneStyleId || null,
+        timeFlavor: sess?.settings?.timeFlavorId || timeFlavorId || null,
+      },
       wallet: { balance: latestBalance },
-    });
+    };
+
+    console.log('[SESSION_PERSISTED]', String(sess._id), story.title, 'user=', String(req.userId));
+    console.log('[SESSION_SETTINGS]', { toneStyleId: sess?.settings?.toneStyleId, timeFlavorId: sess?.settings?.timeFlavorId });
+    return ok(res, responsePayload);
   } catch (e) {
     console.error("❌ StoryRunner startSession error:", e);
     console.error("❌ Error stack:", e.stack);

@@ -102,9 +102,9 @@ export const useChatMessages = (sessionId: string | null) => {
           id: `choice-${choiceIndex}`,
           text: choice
         })),
-        metadata: {
+        metadata: msg.metadata ?? {
           chapter: 1,
-          beat: 1,
+          beat: index + 1,
           tokenUsage: { prompt: 0, completion: 0, total: 0 },
           latency: 0
         },
@@ -176,7 +176,12 @@ export const useChatMessages = (sessionId: string | null) => {
         role: 'assistant',
         content: response.assistantMessage.content,
         choices: response.assistantMessage.choices,
-        metadata: response.assistantMessage.metadata,
+        metadata: response.assistantMessage.metadata ?? {
+          chapter: 1,
+          beat: (Date.now() % 1000),
+          tokenUsage: { prompt: 0, completion: 0, total: 0 },
+          latency: 0
+        },
         createdAt: new Date()
       };
 

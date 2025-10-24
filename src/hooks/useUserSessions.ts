@@ -20,10 +20,11 @@ export const useUserSessions = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('[USE_USER_SESSIONS] fetchSessions invoked for', email || 'unknown');
       console.log('[VERIFY_ISOLATION_FETCH_START] email=', email || 'unknown');
       // Clear any previous local data to avoid ghost lists
       setSessions([]);
-      console.log('[FETCH] GET /api/sessions');
+      console.log('[FETCH_CALL] /api/sessions invoked with credentials=include');
       const res = await fetch('/api/sessions', {
         credentials: 'include',
         cache: 'no-store',
@@ -38,13 +39,16 @@ export const useUserSessions = () => {
       items.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
       setSessions(items);
     } catch (e) {
+      console.log('[FETCH_ERROR]', e);
       setError(e instanceof Error ? e.message : 'Failed to load sessions');
     } finally {
+      console.log('[USE_USER_SESSIONS] fetchSessions finished');
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    console.log('[USE_USER_SESSIONS] Hook mounted');
     // Intentionally not auto-fetching; let caller control when user is ready
   }, []);
 

@@ -40,6 +40,7 @@ import adminStoryRunnerRouter from "./routes/admin/storyRunner.js";
 import adminBriefRouter from "./routes/admin/brief.js";
 import uploadRouter from "./routes/upload.js";
 import storyRunnerRoutes from "./routes/storyRunnerRoutes.js";
+import storySettingsRoutes from "./routes/story-settings.js";
 import { publicRouter as reportsPublicRouter, adminRouter as reportsAdminRouter } from "./routes/reports.js";
 import reportCategoryRoutes from "./routes/reportCategories.js";
 import packagesRouter from "./routes/packages.js";
@@ -56,6 +57,14 @@ function err(res, code = 500, name = "SERVER_ERROR", field) {
 dotenv.config();
 
 const app = express();
+
+// Phase 5.A: Global backend trace collector
+globalThis.traceCollector = globalThis.traceCollector || [];
+function pushTrace(entry) {
+  try {
+    globalThis.traceCollector.push({ ts: new Date().toISOString(), ...entry });
+  } catch {}
+}
 
 // Env toggles & helpers
 const NODE_ENV = process.env.NODE_ENV || "development";
@@ -97,6 +106,39 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
 app.use(morgan(isProduction ? "combined" : "dev"));
 app.use(express.json());
+// Phase 4.C: Log incoming bodies for PATCH/POST
+app.use((req, res, next) => {
+  try {
+    if (['PATCH', 'POST'].includes(req.method)) {
+      console.log('[PHASE4C_BE] BODY RECEIVED @', req.path, JSON.stringify(req.body, null, 2));
+      try { console.log('[PHASE4D_BE] INCOMING', { path: req.path, body: req.body }); } catch {}
+      try { pushTrace({ tag: '[PHASE4D_BE] INCOMING', path: req.path, body: req.body }); } catch {}
+    }
+  } catch {}
+  next();
+});
+// Phase 4.C: Log outgoing response bodies for PATCH/POST
+app.use((req, res, next) => {
+  if (!['PATCH', 'POST'].includes(req.method)) return next();
+  const originalSend = res.send;
+  res.send = function (body) {
+    try {
+      console.log('[PHASE4C_BE] RESPONSE BODY @', req.path, (typeof body === 'string' ? body : (body?.toString?.() || '')));
+      try { console.log('[PHASE4D_BE] OUTGOING', { path: req.path, body: (typeof body === 'string' ? body : (body?.toString?.() || '')) }); } catch {}
+      try { pushTrace({ tag: '[PHASE4D_BE] OUTGOING', path: req.path, body: (typeof body === 'string' ? body : (body?.toString?.() || '')) }); } catch {}
+    } catch {}
+    return originalSend.call(this, body);
+  };
+  next();
+});
+
+// Phase 5.A: Push REQUEST_COMPLETE after each response
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    try { pushTrace({ tag: 'REQUEST_COMPLETE', path: req.path, status: res.statusCode }); } catch {}
+  });
+  next();
+});
 app.use(attachRequestId);
 app.use(requestLogger);
 app.use(passport.initialize());
@@ -148,6 +190,10 @@ export function authGuard(req, res, next) {
       req.userId = decoded?.sub || decoded?.uid || decoded?._id;
       console.log("DEBUG authGuard -> req.userId set to:", req.userId);
       console.log(`[VERIFY_ISOLATION] route=authGuard userId=${String(req.userId)} cookie=${req.selectedTokenName}`);
+      try { if (decoded?.email) console.log('[AUTH_GUARD] verified user=', decoded.email); } catch {}
+      try { console.log('[PHASE4B_BE] authGuard verified user', req.userId); } catch {}
+      try { console.log('[PHASE4C_BE] AUTHGUARD PASS', { userId: req.userId, email: decoded?.email }); } catch {}
+      try { pushTrace({ tag: '[AUTHGUARD_PASS]', userId: String(req.userId), email: decoded?.email }); } catch {}
       return next();
     } catch (err) {
       console.error("DEBUG authGuard -> jwt.verify error:", err);
@@ -174,8 +220,8 @@ app.use("/api/auth", authRouter);
 // Public browsing per Blueprint
 app.use("/api/stories", storiesRouter);
 
-// Story settings router (public)
-app.use("/api/story-settings", storyRunnerRoutes);
+// Story settings router (auth-protected)
+app.use("/api/story-settings", authGuard, storySettingsRoutes);
 
 // Sessions router
 app.use("/api/sessions", authGuard, sessionsRouter);
@@ -488,12 +534,10 @@ app.use("/api", notFoundHandler);
 const MONGO_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/plaible";
 
 mongoose
-  .connect(MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(MONGO_URI)
   .then(async () => {
     console.log("MongoDB connected");
+    console.log("[CLEANUP] Deprecated mongoose options removed");
     
     // Seed default packages if none exist
     try {
@@ -523,7 +567,20 @@ setInterval(async () => {
 // Global error handler (must be last)
 app.use(globalErrorHandler);
 
+// Diagnostics endpoint to export backend trace (mount before listen)
+app.get('/api/diagnostics/trace', (req, res) => {
+  try {
+    const trace = globalThis.traceCollector || [];
+    res.status(200).json({ ok: true, trace });
+    console.log('[TRACE_API] /api/diagnostics/trace returned', trace.length, 'entries');
+  } catch (err) {
+    console.error('[TRACE_API_ERROR]', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 5050;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log('[PHASE5A] Global hygiene patch applied successfully');
 });

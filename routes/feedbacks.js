@@ -142,9 +142,26 @@ router.post("/", async (req, res) => {
  *     summary: Get feedbacks for a story
  *     description: Retrieve paginated list of visible feedbacks for a story
  *     parameters:
- *       - in: path, name: slug, required: true, schema: { type: string }, description: Story slug
- *       - in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 20 }, description: Number of results per page
- *       - in: query, name: cursor, schema: { type: string, format: date-time }, description: Pagination cursor (ISO date)
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Story slug
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Number of results per page
+ *       - in: query
+ *         name: cursor
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Pagination cursor (ISO date)
  *     responses:
  *       200:
  *         description: Feedbacks retrieved successfully

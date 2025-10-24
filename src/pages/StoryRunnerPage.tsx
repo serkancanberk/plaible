@@ -1,18 +1,21 @@
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { handleAddBalanceNavigation } from '../utils/navigation';
-import { ChatContainer, ChatInput, TypingIndicator, StoryHeader, CharacterStatus } from '../components/ui/chat';
+import { ChatContainer, ChatInput, TypingIndicator } from '../components/ui/chat';
+import PlayChatHeader from '../components/ui/chat/PlayChatHeader';
 import { useStorySession } from '../hooks/useStorySession';
 import { useChatMessages } from '../hooks/useChatMessages';
 import { useStoryRunner, StoryContext } from '../hooks/useStoryRunner';
 import { useStorySettingsContext } from '../components/ui/storySettings/StorySettingsProvider';
 import { AuthGuard } from '../components/AuthGuard';
 import { CreditsPurchaseSection } from '../components/credits/CreditsPurchaseSection';
+import { useAuth } from '../hooks/useAuth';
 
 const StoryRunnerPage: React.FC = () => {
   const { storySlug, characterSlug } = useParams<{ storySlug: string; characterSlug: string }>();
   const navigate = useNavigate();
   const { selectedToneStyle, selectedTimeFlavor } = useStorySettingsContext();
+  const { user, refreshUser, refreshSessions } = useAuth();
 
   const handlePurchase = (packageId: string) => {
     console.log('[STORY_RUNNER][PURCHASE] Package selected:', packageId);
@@ -20,7 +23,16 @@ const StoryRunnerPage: React.FC = () => {
   };
   
   // Session management
-  const { session, startSession, isLoading: isSessionLoading, error: sessionError } = useStorySession();
+  const { session, isReady, startSession, isLoading: isSessionLoading, error: sessionError, instanceIdRef } = useStorySession();
+  console.log('[STORY_RUNNER][SESSION_STATE]', session);
+  React.useEffect(() => {
+    if (isReady) {
+      console.log('[STORY_RUNNER][SESSION_READY]', {
+        story: session?.story?.title,
+        character: session?.story?.character?.displayName || session?.story?.character?.name,
+      });
+    }
+  }, [isReady, session]);
   
   // Message management
   const { messages, sendMessage, isSending, error: messageError } = useChatMessages(session?.sessionId || null);
@@ -28,14 +40,105 @@ const StoryRunnerPage: React.FC = () => {
   // Story runner with context
   const { processTurn, isProcessing, error: runnerError } = useStoryRunner();
 
+  // Local UI state
+  const [headerMenuOpen, setHeaderMenuOpen] = React.useState(false);
+  const [chatScrollEl, setChatScrollEl] = React.useState<HTMLDivElement | null>(null);
+
+  // Last assistant message (robust across environments)
+  const lastAssistantMessage = React.useMemo(() => {
+    const list = messages || [];
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (list[i]?.role === 'assistant') return list[i];
+    }
+    return null;
+  }, [messages]);
+
+  // Debug selected settings readiness
+  React.useEffect(() => {
+    console.log('[StoryRunnerPage] settings', {
+      hasTone: !!selectedToneStyle,
+      hasTime: !!selectedTimeFlavor,
+      tone: selectedToneStyle?.displayLabel,
+      time: selectedTimeFlavor?.displayLabel,
+    });
+  }, [selectedToneStyle, selectedTimeFlavor]);
+
+  // Structured data diagnostics for header binding (does not report readiness)
+  React.useEffect(() => {
+    try {
+      try {
+        console.log('[STORY_RUNNER][HOOK_REF]', {
+          instance: instanceIdRef?.current,
+          sessionPresent: !!session,
+        });
+      } catch {}
+      console.log('[STORY_RUNNER_DATA]', {
+        session: session ? Object.keys(session) : 'no session',
+        story: session?.story || 'no story',
+        character: session?.story?.character || 'no character',
+        tone: selectedToneStyle || 'no tone',
+        time: selectedTimeFlavor || 'no time',
+        user: user || 'no user',
+        lastAssistantMsg: lastAssistantMessage || 'no assistant messages',
+      });
+    } catch (e) {
+      console.warn('[STORY_RUNNER_REPORT_ERROR]', e);
+    }
+  }, [session, selectedToneStyle, selectedTimeFlavor, user, lastAssistantMessage]);
+
+  // Readiness report strictly tied to session state changes
+  React.useEffect(() => {
+    if (!session) return;
+    try {
+      const report = {
+        sessionReady: !!session,
+        storyReady: !!session?.story,
+        characterReady: !!session?.story?.character,
+      } as const;
+
+      console.log('[STORY_RUNNER_REPORT]', {
+        '✅ loaded': Object.entries(report).filter(([_, v]) => v).map(([k]) => k),
+        '⚠️ missing': Object.entries(report).filter(([_, v]) => !v).map(([k]) => k),
+      });
+
+      console.info(
+        '[STORY_RUNNER_STATUS]',
+        `${session?.story?.title || 'Untitled'} | ${session?.story?.character?.displayName || session?.story?.character?.name || 'Unknown'}`
+      );
+    } catch (e) {
+      console.warn('[STORY_RUNNER_REPORT_ERROR]', e);
+    }
+  }, [session]);
+
   // Initialize session on page load
   useEffect(() => {
     if (!session && storySlug && characterSlug && selectedToneStyle && selectedTimeFlavor) {
-      startSession().catch(error => {
+      startSession().then(() => {
+        // Ensure Recent list reflects current session
+        try {
+          if (typeof (window as any).requestIdleCallback === 'function') {
+            (window as any).requestIdleCallback(() => {
+              if (refreshSessions) {
+                refreshSessions().then(() => console.log('[RECENT_REFRESH_TRIGGERED] after startSession'));
+              } else if (refreshUser) {
+                refreshUser();
+              }
+            });
+          } else {
+            setTimeout(() => {
+              if (refreshSessions) {
+                refreshSessions().then(() => console.log('[RECENT_REFRESH_TRIGGERED] after startSession'));
+              } else if (refreshUser) {
+                refreshUser();
+              }
+            }, 0);
+          }
+        } catch {}
+      }).catch(error => {
         console.error('Failed to start session:', error);
       });
     }
-  }, [session, storySlug, characterSlug, selectedToneStyle, selectedTimeFlavor, startSession]);
+  }, [session, storySlug, characterSlug, selectedToneStyle, selectedTimeFlavor, startSession, refreshSessions, refreshUser]);
 
   // Build story context for enhanced prompts
   const buildStoryContext = (): StoryContext | null => {
@@ -144,80 +247,41 @@ const StoryRunnerPage: React.FC = () => {
           </div>
         )}
 
-        {/* Story Header */}
-        <div className="px-spacing-md py-spacing-sm border-b border-ui-muted">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-spacing-sm">
-              <div className="w-2 h-2 bg-accent rounded-full"></div>
-              <h1 className="text-subheading font-serif text-accent">
-                {session?.story.title || 'Loading Story...'}
-              </h1>
-            </div>
-            <div className="flex items-center space-x-spacing-md">
-              <button 
-                onClick={() => navigate(-1)}
-                className="text-caption text-text-tertiary hover:text-text-secondary transition-colors"
-              >
-                Back
-              </button>
-              <button className="text-caption text-text-tertiary hover:text-text-secondary transition-colors">
-                Search
-              </button>
-              <button className="text-caption text-text-tertiary hover:text-text-secondary transition-colors">
-                Share
-              </button>
-              <button className="text-caption text-text-tertiary hover:text-text-secondary transition-colors">
-                ⋯
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Story Context Header */}
-        {session && selectedToneStyle && selectedTimeFlavor && (
-          <div className="px-spacing-md py-spacing-sm border-b border-ui-muted">
-            <StoryHeader
-              story={session.story}
-              character={session.story.character}
-              toneStyle={{
-                id: selectedToneStyle.id,
-                label: selectedToneStyle.displayLabel
-              }}
-              timeFlavor={{
-                id: selectedTimeFlavor.id,
-                label: selectedTimeFlavor.displayLabel
-              }}
+        {/* Scroll region with overlay header */}
+        {isReady && (
+          <div className="flex-1 flex flex-col min-h-0 relative">
+            {/* Dynamic header (always visible; no smart visibility yet) */}
+            <PlayChatHeader
+              characterName={session?.story?.character?.displayName ?? session?.story?.character?.name ?? 'Unknown Character'}
+              storyName={session?.story?.title ?? 'Untitled'}
+              timeInfo={selectedTimeFlavor?.displayLabel ?? '—'}
+              toneInfo={selectedToneStyle?.displayLabel ?? '—'}
+              sceneInfo={(messages || []).filter(m => m.role === 'assistant').slice(-1)[0]?.metadata || null}
+              playerInfo={user?.identity?.displayName ?? user?.email ?? ''}
+              onOpenMenu={() => setHeaderMenuOpen(true)}
+              scrollElement={chatScrollEl || null}
+              className="absolute top-0 left-0 right-0 z-70"
             />
+
+            {/* Chat Container */}
+            <div className="flex-1 flex flex-col min-h-0 pt-16">
+              <ChatContainer 
+                messages={messages}
+                isLoading={isSending || isProcessing}
+                onChoiceSelect={handleChoiceSelect}
+                className="flex-1"
+                onContainerRef={setChatScrollEl}
+              />
+              
+              {/* Typing Indicator */}
+              {(isSending || isProcessing) && (
+                <div className="px-spacing-md py-spacing-sm">
+                  <TypingIndicator isVisible={isSending || isProcessing} />
+                </div>
+              )}
+            </div>
           </div>
         )}
-
-        {/* Character Status */}
-        {session && (
-          <div className="px-spacing-md py-spacing-sm border-b border-ui-muted">
-            <CharacterStatus 
-              alignment="Temptation"
-              relationshipHint="+Trust"
-              progress="Chapter 3 of 6"
-            />
-          </div>
-        )}
-
-        {/* Chat Container */}
-        <div className="flex-1 flex flex-col min-h-0">
-          <ChatContainer 
-            messages={messages}
-            isLoading={isSending || isProcessing}
-            onChoiceSelect={handleChoiceSelect}
-            className="flex-1"
-          />
-          
-          {/* Typing Indicator */}
-          {(isSending || isProcessing) && (
-            <div className="px-spacing-md py-spacing-sm">
-              <TypingIndicator isVisible={isSending || isProcessing} />
-            </div>
-          )}
-        </div>
 
         {/* Chat Input */}
         <ChatInput

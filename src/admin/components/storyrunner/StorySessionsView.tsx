@@ -7,6 +7,7 @@ import { Pagination } from '../Pagination';
 import { useToast } from '../Toast';
 import { debounce } from '../../utils/debounce';
 import { adminApi, UserStorySession } from '../../api';
+import { formatUserName } from '../../../utils/formatUserName';
 
 export const StorySessionsView: React.FC = () => {
   const [sessions, setSessions] = useState<UserStorySession[]>([]);
@@ -60,6 +61,8 @@ export const StorySessionsView: React.FC = () => {
   );
 
   useEffect(() => {
+    console.log('[USER_FORMAT] Admin sessions using unified name formatter');
+    console.log('[ADMIN_UI] Unified Story Settings column active');
     loadSessions();
   }, [loadSessions]);
 
@@ -72,16 +75,21 @@ export const StorySessionsView: React.FC = () => {
     setFilters(prev => ({ ...prev, page }));
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (row: any) => {
+    const derived = row?.progress?.completed ? 'finished' : 'active';
+    const safeStatus: string = (row?.status ?? derived) || 'active';
     const statusClasses = {
       active: 'bg-green-100 text-green-800',
       finished: 'bg-blue-100 text-blue-800',
       abandoned: 'bg-red-100 text-red-800'
-    };
-    
+    } as const;
+    const label = typeof safeStatus === 'string' && safeStatus.length > 0
+      ? safeStatus.charAt(0).toUpperCase() + safeStatus.slice(1)
+      : 'Active';
+
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusClasses[status as keyof typeof statusClasses] || 'bg-gray-100 text-gray-800'}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusClasses[safeStatus as keyof typeof statusClasses] || 'bg-gray-100 text-gray-800'}`}>
+        {label}
       </span>
     );
   };
@@ -105,10 +113,10 @@ export const StorySessionsView: React.FC = () => {
 
   const columns = [
     {
-      key: 'userId',
-      label: 'User ID',
-      render: (value: string) => (
-        <span className="font-mono text-sm">{value.substring(0, 8)}...</span>
+      key: 'user',
+      label: 'User',
+      render: (_: any, row: any) => (
+        <span className="text-sm">{formatUserName(row?.user)}</span>
       )
     },
     {
@@ -119,53 +127,70 @@ export const StorySessionsView: React.FC = () => {
       )
     },
     {
-      key: 'toneStyleId',
-      label: 'Tone Style',
-      render: (value: string) => (
-        <span className="capitalize">{value}</span>
+      key: 'displayId',
+      label: 'Session',
+      render: (value: string, row: any) => (
+        <span className="font-mono text-sm">{row?.displayId || (String(row?._id || '').slice(0, 6))}</span>
       )
     },
     {
-      key: 'timeFlavorId',
-      label: 'Time Flavor',
-      render: (value: string) => (
-        <span className="capitalize">{value}</span>
-      )
+      key: 'storySettings',
+      label: 'Story Settings',
+      render: (_: any, row: any) => {
+        const settings = row?.settings || null;
+        if (!settings) return '—';
+        const tone = settings.toneStyleId || 'Original';
+        const time = settings.timeFlavorId || 'Original';
+        return `Time: ${time}, Theme: ${tone}`;
+      }
     },
     {
       key: 'status',
       label: 'Status',
-      render: (value: string) => getStatusBadge(value)
+      render: (_value: string, row: any) => getStatusBadge(row)
     },
     {
       key: 'currentChapter',
       label: 'Chapter',
-      render: (value: number, session: UserStorySession) => (
-        <span className="text-sm">
-          {value} / {session.chaptersGenerated}
-        </span>
-      )
+      render: (value: number, session: any) => {
+        const currentChapter = session?.progress?.chapter ?? value ?? 1;
+        const chaptersGenerated = typeof session?.chaptersGenerated === 'number'
+          ? session.chaptersGenerated
+          : Math.max((currentChapter ?? 1) - 1, 0);
+        return (
+          <span className="text-sm">
+            {currentChapter} / {chaptersGenerated}
+          </span>
+        );
+      }
     },
     {
       key: 'sessionStartedAt',
       label: 'Started',
-      render: (value: string) => (
-        <span className="text-sm text-gray-600">
-          {formatDate(value)}
-        </span>
-      )
+      render: (_value: string, session: any) => {
+        const started = session?.sessionStartedAt || session?.createdAt;
+        return (
+          <span className="text-sm text-gray-600">
+            {started ? formatDate(started) : '-'}
+          </span>
+        );
+      }
     },
     {
       key: 'lastActivityAt',
       label: 'Last Activity',
-      render: (value: string, session: UserStorySession) => (
-        <div className="text-sm">
-          <div className="text-gray-600">{formatDate(value)}</div>
-          <div className="text-xs text-gray-500">
-            {formatDuration(session.sessionStartedAt, value)}
+      render: (_value: string, session: any) => {
+        const started = session?.sessionStartedAt || session?.createdAt;
+        const last = session?.lastActivityAt || session?.updatedAt;
+        return (
+          <div className="text-sm">
+            <div className="text-gray-600">{last ? formatDate(last) : '-'}</div>
+            <div className="text-xs text-gray-500">
+              {started && last ? formatDuration(started, last) : '-'}
+            </div>
           </div>
-        </div>
-      )
+        );
+      }
     }
   ];
 

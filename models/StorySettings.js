@@ -137,3 +137,24 @@ storySettingsSchema.statics.isValidTimeFlavor = async function(timeFlavorId) {
 };
 
 export const StorySettings = mongoose.models.StorySettings || mongoose.model("StorySettings", storySettingsSchema);
+
+// Phase 4.D Mongo trace hooks
+storySettingsSchema.pre('save', function(next) {
+  try { console.log('[PHASE4D_MONGO] pre(\'save\')', this.constructor.modelName, 'id=', this._id?.toString?.(), 'changes=', this.modifiedPaths?.()); } catch {}
+  next();
+});
+storySettingsSchema.post('save', function(doc) {
+  try { console.log('[PHASE4D_MONGO] post(\'save\')', this.constructor.modelName, 'id=', doc?._id?.toString?.()); } catch {}
+});
+
+// Phase 4.D: Trace updateOne for StorySettings model
+try {
+  const Model = mongoose.models.StorySettings;
+  const originalUpdateOne = Model.updateOne.bind(Model);
+  Model.updateOne = async function(filter, update, options) {
+    try { console.log('[PHASE4D_MONGO] updateOne()', 'StorySettings', 'filter=', filter, 'update=', update); } catch {}
+    const res = await originalUpdateOne(filter, update, options);
+    try { console.log('[PHASE4D_MONGO] updateOne() result', res); } catch {}
+    return res;
+  };
+} catch {}

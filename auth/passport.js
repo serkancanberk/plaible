@@ -74,6 +74,14 @@ passport.use(
             displayName: (displayName || email || "anonymous").toLowerCase().replace(/\s+/g, ""),
             isVerified: true,
           });
+          if (!user.storySettings) {
+            user.storySettings = {
+              preferredToneStyle: 'original',
+              preferredTimeFlavor: 'original',
+              lastUpdated: new Date()
+            };
+            console.log('[USER_SETTINGS_INIT] Default StorySettings assigned for user', user._id || '(new)');
+          }
         } else {
           // Merge latest profile
           user.googleId = user.googleId || googleId;
@@ -84,6 +92,31 @@ passport.use(
             lastName: lastName || user.identity?.lastName || "",
             displayName: displayName || user.identity?.displayName || user.displayName || user.fullName,
           };
+          if (!user.storySettings) {
+            user.storySettings = {
+              preferredToneStyle: 'original',
+              preferredTimeFlavor: 'original',
+              lastUpdated: new Date()
+            };
+            console.log('[USER_SETTINGS_INIT] Default StorySettings assigned for user', user._id || '(existing)');
+          }
+        }
+
+        // Ensure human-readable identity.displayName is set
+        try {
+          if ((!user.identity || !user.identity.displayName) && email) {
+            const { deriveDisplayNameFromEmail } = await import('../src/services/userDisplayName.js');
+            const derivedName = deriveDisplayNameFromEmail(email);
+            user.identity = {
+              ...(user.identity || {}),
+              displayName: derivedName,
+              firstName: user.identity?.firstName || firstName || "",
+              lastName: user.identity?.lastName || lastName || "",
+            };
+            console.log('[USER_AUTONAME] Generated displayName="%s" for user %s', derivedName, user._id || '(new)');
+          }
+        } catch (e) {
+          console.warn('[USER_AUTONAME] derive failed:', e?.message);
         }
 
         await user.save();

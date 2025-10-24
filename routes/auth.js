@@ -75,6 +75,19 @@ router.get(
   async (req, res) => {
     try {
       const user = req.user;
+      // Backfill identity.displayName if still missing after OAuth upsert
+      try {
+        const latest = await User.findById(user?._id);
+        if (latest && (!latest.identity || !latest.identity.displayName) && latest.email) {
+          const { deriveDisplayNameFromEmail } = await import('../src/services/userDisplayName.js');
+          const derived = deriveDisplayNameFromEmail(latest.email);
+          latest.identity = { ...(latest.identity || {}), displayName: derived };
+          await latest.save();
+          console.log('[USER_AUTONAME] Backfilled displayName="%s" for user %s', derived, latest._id.toString());
+        }
+      } catch (e) {
+        console.warn('[USER_AUTONAME] backfill in callback failed:', e?.message);
+      }
       const isAdmin = Array.isArray(user.roles) && user.roles.includes('admin');
       const storedRedirect = req.session?.oauthRedirect;
       const PUBLIC_FRONTEND_URL =
@@ -195,7 +208,20 @@ router.get("/me", async (req, res) => {
     const decoded = verifyJwt(token);
     const userId = decoded?.sub || decoded?.uid;
     if (!userId) return res.status(401).json({ error: "INVALID_TOKEN" });
-    const user = await User.findById(userId).lean();
+    // Optional backfill of identity.displayName if missing
+    let user = await User.findById(userId);
+    if (user && (!user.identity || !user.identity.displayName) && user.email) {
+      try {
+        const { deriveDisplayNameFromEmail } = await import('../src/services/userDisplayName.js');
+        const derived = deriveDisplayNameFromEmail(user.email);
+        user.identity = { ...(user.identity || {}), displayName: derived };
+        await user.save();
+        console.log('[USER_AUTONAME] Backfilled displayName="%s" for user %s', derived, user._id.toString());
+      } catch (e) {
+        console.warn('[USER_AUTONAME] backfill in /me failed:', e?.message);
+      }
+    }
+    user = user?.toObject ? user.toObject() : user;
     if (!user) return res.status(404).json({ error: "USER_NOT_FOUND" });
     const safe = {
       _id: user._id,
